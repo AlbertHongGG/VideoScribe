@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { useVideoStore } from "../../store/videoStore";
 import { useSTTStore } from "../../store/sttStore";
 import { formatTime } from "../../utils/time";
-import { Play } from "lucide-react";
+import { Play, AudioLines } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export const STTPanel: React.FC = () => {
@@ -116,13 +116,21 @@ export const STTPanel: React.FC = () => {
               </div>
             ) : (
               status === "idle" && (
-                <div className="h-full flex flex-col items-center justify-center text-center p-8 text-gray-500">
-                  <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6 shadow-inner ring-1 ring-white/10">
-                    <Play size={28} className="text-gray-600 ml-1" />
+                <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                  <div className="relative mb-8 group">
+                    {/* Background glow */}
+                    <div className="absolute inset-0 bg-[#facc15]/10 rounded-full blur-2xl group-hover:bg-[#facc15]/20 transition-all duration-700"></div>
+                    
+                    {/* Outer dashed ring with slow spin */}
+                    <div className="w-32 h-32 rounded-full border border-dashed border-white/10 flex items-center justify-center relative animate-[spin_30s_linear_infinite]"></div>
+                    
+                    {/* Inner solid ring & Icon */}
+                    <div className="w-20 h-20 rounded-full bg-black/40 border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] flex items-center justify-center absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 backdrop-blur-md">
+                      <AudioLines size={32} className="text-[#facc15] opacity-80" />
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-400 font-medium tracking-wide leading-relaxed">
-                    Click <span className="text-[#facc15]">Run STT</span> in the top bar to generate a transcription.
-                  </p>
+                  
+                  <span className="text-[10px] text-gray-500 font-bold tracking-[0.3em]">NO TRANSCRIPTION</span>
                 </div>
               )
             )}
