@@ -1,6 +1,6 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 
-interface STTResult {
+export interface STTResult {
   start: number;
   end: number;
   text: string;
@@ -13,12 +13,14 @@ interface STTStore {
   status: STTStatus;
   progress: number;
   results: STTResult[];
+  _buffer: STTResult[];
   
   togglePanel: () => void;
   setPanelOpen: (isOpen: boolean) => void;
   setStatus: (status: STTStatus, progress?: number) => void;
   setResults: (results: STTResult[]) => void;
-  appendResult: (result: STTResult) => void;
+  appendResultToBuffer: (result: STTResult) => void;
+  commitResults: () => void;
   reset: () => void;
 }
 
@@ -27,11 +29,19 @@ export const useSTTStore = create<STTStore>((set) => ({
   status: 'idle',
   progress: 0,
   results: [],
+  _buffer: [],
 
   togglePanel: () => set((state) => ({ isPanelOpen: !state.isPanelOpen })),
   setPanelOpen: (isOpen) => set({ isPanelOpen: isOpen }),
   setStatus: (status, progress = 0) => set({ status, progress }),
-  setResults: (results) => set({ results }),
-  appendResult: (result) => set((state) => ({ results: [...state.results, result] })),
-  reset: () => set({ status: 'idle', progress: 0, results: [] }),
+  setResults: (results) => set({ results, _buffer: [...results] }),
+  
+  // Appends to buffer without triggering a full re-render of results-dependent components immediately.
+  // Note: Zustand still notifies subscribers of the store, but we isolate the 'results' array reference.
+  appendResultToBuffer: (result) => set((state) => ({ _buffer: [...state._buffer, result] })),
+  
+  // Flushes buffer to the main results array, causing components relying on `results` to update.
+  commitResults: () => set((state) => ({ results: [...state._buffer] })),
+  
+  reset: () => set({ status: 'idle', progress: 0, results: [], _buffer: [] }),
 }));

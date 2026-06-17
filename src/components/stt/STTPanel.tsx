@@ -66,7 +66,7 @@ export const STTPanel: React.FC = () => {
               <div className="absolute inset-0 bg-[#121212]/80 backdrop-blur-md z-10 flex flex-col items-center justify-center p-8 text-center">
                 <div className="relative mb-6">
                   <div className="w-16 h-16 rounded-full border-4 border-white/5 absolute inset-0" />
-                  <div className="w-16 h-16 rounded-full border-4 border-t-[#facc15] border-r-transparent border-b-transparent border-l-transparent animate-spin shadow-[0_0_20px_rgba(250,204,21,0.3)]" />
+                  <div className="w-16 h-16 rounded-full border-4 border-t-[#facc15] border-r-transparent border-b-transparent border-l-transparent animate-spin" />
                 </div>
                 <p className="text-white font-bold text-sm mb-3 tracking-widest drop-shadow-md">PROCESSING AUDIO</p>
                 
@@ -74,10 +74,8 @@ export const STTPanel: React.FC = () => {
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
-                    className="h-full bg-[#facc15] shadow-[0_0_15px_rgba(250,204,21,0.8)] relative overflow-hidden"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full animate-[shimmer_1.5s_infinite]" />
-                  </motion.div>
+                    className="h-full bg-[#facc15] shadow-[0_0_10px_rgba(250,204,21,0.5)] relative overflow-hidden transition-all duration-300"
+                  />
                 </div>
               </div>
             )}
@@ -92,24 +90,24 @@ export const STTPanel: React.FC = () => {
                       key={idx}
                       ref={isActive ? activeItemRef : null}
                       onClick={() => handleSeek(result.start)}
-                      className={`group p-4 rounded-xl cursor-pointer transition-all duration-300 ${
+                      className={`group p-4 rounded-xl cursor-pointer transition-colors duration-200 ${
                         isActive 
-                          ? "bg-[#facc15]/10 border border-[#facc15]/30 shadow-[0_4px_20px_rgba(250,204,21,0.15)] scale-[1.02] ml-2" 
+                          ? "bg-[#facc15]/10 border border-[#facc15]/30 ml-2" 
                           : "bg-white/5 hover:bg-white/10 border border-white/5"
                       }`}
                     >
                       <div className="flex items-center gap-3 mb-2">
-                        <span className={`text-[10px] font-mono font-bold tracking-widest ${isActive ? "text-[#facc15] drop-shadow-md" : "text-gray-500"}`}>
+                        <span className={`text-[10px] font-mono font-bold tracking-widest ${isActive ? "text-[#facc15]" : "text-gray-500"}`}>
                           {formatTime(result.start)}
                         </span>
                         <div className={`flex-1 h-px ${isActive ? "bg-gradient-to-r from-[#facc15]/50 to-transparent" : "bg-white/5"}`}></div>
                         <Play 
                           size={14} 
-                          className={`opacity-0 group-hover:opacity-100 transition-all ${isActive ? "text-[#facc15] opacity-100 shadow-[0_0_10px_rgba(250,204,21,0.5)] rounded-full" : "text-gray-400"}`} 
+                          className={`opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? "text-[#facc15] opacity-100" : "text-gray-400"}`} 
                         />
                       </div>
                       
-                      <p className={`text-sm leading-relaxed ${isActive ? "text-white font-medium drop-shadow-sm" : "text-gray-400 group-hover:text-gray-200 transition-colors"}`}>
+                      <p className={`text-sm leading-relaxed ${isActive ? "text-white font-medium" : "text-gray-400 group-hover:text-gray-200"}`}>
                         {result.text}
                       </p>
                     </div>

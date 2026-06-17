@@ -8,13 +8,14 @@ import { useSTTStore } from "../../store/sttStore";
 import { useNotifyStore } from "../../store/notifyStore";
 import { useAppStore } from "../../store/appStore";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { STTService } from "../../services/sttService";
 
 export const TitleBar: React.FC = () => {
   const [isMaximized, setIsMaximized] = useState(false);
   const appWindow = getCurrentWindow();
 
   const { videoUrl, setVideo } = useVideoStore();
-  const { isPanelOpen, togglePanel, setStatus, setResults, status, setPanelOpen } = useSTTStore();
+  const { isPanelOpen, togglePanel, status, setPanelOpen } = useSTTStore();
   const { show } = useNotifyStore();
   const { activeView, setActiveView } = useAppStore();
 
@@ -76,42 +77,9 @@ export const TitleBar: React.FC = () => {
 
     setActiveView("player");
     setPanelOpen(true);
-    setResults([]);
-    setStatus("loading_model", 0);
-    show("Starting Speech-to-Text process...", "info");
-
-    try {
-      const { invoke } = await import("@tauri-apps/api/core");
-      const { listen } = await import("@tauri-apps/api/event");
-
-      const unlisten = await listen<string>("stt-progress", (event) => {
-        try {
-          const data = JSON.parse(event.payload);
-          if (data.type === "progress") {
-            setStatus(data.status, data.progress);
-            if (data.status === "completed") {
-              show("STT processing completed", "success");
-              unlisten();
-            }
-          } else if (data.type === "result") {
-            useSTTStore.getState().appendResult({ start: data.start, end: data.end, text: data.text });
-          } else if (data.type === "error") {
-            setStatus("error");
-            show(data.message, "error");
-            unlisten();
-          }
-        } catch (e) {
-          console.error("Failed to parse STT event", e);
-        }
-      });
-
-      await invoke("run_stt", { videoPath: path, modelSize: "medium" });
-
-    } catch (e: any) {
-      console.error(e);
-      setStatus("error");
-      show(`Failed to start STT: ${e.toString()}`, "error");
-    }
+    
+    // Delegate complex STT flow to STTService
+    STTService.startSTT(path, "medium");
   };
 
   return (

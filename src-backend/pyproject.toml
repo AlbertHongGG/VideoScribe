@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "ctranslate2>=4.8.0",
     "faster-whisper>=1.2.1",
     "torch>=2.6.0",
 ]

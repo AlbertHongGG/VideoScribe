@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useMemo } from "react";
 import { useVideoStore } from "../../store/videoStore";
 import { useSTTStore } from "../../store/sttStore";
 import { VideoControls } from "./VideoControls";
@@ -13,7 +13,6 @@ export const VideoPlayer: React.FC = () => {
     isPlaying, 
     currentTime, 
     volume,
-    setVideo,
     setIsPlaying, 
     setCurrentTime,
     setDuration 
@@ -21,6 +20,9 @@ export const VideoPlayer: React.FC = () => {
 
   const { results } = useSTTStore();
   const [currentSubtitle, setCurrentSubtitle] = useState<string | null>(null);
+
+  // Memoize results to prevent unnecessary scans if results haven't changed
+  const memoizedResults = useMemo(() => results, [results]);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -38,18 +40,24 @@ export const VideoPlayer: React.FC = () => {
     }
   }, [volume]);
 
+  // 1. Sync video element time if the React store changes by a large amount (e.g., user seeks).
+  // We strictly isolate this from memoizedResults so STT updates NEVER cause video rewinding.
   useEffect(() => {
-    if (videoRef.current && Math.abs(videoRef.current.currentTime - currentTime) > 0.1) {
+    if (videoRef.current && Math.abs(videoRef.current.currentTime - currentTime) > 0.5) {
       videoRef.current.currentTime = currentTime;
     }
+  }, [currentTime]);
 
-    if (results.length > 0) {
-      const activeSubtitle = results.find(r => currentTime >= r.start && currentTime <= r.end);
+  // 2. Update subtitle text. This is purely UI and won't affect video playback.
+  useEffect(() => {
+    if (memoizedResults.length > 0) {
+      // Opt: A linear scan here is okay for now as results length is usually < 1000
+      const activeSubtitle = memoizedResults.find(r => currentTime >= r.start && currentTime <= r.end);
       setCurrentSubtitle(activeSubtitle ? activeSubtitle.text : null);
     } else {
       setCurrentSubtitle(null);
     }
-  }, [currentTime, results]);
+  }, [currentTime, memoizedResults]);
 
   const handleTimeUpdate = () => {
     if (videoRef.current && isPlaying) {
@@ -104,13 +112,9 @@ export const VideoPlayer: React.FC = () => {
         </>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-b from-transparent to-black/40">
-          <motion.div 
-            animate={{ y: [0, -10, 0] }} 
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="p-8 rounded-full bg-white/5 mb-8 text-[#facc15] shadow-[0_0_30px_rgba(250,204,21,0.15)] ring-1 ring-white/10"
-          >
+          <div className="p-8 rounded-full bg-white/5 mb-8 text-[#facc15] shadow-[0_0_30px_rgba(250,204,21,0.15)] ring-1 ring-white/10">
             <Upload size={56} className="opacity-80" />
-          </motion.div>
+          </div>
           <h2 className="text-3xl font-bold mb-4 text-white tracking-tight drop-shadow-md">
             Drop Video Here
           </h2>
