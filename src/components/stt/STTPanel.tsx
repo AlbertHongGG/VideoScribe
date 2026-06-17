@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export const STTPanel: React.FC = () => {
   const { isPanelOpen, results, status, progress } = useSTTStore();
-  const { currentTime, setCurrentTime, setIsPlaying } = useVideoStore();
+  const { currentTime, setSeekToTime, setIsPlaying } = useVideoStore();
   
   const containerRef = useRef<HTMLDivElement>(null);
   const activeItemRef = useRef<HTMLDivElement>(null);
@@ -29,7 +29,7 @@ export const STTPanel: React.FC = () => {
   }, [currentTime, isPanelOpen]);
 
   const handleSeek = (time: number) => {
-    setCurrentTime(time);
+    setSeekToTime(time);
     setIsPlaying(true);
   };
 
@@ -91,9 +91,9 @@ export const STTPanel: React.FC = () => {
                         key={idx}
                         ref={isActive ? activeItemRef : null}
                         onClick={() => handleSeek(result.start)}
-                        className={`group p-4 rounded-xl cursor-pointer transition-colors duration-200 ${
+                        className={`group p-4 rounded-xl cursor-pointer transition-all duration-200 ${
                           isActive 
-                            ? "bg-[#facc15]/10 border border-[#facc15]/30 ml-2" 
+                            ? "bg-[#facc15]/10 border border-[#facc15]/30 ring-1 ring-[#facc15]/30" 
                             : "bg-white/5 hover:bg-white/10 border border-white/5"
                         }`}
                       >
