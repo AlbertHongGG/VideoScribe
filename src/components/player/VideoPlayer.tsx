@@ -13,9 +13,11 @@ export const VideoPlayer: React.FC = () => {
     isPlaying, 
     currentTime, 
     volume,
+    seekToTime,
     setIsPlaying, 
     setCurrentTime,
-    setDuration 
+    setDuration,
+    setSeekToTime
   } = useVideoStore();
 
   const { results } = useSTTStore();
@@ -40,13 +42,14 @@ export const VideoPlayer: React.FC = () => {
     }
   }, [volume]);
 
-  // 1. Sync video element time if the React store changes by a large amount (e.g., user seeks).
-  // We strictly isolate this from memoizedResults so STT updates NEVER cause video rewinding.
+  // 1. Handle explicit user seeks directly and instantly without latency.
   useEffect(() => {
-    if (videoRef.current && Math.abs(videoRef.current.currentTime - currentTime) > 0.5) {
-      videoRef.current.currentTime = currentTime;
+    if (videoRef.current && seekToTime !== null) {
+      videoRef.current.currentTime = seekToTime;
+      setCurrentTime(seekToTime); // Sync UI immediately
+      setSeekToTime(null);
     }
-  }, [currentTime]);
+  }, [seekToTime]);
 
   // 2. Update subtitle text. This is purely UI and won't affect video playback.
   useEffect(() => {

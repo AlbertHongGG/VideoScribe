@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useVideoStore } from "../../store/videoStore";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from "lucide-react";
+import { Play, Pause, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Volume2, VolumeX } from "lucide-react";
 import * as Slider from "@radix-ui/react-slider";
 import { formatTime } from "../../utils/time";
 
@@ -12,24 +12,38 @@ export const VideoControls: React.FC = () => {
     volume,
     setIsPlaying, 
     setCurrentTime,
-    setVolume 
+    setVolume,
+    setSeekToTime
   } = useVideoStore();
 
   const handlePlayPause = () => setIsPlaying(!isPlaying);
   
   const handleVolumeChange = (value: number[]) => setVolume(value[0]);
   
-  const handleTimeChange = (value: number[]) => setCurrentTime(value[0]);
+  const handleTimeChange = (value: number[]) => setSeekToTime(value[0]);
 
+  // Robust skipTime that always reads the latest state
   const skipTime = (amount: number) => {
-    const newTime = Math.max(0, Math.min(currentTime + amount, duration));
-    setCurrentTime(newTime);
+    const state = useVideoStore.getState();
+    const newTime = Math.max(0, Math.min(state.currentTime + amount, state.duration));
+    state.setSeekToTime(newTime);
   };
 
-  const skipFrame = (frames: number) => {
-    const frameTime = 1 / 30;
-    skipTime(frames * frameTime);
-  };
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Do not intercept if user is typing
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if (e.key === ',' || e.key === '<') {
+        skipTime(-1 / 30);
+      } else if (e.key === '.' || e.key === '>') {
+        skipTime(1 / 30);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey) {
@@ -70,26 +84,26 @@ export const VideoControls: React.FC = () => {
         </div>
 
         {/* Center: Playback Controls */}
-        <div className="w-1/3 flex items-center justify-center gap-6">
+        <div className="w-1/3 flex items-center justify-center gap-4">
           <button 
-            onClick={() => skipFrame(-1)} 
+            onClick={() => skipTime(-5)} 
             className="text-white/50 hover:text-white transition-all duration-200 hover:-translate-x-0.5 active:scale-95" 
-            title="Previous Frame"
+            title="-5 Seconds"
           >
-            <SkipBack size={20} />
+            <ChevronsLeft size={22} />
           </button>
           
           <button 
             onClick={() => skipTime(-1)} 
-            className="text-white/50 hover:text-white transition-all duration-200 font-bold text-[11px] tracking-widest hover:-translate-x-0.5 active:scale-95" 
+            className="text-white/50 hover:text-white transition-all duration-200 hover:-translate-x-0.5 active:scale-95" 
             title="-1 Second"
           >
-            -1S
+            <ChevronLeft size={22} />
           </button>
           
           <button 
             onClick={handlePlayPause}
-            className="w-14 h-14 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-full transition-all duration-300 hover:scale-105 active:scale-95 border border-white/10 hover:border-white/20 shadow-lg hover:shadow-[0_0_25px_rgba(255,255,255,0.15)] group/play"
+            className="w-14 h-14 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-full transition-all duration-300 hover:scale-105 active:scale-95 border border-white/10 hover:border-white/20 shadow-lg hover:shadow-[0_0_25px_rgba(255,255,255,0.15)] group/play mx-2"
           >
             {isPlaying ? (
               <Pause size={24} className="fill-current text-white transition-transform group-hover/play:scale-110" />
@@ -100,18 +114,18 @@ export const VideoControls: React.FC = () => {
           
           <button 
             onClick={() => skipTime(1)} 
-            className="text-white/50 hover:text-white transition-all duration-200 font-bold text-[11px] tracking-widest hover:translate-x-0.5 active:scale-95" 
+            className="text-white/50 hover:text-white transition-all duration-200 hover:translate-x-0.5 active:scale-95" 
             title="+1 Second"
           >
-            +1S
+            <ChevronRight size={22} />
           </button>
           
           <button 
-            onClick={() => skipFrame(1)} 
+            onClick={() => skipTime(5)} 
             className="text-white/50 hover:text-white transition-all duration-200 hover:translate-x-0.5 active:scale-95" 
-            title="Next Frame"
+            title="+5 Seconds"
           >
-            <SkipForward size={20} />
+            <ChevronsRight size={22} />
           </button>
         </div>
 
