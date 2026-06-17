@@ -22,28 +22,11 @@ export const VideoControls: React.FC = () => {
   
   const handleTimeChange = (value: number[]) => setSeekToTime(value[0]);
 
-  // Robust skipTime that always reads the latest state
   const skipTime = (amount: number) => {
     const state = useVideoStore.getState();
     const newTime = Math.max(0, Math.min(state.currentTime + amount, state.duration));
     state.setSeekToTime(newTime);
   };
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Do not intercept if user is typing
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      if (e.key === ',' || e.key === '<') {
-        skipTime(-1 / 30);
-      } else if (e.key === '.' || e.key === '>') {
-        skipTime(1 / 30);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
 
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey) {

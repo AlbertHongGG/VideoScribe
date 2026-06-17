@@ -62,6 +62,52 @@ export const VideoPlayer: React.FC = () => {
     }
   }, [currentTime, memoizedResults]);
 
+  const lastSyncTime = useRef(0);
+
+  // 3. Handle global hotkeys for smooth frame-by-frame scrubbing directly on the DOM
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (!videoRef.current) return;
+
+      if (e.key === ',' || e.key === '<') {
+        const newTime = Math.max(0, videoRef.current.currentTime - 1 / 30);
+        videoRef.current.currentTime = newTime;
+        
+        // Throttle React state updates to 10fps (every 100ms) during rapid scrubbing
+        const now = performance.now();
+        if (now - lastSyncTime.current > 100) {
+          setCurrentTime(newTime);
+          lastSyncTime.current = now;
+        }
+      } else if (e.key === '.' || e.key === '>') {
+        const newTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 1 / 30);
+        videoRef.current.currentTime = newTime;
+        
+        const now = performance.now();
+        if (now - lastSyncTime.current > 100) {
+          setCurrentTime(newTime);
+          lastSyncTime.current = now;
+        }
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') {
+        if (videoRef.current) {
+          setCurrentTime(videoRef.current.currentTime); // Perfect sync on release
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [setCurrentTime]);
+
   const handleTimeUpdate = () => {
     if (videoRef.current && isPlaying) {
       setCurrentTime(videoRef.current.currentTime);
