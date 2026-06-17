@@ -37,48 +37,45 @@ export const Select: React.FC<SelectProps> = ({ options, value, onChange, placeh
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between px-5 py-3.5 bg-black/60 rounded-xl font-medium text-white transition-all cursor-pointer 
-        ${isOpen 
-          ? "border-[#facc15] ring-1 ring-[#facc15]/50 shadow-[0_0_15px_rgba(250,204,21,0.2)]" 
-          : "border-white/10 hover:border-[#facc15]/50 hover:bg-black/80"} 
-        border outline-none`}
+        className={`w-full flex items-center justify-between px-4 py-3 bg-[#1a1a1a] border rounded-xl text-sm font-medium transition-all outline-none 
+        ${isOpen ? 'ring-1 ring-[#facc15]/50 border-[#facc15]/50 text-white shadow-[0_0_15px_rgba(250,204,21,0.1)]' : 'border-white/10 text-gray-200 hover:bg-[#222222] hover:border-white/20'}`}
       >
         <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          <ChevronDown size={18} className="text-gray-400" />
+        <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+          <ChevronDown size={16} className={isOpen ? "text-[#facc15]" : "text-gray-400"} />
         </motion.div>
       </button>
 
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute z-50 w-full mt-2 bg-[#1e1e1e]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden"
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="absolute z-[100] w-full mt-2 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden"
           >
-            <div className="max-h-60 overflow-y-auto custom-scrollbar flex flex-col py-1">
-              {options.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => {
-                    onChange(option.value);
-                    setIsOpen(false);
-                  }}
-                  className={`w-full text-left px-5 py-3 text-sm transition-colors
-                  ${value === option.value 
-                    ? "bg-[#facc15]/10 text-[#facc15] font-semibold border-l-2 border-[#facc15]" 
-                    : "text-gray-300 hover:bg-white/5 hover:text-white border-l-2 border-transparent"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
+            <div className="max-h-60 overflow-y-auto custom-scrollbar flex flex-col p-1.5 gap-0.5">
+              {options.map((option) => {
+                const isSelected = value === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      onChange(option.value);
+                      setIsOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors
+                    ${isSelected 
+                      ? "bg-[#facc15]/10 text-[#facc15] font-semibold" 
+                      : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
             </div>
           </motion.div>
         )}
