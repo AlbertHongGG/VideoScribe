@@ -14,6 +14,7 @@ export const VideoPlayer: React.FC = () => {
     currentTime, 
     volume,
     seekToTime,
+    playbackRate,
     setIsPlaying, 
     setCurrentTime,
     setDuration,
@@ -84,6 +85,12 @@ export const VideoPlayer: React.FC = () => {
     }
   }, [volume]);
 
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.playbackRate = playbackRate;
+    }
+  }, [playbackRate]);
+
   // 1. Handle explicit user seeks directly and instantly without latency.
   useEffect(() => {
     if (videoRef.current && seekToTime !== null) {
@@ -113,6 +120,53 @@ export const VideoPlayer: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (!videoRef.current) return;
+
+      const state = useVideoStore.getState();
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setIsPlaying(!state.isPlaying);
+        return;
+      }
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const newTime = Math.max(0, videoRef.current.currentTime - 1);
+        videoRef.current.currentTime = newTime;
+        setCurrentTime(newTime);
+        return;
+      }
+
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const newTime = Math.min(state.duration, videoRef.current.currentTime + 1);
+        videoRef.current.currentTime = newTime;
+        setCurrentTime(newTime);
+        return;
+      }
+
+      if (e.key === 'a' || e.key === 'A') {
+        const newRate = Math.max(0.1, state.playbackRate - 0.1);
+        state.setPlaybackRate(Number(newRate.toFixed(1)));
+        return;
+      }
+
+      if (e.key === 'd' || e.key === 'D') {
+        const newRate = Math.min(16.0, state.playbackRate + 0.1);
+        state.setPlaybackRate(Number(newRate.toFixed(1)));
+        return;
+      }
+
+      // We only toggle on keydown once, so we ignore repeat events for 's'
+      if ((e.key === 's' || e.key === 'S') && !e.repeat) {
+        if (state.playbackRate !== 1) {
+          state.setPreviousPlaybackRate(state.playbackRate);
+          state.setPlaybackRate(1);
+        } else {
+          state.setPlaybackRate(state.previousPlaybackRate);
+        }
+        return;
+      }
 
       if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') {
         // Automatically pause video when scrubbing frame-by-frame

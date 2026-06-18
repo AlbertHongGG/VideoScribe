@@ -10,6 +10,7 @@ export const VideoControls: React.FC = () => {
     currentTime, 
     duration, 
     volume,
+    playbackRate,
     setIsPlaying, 
     setCurrentTime,
     setVolume,
@@ -95,8 +96,15 @@ export const VideoControls: React.FC = () => {
           </button>
         </div>
 
-        {/* Right: Volume Control */}
-        <div className="w-1/3 flex justify-end">
+        {/* Right: Volume Control & Speed */}
+        <div className="w-1/3 flex justify-end items-center gap-3">
+          {/* Speed Display */}
+          {playbackRate !== 1 && (
+            <div className="text-[10px] font-mono text-[#facc15] bg-[#facc15]/10 px-1.5 py-0.5 rounded cursor-default border border-[#facc15]/20">
+              {playbackRate}x
+            </div>
+          )}
+          
           <div className="flex items-center gap-2 w-24 group/vol">
             <button 
               onClick={() => setVolume(volume === 0 ? 1 : 0)}
