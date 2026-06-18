@@ -2,12 +2,14 @@ import React, { useEffect, useRef } from "react";
 import { useVideoStore } from "../../store/videoStore";
 import { useSTTStore } from "../../store/sttStore";
 import { formatTime } from "../../utils/time";
-import { Play, AudioLines } from "lucide-react";
+import { Play, AudioLines, Copy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNotifyStore } from "../../store/notifyStore";
 
 export const STTPanel: React.FC = () => {
   const { isPanelOpen, results, status, progress } = useSTTStore();
   const { currentTime, setSeekToTime, setIsPlaying } = useVideoStore();
+  const { show } = useNotifyStore();
   
   const containerRef = useRef<HTMLDivElement>(null);
   const activeItemRef = useRef<HTMLDivElement>(null);
@@ -31,6 +33,16 @@ export const STTPanel: React.FC = () => {
   const handleSeek = (time: number) => {
     setSeekToTime(time);
     setIsPlaying(true);
+  };
+
+  const handleCopy = (e: React.MouseEvent, text: string) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text).then(() => {
+      show("Copied to clipboard", "success");
+    }).catch((err) => {
+      console.error("Failed to copy text: ", err);
+      show("Failed to copy", "error");
+    });
   };
 
   return (
@@ -102,10 +114,19 @@ export const STTPanel: React.FC = () => {
                             {formatTime(result.start)}
                           </span>
                           <div className={`flex-1 h-px ${isActive ? "bg-gradient-to-r from-[#facc15]/50 to-transparent" : "bg-white/5"}`}></div>
-                          <Play 
-                            size={14} 
-                            className={`opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? "text-[#facc15] opacity-100" : "text-gray-400"}`} 
-                          />
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={(e) => handleCopy(e, result.text)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-500 hover:text-white"
+                              title="Copy text"
+                            >
+                              <Copy size={13} />
+                            </button>
+                            <Play 
+                              size={14} 
+                              className={`opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? "text-[#facc15] opacity-100" : "text-gray-400"}`} 
+                            />
+                          </div>
                         </div>
                         
                         <p className={`text-sm leading-relaxed ${isActive ? "text-white font-medium" : "text-gray-400 group-hover:text-gray-200"}`}>

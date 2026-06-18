@@ -264,7 +264,7 @@ export const VideoPlayer: React.FC = () => {
                   style={{ bottom: `${baseBottomDistance}px` }}
                 >
                   <div className="bg-black/40 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.5)] max-w-4xl pointer-events-auto">
-                    <p className="text-[#facc15] font-medium text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center leading-relaxed tracking-wide">
+                    <p className="text-white font-medium text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center leading-relaxed tracking-wide">
                       {currentSubtitle}
                     </p>
                   </div>
