@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Select } from "../ui/Select";
+import { useSTTStore } from "../../store/sttStore";
+import { emit, listen } from "@tauri-apps/api/event";
 
 const MODEL_OPTIONS = [
   { value: "tiny", label: "Tiny (Fastest, least accurate)" },
@@ -20,6 +22,7 @@ export const SettingsPanel: React.FC = () => {
   const [model, setModel] = useState("medium");
   const [language, setLanguage] = useState("auto");
   const [showSubtitles, setShowSubtitles] = useState(true);
+  const { enableDictionary, setEnableDictionary } = useSTTStore();
 
   return (
     <div className="w-full h-full p-8 text-white overflow-y-auto custom-scrollbar bg-[#0f0f0f]">
@@ -69,6 +72,26 @@ export const SettingsPanel: React.FC = () => {
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none ${showSubtitles ? 'bg-[#facc15] shadow-[0_0_15px_rgba(250,204,21,0.3)]' : 'bg-gray-600'}`}
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showSubtitles ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            <div className="h-px bg-white/5 w-full my-6"></div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-gray-300">Japanese Dictionary Hover</label>
+                <p className="text-xs text-gray-500 mt-1">Hover over Japanese subtitles to see readings and definitions</p>
+              </div>
+              
+              <button 
+                onClick={async () => {
+                  const newValue = !enableDictionary;
+                  setEnableDictionary(newValue);
+                  await emit("setting-changed", { key: "enableDictionary", value: newValue });
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none ${enableDictionary ? 'bg-[#facc15] shadow-[0_0_15px_rgba(250,204,21,0.3)]' : 'bg-gray-600'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enableDictionary ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
           </section>

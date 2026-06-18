@@ -4,7 +4,23 @@ import { Dropzone } from "./components/ui/Dropzone";
 import { VideoPlayer } from "./components/player/VideoPlayer";
 import { STTPanel } from "./components/stt/STTPanel";
 
+import { useEffect } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { useSTTStore } from "./store/sttStore";
+
 function App() {
+  useEffect(() => {
+    const unlisten = listen("setting-changed", (event: any) => {
+      const { key, value } = event.payload;
+      if (key === "enableDictionary") {
+        useSTTStore.getState().setEnableDictionary(value);
+      }
+    });
+
+    return () => {
+      unlisten.then(f => f());
+    };
+  }, []);
   return (
     <div className="flex w-screen h-screen bg-transparent text-white overflow-hidden rounded-lg relative">
       <TitleBar />

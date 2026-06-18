@@ -26,7 +26,7 @@ export const VideoPlayer: React.FC = () => {
     setIsFullscreen
   } = useVideoStore();
 
-  const { results, language } = useSTTStore();
+  const { results, language, enableDictionary } = useSTTStore();
   const [currentSubtitle, setCurrentSubtitle] = useState<string | null>(null);
   
   const [hoverText, setHoverText] = useState<{ text: string; x: number; y: number; startIndex: number } | null>(null);
@@ -309,7 +309,7 @@ export const VideoPlayer: React.FC = () => {
                     }}
                   >
                     <p className="text-white font-medium text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center leading-relaxed tracking-wide flex flex-wrap justify-center">
-                      {language === "ja" ? (
+                      {language === "ja" && enableDictionary ? (
                         Array.from(currentSubtitle).map((char, i) => (
                           <span
                             key={i}

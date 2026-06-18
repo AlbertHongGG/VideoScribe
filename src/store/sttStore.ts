@@ -11,6 +11,7 @@ type STTStatus = 'idle' | 'loading_model' | 'transcribing' | 'completed' | 'erro
 interface STTStore {
   isPanelOpen: boolean;
   language: string | null;
+  enableDictionary: boolean;
   status: STTStatus;
   progress: number;
   results: STTResult[];
@@ -19,6 +20,7 @@ interface STTStore {
   togglePanel: () => void;
   setPanelOpen: (isOpen: boolean) => void;
   setLanguage: (language: string | null) => void;
+  setEnableDictionary: (enable: boolean) => void;
   setStatus: (status: STTStatus, progress?: number) => void;
   setResults: (results: STTResult[]) => void;
   appendResultToBuffer: (result: STTResult) => void;
@@ -29,6 +31,7 @@ interface STTStore {
 export const useSTTStore = create<STTStore>((set) => ({
   isPanelOpen: false,
   language: null,
+  enableDictionary: false,
   status: 'idle',
   progress: 0,
   results: [],
@@ -37,6 +40,7 @@ export const useSTTStore = create<STTStore>((set) => ({
   togglePanel: () => set((state) => ({ isPanelOpen: !state.isPanelOpen })),
   setPanelOpen: (isOpen) => set({ isPanelOpen: isOpen }),
   setLanguage: (language) => set({ language }),
+  setEnableDictionary: (enable) => set({ enableDictionary: enable }),
   setStatus: (status, progress = 0) => set({ status, progress }),
   setResults: (results) => set({ results, _buffer: [...results] }),
   
