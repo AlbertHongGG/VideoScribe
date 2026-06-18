@@ -116,7 +116,7 @@ export const STTPanel: React.FC = () => {
               <div className="absolute inset-0 bg-[#121212]/80 backdrop-blur-md z-10 flex flex-col items-center justify-center p-8 text-center">
                 <div className="relative mb-6">
                   <div className="w-16 h-16 rounded-full border-4 border-white/5 absolute inset-0" />
-                  <div className="w-16 h-16 rounded-full border-4 border-t-emerald-400 border-r-transparent border-b-transparent border-l-transparent animate-spin" />
+                  <div className="w-16 h-16 rounded-full border-4 border-t-[#facc15] border-r-transparent border-b-transparent border-l-transparent animate-spin" />
                 </div>
                 <p className="text-white font-bold text-sm mb-3 tracking-widest drop-shadow-md">TRANSLATING SUBTITLES</p>
                 
@@ -124,7 +124,7 @@ export const STTPanel: React.FC = () => {
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${translationProgress}%` }}
-                    className="h-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)] relative overflow-hidden transition-all duration-300"
+                    className="h-full bg-[#facc15] shadow-[0_0_10px_rgba(250,204,21,0.5)] relative overflow-hidden transition-all duration-300"
                   />
                 </div>
               </div>
@@ -176,7 +176,7 @@ export const STTPanel: React.FC = () => {
                             {result.text}
                           </p>
                           {result.translation && (
-                            <p className={`text-xs leading-relaxed ${isActive ? "text-emerald-400/90" : "text-emerald-500/60 group-hover:text-emerald-400/80"}`}>
+                            <p className={`text-xs leading-relaxed ${isActive ? "text-[#facc15]" : "text-[#facc15]/60 group-hover:text-[#facc15]/80"}`}>
                               {result.translation}
                             </p>
                           )}

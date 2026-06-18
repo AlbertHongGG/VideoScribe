@@ -19,11 +19,11 @@ const LANGUAGE_OPTIONS = [
 ];
 
 const TRANSLATION_LANGUAGES = [
-  { value: "zh-TW", label: "Traditional Chinese (繁體中文)" },
-  { value: "zh-CN", label: "Simplified Chinese (简体中文)" },
+  { value: "zh-TW", label: "繁體中文" },
+  { value: "zh-CN", label: "简体中文" },
   { value: "en", label: "English" },
-  { value: "ja", label: "Japanese (日本語)" },
-  { value: "ko", label: "Korean (한국어)" },
+  { value: "ja", label: "日本語" },
+  { value: "ko", label: "한국어" },
 ];
 
 export const SettingsPanel: React.FC = () => {

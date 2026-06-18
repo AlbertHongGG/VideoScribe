@@ -342,7 +342,7 @@ export const VideoPlayer: React.FC = () => {
                       </p>
                       
                       {currentTranslation && (
-                        <p className="text-emerald-300 font-medium text-lg drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center leading-relaxed tracking-wide mt-1">
+                        <p className="text-[#facc15] font-medium text-lg drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center leading-relaxed tracking-wide mt-1">
                           {currentTranslation}
                         </p>
                       )}

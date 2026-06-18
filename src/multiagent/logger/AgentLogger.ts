@@ -1,19 +1,10 @@
-import { writeTextFile, mkdir, exists } from '@tauri-apps/plugin-fs';
-import { appLogDir } from '@tauri-apps/api/path';
+import { invoke } from '@tauri-apps/api/core';
 
 export class AgentLogger {
   constructor(private name: string) {}
 
   private async writeLog(level: string, message: string, data?: any) {
     try {
-      const logDir = await appLogDir();
-      
-      // Ensure directory exists
-      const dirExists = await exists(logDir);
-      if (!dirExists) {
-        await mkdir(logDir, { recursive: true });
-      }
-
       const now = new Date();
       
       // Format YYYYMMDD_HHMMSS
@@ -29,7 +20,6 @@ export class AgentLogger {
       const randomId = Math.random().toString(36).substring(2, 8);
       
       const fileName = `${this.name}_${timestamp}_${randomId}.json`;
-      const filePath = `${logDir}\\${fileName}`; // Windows uses backslash
 
       const logEntry = {
         agentName: this.name,
@@ -39,8 +29,11 @@ export class AgentLogger {
         ...data
       };
 
-      await writeTextFile(filePath, JSON.stringify(logEntry, null, 2));
-      console.log(`[${this.name}] Wrote log to ${filePath}`);
+      await invoke('save_agent_log', {
+        filename: fileName,
+        content: JSON.stringify(logEntry, null, 2)
+      });
+      
     } catch (err) {
       console.error(`[${this.name}] Failed to write log to file:`, err);
     }
