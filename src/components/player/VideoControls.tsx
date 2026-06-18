@@ -78,7 +78,7 @@ export const VideoControls: React.FC = () => {
           
           <button 
             onClick={handlePlayPause}
-            className="text-white/90 hover:text-[#facc15] transition-colors flex items-center justify-center focus:outline-none mx-2"
+            className="w-8 h-8 text-white/90 hover:text-[#facc15] transition-colors flex items-center justify-center focus:outline-none mx-1"
             title={isPlaying ? "Pause" : "Play"}
           >
             {isPlaying ? (

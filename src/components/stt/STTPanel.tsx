@@ -13,6 +13,20 @@ export const STTPanel: React.FC = () => {
   
   const containerRef = useRef<HTMLDivElement>(null);
   const activeItemRef = useRef<HTMLDivElement>(null);
+  const savedScrollPosition = useRef(0);
+
+  // Restore scroll position when panel opens
+  useEffect(() => {
+    if (isPanelOpen && containerRef.current) {
+      // Need a small timeout to ensure DOM is ready and width animation started, 
+      // though immediately setting it often works if we set it without smooth behavior.
+      containerRef.current.scrollTop = savedScrollPosition.current;
+    }
+  }, [isPanelOpen]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    savedScrollPosition.current = e.currentTarget.scrollTop;
+  };
 
   useEffect(() => {
     if (activeItemRef.current && containerRef.current) {
@@ -28,7 +42,7 @@ export const STTPanel: React.FC = () => {
         item.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }
-  }, [currentTime, isPanelOpen]);
+  }, [currentTime]);
 
   const handleSeek = (time: number) => {
     setSeekToTime(time);
@@ -91,6 +105,7 @@ export const STTPanel: React.FC = () => {
 
             <div 
               ref={containerRef}
+              onScroll={handleScroll}
               className="flex-1 overflow-y-auto custom-scrollbar p-4"
             >
               {results.length > 0 ? (
