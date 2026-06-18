@@ -2,9 +2,10 @@ import React, { useEffect, useRef } from "react";
 import { useVideoStore } from "../../store/videoStore";
 import { useSTTStore } from "../../store/sttStore";
 import { formatTime } from "../../utils/time";
-import { Play, AudioLines, Copy } from "lucide-react";
+import { Play, AudioLines, Copy, Download, Upload } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNotifyStore } from "../../store/notifyStore";
+import { SubtitleIOService } from "../../services/subtitleIOService";
 
 export const STTPanel: React.FC = () => {
   const { isPanelOpen, results, status, progress, translationStatus, translationProgress } = useSTTStore();
@@ -87,6 +88,25 @@ export const STTPanel: React.FC = () => {
                 <span className="text-xs text-[#facc15] font-mono font-bold tracking-wider">
                   {translationProgress}%
                 </span>
+              </div>
+            )}
+            
+            {(status === "idle" || (status === "completed" && translationStatus !== "translating")) && (
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => SubtitleIOService.importSubtitles()}
+                  className="text-gray-400 hover:text-[#facc15] transition-colors p-1"
+                  title="Import Subtitles"
+                >
+                  <Download size={16} />
+                </button>
+                <button 
+                  onClick={() => SubtitleIOService.exportSubtitles()}
+                  className="text-gray-400 hover:text-[#facc15] transition-colors p-1"
+                  title="Export Subtitles"
+                >
+                  <Upload size={16} />
+                </button>
               </div>
             )}
           </div>
