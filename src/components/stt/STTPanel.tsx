@@ -6,6 +6,7 @@ import { Play, AudioLines, Copy, Download, Upload } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNotifyStore } from "../../store/notifyStore";
 import { SubtitleIOService } from "../../services/subtitleIOService";
+import { Tooltip } from "../ui/Tooltip";
 
 export const STTPanel: React.FC = () => {
   const { isPanelOpen, results, status, progress, translationStatus, translationProgress } = useSTTStore();
@@ -93,20 +94,22 @@ export const STTPanel: React.FC = () => {
             
             {(status === "idle" || (status === "completed" && translationStatus !== "translating")) && (
               <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => SubtitleIOService.importSubtitles()}
-                  className="text-gray-400 hover:text-[#facc15] transition-colors p-1"
-                  title="Import Subtitles"
-                >
-                  <Download size={16} />
-                </button>
-                <button 
-                  onClick={() => SubtitleIOService.exportSubtitles()}
-                  className="text-gray-400 hover:text-[#facc15] transition-colors p-1"
-                  title="Export Subtitles"
-                >
-                  <Upload size={16} />
-                </button>
+                <Tooltip content="Import Subtitles" position="bottom">
+                  <button 
+                    onClick={() => SubtitleIOService.importSubtitles()}
+                    className="text-gray-400 hover:text-[#facc15] transition-colors p-1"
+                  >
+                    <Download size={16} />
+                  </button>
+                </Tooltip>
+                <Tooltip content="Export Subtitles" position="bottom">
+                  <button 
+                    onClick={() => SubtitleIOService.exportSubtitles()}
+                    className="text-gray-400 hover:text-[#facc15] transition-colors p-1"
+                  >
+                    <Upload size={16} />
+                  </button>
+                </Tooltip>
               </div>
             )}
           </div>

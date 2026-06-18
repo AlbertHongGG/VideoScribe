@@ -1,7 +1,7 @@
 import { useSTTStore, STTResult } from '../store/sttStore';
 import { useNotifyStore } from '../store/notifyStore';
-import { TranslatorAgent, SubtitleSegment } from '../multiagent/agents/TranslatorAgent';
-import { OllamaProvider } from '../multiagent/providers/OllamaProvider';
+import { SubtitleSegment, TranslatorAgent } from '../multiagent/agents/TranslatorAgent';
+import { AgentFactory } from '../multiagent/agents/AgentFactory';
 
 export class TranslationService {
   static async startTranslation() {
@@ -21,9 +21,8 @@ export class TranslationService {
     notifyStore.show("Starting Dual Subtitle Translation...", "info");
 
     try {
-      // Setup the agent
-      const provider = new OllamaProvider('qwen3.6:35b', 'https://lacresha-posological-steven.ngrok-free.dev');
-      const agent = new TranslatorAgent(provider);
+      // Setup the agent via Factory
+      const agent = AgentFactory.createAgent('translator') as TranslatorAgent;
       
       const targetLanguage = sttStore.targetLanguage;
       
