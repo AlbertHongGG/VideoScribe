@@ -4,10 +4,12 @@ import { useSTTStore } from "../../store/sttStore";
 import { VideoControls } from "./VideoControls";
 import { Upload } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export const VideoPlayer: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const playerWrapperRef = useRef<HTMLDivElement>(null);
   const { 
     videoUrl, 
     isPlaying, 
@@ -15,10 +17,12 @@ export const VideoPlayer: React.FC = () => {
     volume,
     seekToTime,
     playbackRate,
+    isFullscreen,
     setIsPlaying, 
     setCurrentTime,
     setDuration,
-    setSeekToTime
+    setSeekToTime,
+    setIsFullscreen
   } = useVideoStore();
 
   const { results } = useSTTStore();
@@ -122,6 +126,23 @@ export const VideoPlayer: React.FC = () => {
       if (!videoRef.current) return;
 
       const state = useVideoStore.getState();
+
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const appWindow = getCurrentWindow();
+        const newState = !state.isFullscreen;
+        appWindow.setFullscreen(newState).catch(console.error);
+        state.setIsFullscreen(newState);
+        return;
+      }
+
+      if (e.key === 'Escape' && state.isFullscreen) {
+        e.preventDefault();
+        const appWindow = getCurrentWindow();
+        appWindow.setFullscreen(false).catch(console.error);
+        state.setIsFullscreen(false);
+        return;
+      }
 
       if (e.code === 'Space') {
         e.preventDefault();
@@ -239,7 +260,7 @@ export const VideoPlayer: React.FC = () => {
   const baseBottomDistance = videoLayout.containerHeight === 0 ? 32 : distanceFromContainerBottom + 32;
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#0a0a0a] overflow-hidden">
+    <div ref={playerWrapperRef} className={isFullscreen ? "fixed inset-0 z-[9999] bg-[#0a0a0a] flex flex-col overflow-hidden" : "w-full h-full flex flex-col bg-[#0a0a0a] overflow-hidden"}>
       {videoUrl ? (
         <>
           <div ref={containerRef} className="flex-1 min-h-0 relative w-full flex flex-col bg-black">
@@ -273,9 +294,17 @@ export const VideoPlayer: React.FC = () => {
             </AnimatePresence>
           </div>
 
-          <div className="shrink-0 z-40 bg-black">
-            <VideoControls />
-          </div>
+          {isFullscreen ? (
+            <div className="absolute bottom-0 left-0 w-full h-[150px] z-50 flex flex-col justify-end overflow-hidden group/controls">
+              <div className="transform translate-y-full group-hover/controls:translate-y-0 transition-transform duration-300 ease-out">
+                <VideoControls />
+              </div>
+            </div>
+          ) : (
+            <div className="shrink-0 z-40 bg-black">
+              <VideoControls />
+            </div>
+          )}
         </>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-b from-transparent to-black/40">

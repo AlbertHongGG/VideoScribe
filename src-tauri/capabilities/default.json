@@ -16,6 +16,7 @@
     "core:window:allow-close",
     "core:window:allow-is-maximized",
     "core:window:allow-toggle-maximize",
+    "core:window:allow-set-fullscreen",
     "core:event:default",
     "opener:default",
     "dialog:default",

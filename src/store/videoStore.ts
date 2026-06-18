@@ -11,6 +11,7 @@ interface VideoStore {
   playbackRate: number;
   previousPlaybackRate: number;
   seekToTime: number | null;
+  isFullscreen: boolean;
   
   setVideo: (file: File | null, url: string | null, path: string | null) => void;
   setIsPlaying: (isPlaying: boolean) => void;
@@ -20,6 +21,7 @@ interface VideoStore {
   setPlaybackRate: (rate: number) => void;
   setPreviousPlaybackRate: (rate: number) => void;
   setSeekToTime: (time: number | null) => void;
+  setIsFullscreen: (isFullscreen: boolean) => void;
   reset: () => void;
 }
 
@@ -34,6 +36,7 @@ export const useVideoStore = create<VideoStore>((set) => ({
   playbackRate: 1,
   previousPlaybackRate: 1,
   seekToTime: null,
+  isFullscreen: false,
 
   setVideo: (file, url, path) => set({ videoFile: file, videoUrl: url, videoPath: path, currentTime: 0, isPlaying: false, seekToTime: null, playbackRate: 1 }),
   setIsPlaying: (isPlaying) => set({ isPlaying }),
@@ -43,5 +46,6 @@ export const useVideoStore = create<VideoStore>((set) => ({
   setPlaybackRate: (playbackRate) => set({ playbackRate }),
   setPreviousPlaybackRate: (previousPlaybackRate) => set({ previousPlaybackRate }),
   setSeekToTime: (seekToTime) => set({ seekToTime }),
-  reset: () => set({ videoFile: null, videoUrl: null, videoPath: null, isPlaying: false, currentTime: 0, duration: 0, seekToTime: null, playbackRate: 1 }),
+  setIsFullscreen: (isFullscreen) => set({ isFullscreen }),
+  reset: () => set({ videoFile: null, videoUrl: null, videoPath: null, isPlaying: false, currentTime: 0, duration: 0, seekToTime: null, playbackRate: 1, isFullscreen: false }),
 }));
