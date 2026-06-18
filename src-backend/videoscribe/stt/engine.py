@@ -50,6 +50,9 @@ class STTEngine:
             print(f"Detected language: {info.language} with probability {info.language_probability:.2f}", file=sys.stderr)
             print(f"Total duration: {info.duration}s", file=sys.stderr)
             
+            print(json.dumps({"type": "language", "language": info.language}), flush=True)
+
+            
             for segment in segments:
                 # Extract precise vocal boundaries from word-level timestamps
                 start_time = float(segment.words[0].start) if segment.words else float(segment.start)

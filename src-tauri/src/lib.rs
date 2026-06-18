@@ -1,10 +1,21 @@
 use std::process::{Command, Stdio};
 use std::io::{BufRead, BufReader};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, State, Manager};
+use std::sync::Mutex;
+use std::path::PathBuf;
+
+pub mod dictionary;
+use dictionary::{DictionaryState, LookupResult};
 
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+#[tauri::command]
+fn lookup_word(text: String, state: State<'_, Mutex<DictionaryState>>) -> Result<LookupResult, String> {
+    let dict = state.lock().map_err(|e| e.to_string())?;
+    dict.lookup(&text)
 }
 
 #[tauri::command]
@@ -61,10 +72,31 @@ async fn run_stt(app: AppHandle, video_path: String, model_size: String) -> Resu
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            let resource_dir = app.path().resource_dir().unwrap_or_else(|_| PathBuf::from("."));
+            let db_path = resource_dir.join("jmdict.db");
+            
+            // Fallback for dev environment if resource_dir doesn't have it
+            let actual_db_path = if db_path.exists() {
+                db_path
+            } else {
+                PathBuf::from("jmdict.db")
+            };
+
+            match DictionaryState::new(actual_db_path) {
+                Ok(state) => {
+                    app.manage(Mutex::new(state));
+                }
+                Err(e) => {
+                    eprintln!("Failed to initialize dictionary: {}", e);
+                }
+            }
+            Ok(())
+        })
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, run_stt])
+        .invoke_handler(tauri::generate_handler![greet, run_stt, lookup_word])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -11,6 +11,7 @@ export class STTService {
     const sttStore = useSTTStore.getState();
     const notifyStore = useNotifyStore.getState();
 
+    sttStore.setLanguage(null);
     sttStore.setResults([]);
     sttStore.setStatus("loading_model", 0);
     notifyStore.show("Starting Speech-to-Text process...", "info");
@@ -39,6 +40,8 @@ export class STTService {
             }
           } else if (data.type === "result") {
             currentStore.appendResultToBuffer({ start: data.start, end: data.end, text: data.text });
+          } else if (data.type === "language") {
+            currentStore.setLanguage(data.language);
           } else if (data.type === "error") {
             this.cleanup();
             currentStore.setStatus("error");

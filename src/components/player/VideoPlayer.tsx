@@ -5,6 +5,7 @@ import { VideoControls } from "./VideoControls";
 import { Upload } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { DictionaryTooltip } from "../stt/DictionaryTooltip";
 
 export const VideoPlayer: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -25,8 +26,11 @@ export const VideoPlayer: React.FC = () => {
     setIsFullscreen
   } = useVideoStore();
 
-  const { results } = useSTTStore();
+  const { results, language } = useSTTStore();
   const [currentSubtitle, setCurrentSubtitle] = useState<string | null>(null);
+  
+  const [hoverText, setHoverText] = useState<{ text: string; x: number; y: number } | null>(null);
+  const hoverTimeoutRef = useRef<number | null>(null);
 
   const [videoLayout, setVideoLayout] = useState({
     containerHeight: 0,
@@ -274,6 +278,20 @@ export const VideoPlayer: React.FC = () => {
               onClick={() => setIsPlaying(!isPlaying)}
             />
             
+            {hoverText && (
+              <DictionaryTooltip
+                text={hoverText.text}
+                x={hoverText.x}
+                y={hoverText.y}
+                onMouseEnter={() => {
+                  if (hoverTimeoutRef.current) window.clearTimeout(hoverTimeoutRef.current);
+                }}
+                onMouseLeave={() => {
+                  hoverTimeoutRef.current = window.setTimeout(() => setHoverText(null), 150);
+                }}
+              />
+            )}
+            
             <AnimatePresence>
               {currentSubtitle && (
                 <motion.div 
@@ -284,9 +302,34 @@ export const VideoPlayer: React.FC = () => {
                   className="absolute left-0 w-full flex justify-center pointer-events-none px-12 transition-all duration-300 ease-out z-30"
                   style={{ bottom: `${baseBottomDistance}px` }}
                 >
-                  <div className="bg-black/40 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.5)] max-w-4xl pointer-events-auto">
-                    <p className="text-white font-medium text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center leading-relaxed tracking-wide">
-                      {currentSubtitle}
+                  <div 
+                    className="bg-black/40 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.5)] max-w-4xl pointer-events-auto"
+                    onMouseLeave={() => {
+                      hoverTimeoutRef.current = window.setTimeout(() => setHoverText(null), 150);
+                    }}
+                  >
+                    <p className="text-white font-medium text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center leading-relaxed tracking-wide flex flex-wrap justify-center">
+                      {language === "ja" ? (
+                        Array.from(currentSubtitle).map((char, i) => (
+                          <span
+                            key={i}
+                            className="hover:text-yellow-400 hover:bg-white/10 rounded px-px cursor-pointer transition-colors"
+                            onMouseEnter={(e) => {
+                              if (hoverTimeoutRef.current) window.clearTimeout(hoverTimeoutRef.current);
+                              const textToLookup = Array.from(currentSubtitle).slice(i, i + 15).join('');
+                              setHoverText({
+                                text: textToLookup,
+                                x: e.clientX,
+                                y: e.clientY
+                              });
+                            }}
+                          >
+                            {char}
+                          </span>
+                        ))
+                      ) : (
+                        currentSubtitle
+                      )}
                     </p>
                   </div>
                 </motion.div>
