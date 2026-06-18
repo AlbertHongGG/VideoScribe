@@ -18,6 +18,12 @@ function App() {
         useSTTStore.getState().setEnableTranslation(value);
       } else if (key === "targetLanguage") {
         useSTTStore.getState().setTargetLanguage(value);
+      } else if (key === "model") {
+        useSTTStore.getState().setModel(value);
+      } else if (key === "showSubtitles") {
+        useSTTStore.getState().setShowSubtitles(value);
+      } else if (key === "language") {
+        useSTTStore.getState().setLanguage(value);
       }
     });
 

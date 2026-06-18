@@ -26,7 +26,7 @@ export const VideoPlayer: React.FC = () => {
     setIsFullscreen
   } = useVideoStore();
 
-  const { results, language, enableDictionary } = useSTTStore();
+  const { results, language, enableDictionary, showSubtitles } = useSTTStore();
   const [currentSubtitle, setCurrentSubtitle] = useState<string | null>(null);
   const [currentTranslation, setCurrentTranslation] = useState<string | null>(null);
   
@@ -296,7 +296,7 @@ export const VideoPlayer: React.FC = () => {
             )}
             
             <AnimatePresence>
-              {currentSubtitle && (
+              {showSubtitles && currentSubtitle && (
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}

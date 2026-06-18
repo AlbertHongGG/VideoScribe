@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export interface STTResult {
   start: number;
@@ -12,7 +13,9 @@ type TranslationStatus = 'idle' | 'translating' | 'completed' | 'error';
 
 interface STTStore {
   isPanelOpen: boolean;
+  model: string;
   language: string | null;
+  showSubtitles: boolean;
   enableDictionary: boolean;
   enableTranslation: boolean;
   targetLanguage: string;
@@ -25,7 +28,9 @@ interface STTStore {
   
   togglePanel: () => void;
   setPanelOpen: (isOpen: boolean) => void;
+  setModel: (model: string) => void;
   setLanguage: (language: string | null) => void;
+  setShowSubtitles: (show: boolean) => void;
   setEnableDictionary: (enable: boolean) => void;
   setEnableTranslation: (enable: boolean) => void;
   setTargetLanguage: (lang: string) => void;
@@ -37,10 +42,14 @@ interface STTStore {
   reset: () => void;
 }
 
-export const useSTTStore = create<STTStore>((set) => ({
-  isPanelOpen: false,
-  language: null,
-  enableDictionary: false,
+export const useSTTStore = create<STTStore>()(
+  persist(
+    (set) => ({
+      isPanelOpen: false,
+      model: 'medium',
+      language: 'auto',
+      showSubtitles: true,
+      enableDictionary: false,
   enableTranslation: false,
   targetLanguage: 'zh-TW',
   status: 'idle',
@@ -50,10 +59,12 @@ export const useSTTStore = create<STTStore>((set) => ({
   results: [],
   _buffer: [],
 
-  togglePanel: () => set((state) => ({ isPanelOpen: !state.isPanelOpen })),
-  setPanelOpen: (isOpen) => set({ isPanelOpen: isOpen }),
-  setLanguage: (language) => set({ language }),
-  setEnableDictionary: (enable) => set({ enableDictionary: enable }),
+      togglePanel: () => set((state) => ({ isPanelOpen: !state.isPanelOpen })),
+      setPanelOpen: (isOpen) => set({ isPanelOpen: isOpen }),
+      setModel: (model) => set({ model }),
+      setLanguage: (language) => set({ language }),
+      setShowSubtitles: (showSubtitles) => set({ showSubtitles }),
+      setEnableDictionary: (enable) => set({ enableDictionary: enable }),
   setEnableTranslation: (enable) => set({ enableTranslation: enable }),
   setTargetLanguage: (lang) => set({ targetLanguage: lang }),
   setStatus: (status, progress = 0) => set({ status, progress }),
@@ -67,13 +78,25 @@ export const useSTTStore = create<STTStore>((set) => ({
   // Flushes buffer to the main results array, causing components relying on `results` to update.
   commitResults: () => set((state) => ({ results: [...state._buffer] })),
   
-  reset: () => set({ 
-    status: 'idle', 
-    progress: 0, 
-    translationStatus: 'idle',
-    translationProgress: 0,
-    results: [], 
-    _buffer: [], 
-    language: null 
-  }),
-}));
+      reset: () => set({ 
+        status: 'idle', 
+        progress: 0, 
+        translationStatus: 'idle',
+        translationProgress: 0,
+        results: [], 
+        _buffer: [], 
+      }),
+    }),
+    {
+      name: 'stt-settings',
+      partialize: (state) => ({
+        model: state.model,
+        language: state.language,
+        showSubtitles: state.showSubtitles,
+        enableDictionary: state.enableDictionary,
+        enableTranslation: state.enableTranslation,
+        targetLanguage: state.targetLanguage,
+      }),
+    }
+  )
+);

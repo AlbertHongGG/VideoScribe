@@ -15,7 +15,7 @@ export const TitleBar: React.FC = () => {
   const appWindow = getCurrentWindow();
 
   const { videoUrl, setVideo } = useVideoStore();
-  const { isPanelOpen, togglePanel, status, setPanelOpen } = useSTTStore();
+  const { isPanelOpen, togglePanel, status, setPanelOpen, model } = useSTTStore();
   const { show } = useNotifyStore();
 
   useEffect(() => {
@@ -74,7 +74,7 @@ export const TitleBar: React.FC = () => {
     }
 
     setPanelOpen(true);
-    STTService.startSTT(path, "medium");
+    STTService.startSTT(path, model);
   };
 
   const handleOpenSettings = async () => {

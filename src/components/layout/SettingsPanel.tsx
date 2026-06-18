@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Select } from "../ui/Select";
 import { useSTTStore } from "../../store/sttStore";
 import { emit, listen } from "@tauri-apps/api/event";
@@ -27,10 +27,14 @@ const TRANSLATION_LANGUAGES = [
 ];
 
 export const SettingsPanel: React.FC = () => {
-  const [model, setModel] = useState("medium");
-  const [language, setLanguage] = useState("auto");
-  const [showSubtitles, setShowSubtitles] = useState(true);
-  const { enableDictionary, setEnableDictionary, enableTranslation, setEnableTranslation, targetLanguage, setTargetLanguage } = useSTTStore();
+  const { 
+    model, setModel, 
+    language, setLanguage, 
+    showSubtitles, setShowSubtitles,
+    enableDictionary, setEnableDictionary, 
+    enableTranslation, setEnableTranslation, 
+    targetLanguage, setTargetLanguage 
+  } = useSTTStore();
 
   return (
     <div className="w-full h-full p-8 text-white overflow-y-auto custom-scrollbar bg-[#0f0f0f]">
@@ -47,7 +51,10 @@ export const SettingsPanel: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:items-center">
                 <label className="text-sm font-medium text-gray-300">Model Size</label>
                 <div className="md:col-span-2">
-                  <Select options={MODEL_OPTIONS} value={model} onChange={setModel} />
+                  <Select options={MODEL_OPTIONS} value={model} onChange={async (val) => {
+                    setModel(val);
+                    await emit("setting-changed", { key: "model", value: val });
+                  }} />
                 </div>
               </div>
 
@@ -56,7 +63,10 @@ export const SettingsPanel: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:items-center">
                 <label className="text-sm font-medium text-gray-300">Language Detection</label>
                 <div className="md:col-span-2">
-                  <Select options={LANGUAGE_OPTIONS} value={language} onChange={setLanguage} />
+                  <Select options={LANGUAGE_OPTIONS} value={language || "auto"} onChange={async (val) => {
+                    setLanguage(val);
+                    await emit("setting-changed", { key: "language", value: val });
+                  }} />
                 </div>
               </div>
             </div>
@@ -76,7 +86,11 @@ export const SettingsPanel: React.FC = () => {
               </div>
               
               <button 
-                onClick={() => setShowSubtitles(!showSubtitles)}
+                onClick={async () => {
+                  const newValue = !showSubtitles;
+                  setShowSubtitles(newValue);
+                  await emit("setting-changed", { key: "showSubtitles", value: newValue });
+                }}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none ${showSubtitles ? 'bg-[#facc15] shadow-[0_0_15px_rgba(250,204,21,0.3)]' : 'bg-gray-600'}`}
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showSubtitles ? 'translate-x-6' : 'translate-x-1'}`} />
