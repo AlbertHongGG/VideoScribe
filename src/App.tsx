@@ -14,6 +14,10 @@ function App() {
       const { key, value } = event.payload;
       if (key === "enableDictionary") {
         useSTTStore.getState().setEnableDictionary(value);
+      } else if (key === "enableTranslation") {
+        useSTTStore.getState().setEnableTranslation(value);
+      } else if (key === "targetLanguage") {
+        useSTTStore.getState().setTargetLanguage(value);
       }
     });
 

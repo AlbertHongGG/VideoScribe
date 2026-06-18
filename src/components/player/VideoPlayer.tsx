@@ -28,6 +28,7 @@ export const VideoPlayer: React.FC = () => {
 
   const { results, language, enableDictionary } = useSTTStore();
   const [currentSubtitle, setCurrentSubtitle] = useState<string | null>(null);
+  const [currentTranslation, setCurrentTranslation] = useState<string | null>(null);
   
   const [hoverText, setHoverText] = useState<{ text: string; x: number; y: number; startIndex: number } | null>(null);
   const hoverTimeoutRef = useRef<number | null>(null);
@@ -114,8 +115,10 @@ export const VideoPlayer: React.FC = () => {
       // Opt: A linear scan here is okay for now as results length is usually < 1000
       const activeSubtitle = memoizedResults.find(r => currentTime >= r.start && currentTime <= r.end);
       setCurrentSubtitle(activeSubtitle ? activeSubtitle.text : null);
+      setCurrentTranslation(activeSubtitle && activeSubtitle.translation ? activeSubtitle.translation : null);
     } else {
       setCurrentSubtitle(null);
+      setCurrentTranslation(null);
     }
   }, [currentTime, memoizedResults]);
 
@@ -308,34 +311,42 @@ export const VideoPlayer: React.FC = () => {
                       hoverTimeoutRef.current = window.setTimeout(() => setHoverText(null), 150);
                     }}
                   >
-                    <p className="text-white font-medium text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center leading-relaxed tracking-wide flex flex-wrap justify-center">
-                      {language === "ja" && enableDictionary ? (
-                        Array.from(currentSubtitle).map((char, i) => (
-                          <span
-                            key={i}
-                            className={`rounded px-px cursor-pointer transition-colors ${
-                              hoverText?.startIndex === i 
-                                ? "text-yellow-400 bg-yellow-500/20" 
-                                : "hover:text-yellow-400 hover:bg-white/10"
-                            }`}
-                            onMouseEnter={(e) => {
-                              if (hoverTimeoutRef.current) window.clearTimeout(hoverTimeoutRef.current);
-                              const textToLookup = Array.from(currentSubtitle).slice(i, i + 15).join('');
-                              setHoverText({
-                                text: textToLookup,
-                                x: e.clientX,
-                                y: e.clientY,
-                                startIndex: i
-                              });
-                            }}
-                          >
-                            {char}
-                          </span>
-                        ))
-                      ) : (
-                        currentSubtitle
+                    <div className="flex flex-col items-center gap-1.5">
+                      <p className="text-white font-medium text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center leading-relaxed tracking-wide flex flex-wrap justify-center">
+                        {language === "ja" && enableDictionary ? (
+                          Array.from(currentSubtitle).map((char, i) => (
+                            <span
+                              key={i}
+                              className={`rounded px-px cursor-pointer transition-colors ${
+                                hoverText?.startIndex === i 
+                                  ? "text-yellow-400 bg-yellow-500/20" 
+                                  : "hover:text-yellow-400 hover:bg-white/10"
+                              }`}
+                              onMouseEnter={(e) => {
+                                if (hoverTimeoutRef.current) window.clearTimeout(hoverTimeoutRef.current);
+                                const textToLookup = Array.from(currentSubtitle).slice(i, i + 15).join('');
+                                setHoverText({
+                                  text: textToLookup,
+                                  x: e.clientX,
+                                  y: e.clientY,
+                                  startIndex: i
+                                });
+                              }}
+                            >
+                              {char}
+                            </span>
+                          ))
+                        ) : (
+                          currentSubtitle
+                        )}
+                      </p>
+                      
+                      {currentTranslation && (
+                        <p className="text-emerald-300 font-medium text-lg drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center leading-relaxed tracking-wide mt-1">
+                          {currentTranslation}
+                        </p>
                       )}
-                    </p>
+                    </div>
                   </div>
                 </motion.div>
               )}

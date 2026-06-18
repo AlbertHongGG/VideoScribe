@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNotifyStore } from "../../store/notifyStore";
 
 export const STTPanel: React.FC = () => {
-  const { isPanelOpen, results, status, progress } = useSTTStore();
+  const { isPanelOpen, results, status, progress, translationStatus, translationProgress } = useSTTStore();
   const { currentTime, setSeekToTime, setIsPlaying } = useVideoStore();
   const { show } = useNotifyStore();
   
@@ -82,9 +82,17 @@ export const STTPanel: React.FC = () => {
                 </span>
               </div>
             )}
+            {status === "completed" && translationStatus === "translating" && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[#facc15] font-mono font-bold tracking-wider">
+                  {translationProgress}%
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex-1 relative overflow-hidden flex flex-col">
+            {/* STT Processing Overlay */}
             {status !== "idle" && status !== "completed" && (
               <div className="absolute inset-0 bg-[#121212]/80 backdrop-blur-md z-10 flex flex-col items-center justify-center p-8 text-center">
                 <div className="relative mb-6">
@@ -98,6 +106,25 @@ export const STTPanel: React.FC = () => {
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     className="h-full bg-[#facc15] shadow-[0_0_10px_rgba(250,204,21,0.5)] relative overflow-hidden transition-all duration-300"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Translation Processing Overlay */}
+            {status === "completed" && translationStatus === "translating" && (
+              <div className="absolute inset-0 bg-[#121212]/80 backdrop-blur-md z-10 flex flex-col items-center justify-center p-8 text-center">
+                <div className="relative mb-6">
+                  <div className="w-16 h-16 rounded-full border-4 border-white/5 absolute inset-0" />
+                  <div className="w-16 h-16 rounded-full border-4 border-t-emerald-400 border-r-transparent border-b-transparent border-l-transparent animate-spin" />
+                </div>
+                <p className="text-white font-bold text-sm mb-3 tracking-widest drop-shadow-md">TRANSLATING SUBTITLES</p>
+                
+                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden shadow-inner">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${translationProgress}%` }}
+                    className="h-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)] relative overflow-hidden transition-all duration-300"
                   />
                 </div>
               </div>
@@ -144,9 +171,16 @@ export const STTPanel: React.FC = () => {
                           </div>
                         </div>
                         
-                        <p className={`text-sm leading-relaxed ${isActive ? "text-white font-medium" : "text-gray-400 group-hover:text-gray-200"}`}>
-                          {result.text}
-                        </p>
+                        <div className="flex flex-col gap-1.5">
+                          <p className={`text-sm leading-relaxed ${isActive ? "text-white font-medium" : "text-gray-400 group-hover:text-gray-200"}`}>
+                            {result.text}
+                          </p>
+                          {result.translation && (
+                            <p className={`text-xs leading-relaxed ${isActive ? "text-emerald-400/90" : "text-emerald-500/60 group-hover:text-emerald-400/80"}`}>
+                              {result.translation}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     );
                   })}

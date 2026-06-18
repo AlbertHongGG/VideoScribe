@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useSTTStore } from "../store/sttStore";
 import { useNotifyStore } from "../store/notifyStore";
+import { TranslationService } from "./translationService";
 
 export class STTService {
   private static unlistenFn: UnlistenFn | null = null;
@@ -37,6 +38,7 @@ export class STTService {
               this.cleanup();
               currentStore.commitResults();
               notifyStore.show("STT processing completed", "success");
+              TranslationService.startTranslation();
             }
           } else if (data.type === "result") {
             currentStore.appendResultToBuffer({ start: data.start, end: data.end, text: data.text });
