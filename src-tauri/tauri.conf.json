@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "tauri-app",
+  "productName": "VideoScribe",
   "version": "0.1.0",
-  "identifier": "com.jasonhong.tauri-app",
+  "identifier": "com.jasonhong.VideoScribe",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",

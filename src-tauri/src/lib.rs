@@ -45,27 +45,55 @@ fn save_agent_log(filename: String, content: String) -> Result<(), String> {
 #[tauri::command]
 async fn run_stt(app: AppHandle, video_path: String, model_size: String) -> Result<(), String> {
     std::thread::spawn(move || {
-        let backend_dir = std::env::current_dir()
-            .unwrap_or_default()
-            .join("..")
-            .join("src-backend");
+        let exe_dir = std::env::current_exe()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."))
+            .to_path_buf();
 
-        #[cfg(target_os = "windows")]
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        let backend_exe = exe_dir.join("backend").join("VideoScribe-backend.exe");
+        
+        let mut child_cmd;
+        
+        if backend_exe.exists() {
+            // Portable mode
+            child_cmd = Command::new(&backend_exe);
+            child_cmd
+                .arg(&video_path)
+                .arg("--model")
+                .arg(&model_size);
+                
+            // Add ffmpeg to PATH
+            let ffmpeg_dir = exe_dir.join("ffmpeg").join("bin");
+            if let Some(path_var) = std::env::var_os("PATH") {
+                let mut paths = std::env::split_paths(&path_var).collect::<Vec<_>>();
+                paths.insert(0, ffmpeg_dir);
+                if let Ok(new_path) = std::env::join_paths(paths) {
+                    child_cmd.env("PATH", new_path);
+                }
+            }
+        } else {
+            // Dev mode
+            let backend_dir = std::env::current_dir()
+                .unwrap_or_default()
+                .join("..")
+                .join("src-backend");
 
-        let mut child_cmd = Command::new("uv");
-        child_cmd
-            .arg("run")
-            .arg("main.py")
-            .arg(&video_path)
-            .arg("--model")
-            .arg(&model_size)
-            .current_dir(backend_dir)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
+            child_cmd = Command::new("uv");
+            child_cmd
+                .arg("run")
+                .arg("main.py")
+                .arg(&video_path)
+                .arg("--model")
+                .arg(&model_size)
+                .current_dir(backend_dir);
+        }
+
+        child_cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
 
         #[cfg(target_os = "windows")]
         {
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
             use std::os::windows::process::CommandExt;
             child_cmd.creation_flags(CREATE_NO_WINDOW);
         }
@@ -100,8 +128,17 @@ pub fn run() {
             let resource_dir = app.path().resource_dir().unwrap_or_else(|_| PathBuf::from("."));
             let db_path = resource_dir.join("jmdict.db");
             
-            // Fallback for dev environment if resource_dir doesn't have it
-            let actual_db_path = if db_path.exists() {
+            let exe_dir = std::env::current_exe()
+                .unwrap_or_else(|_| PathBuf::from("."))
+                .parent()
+                .unwrap_or_else(|| std::path::Path::new("."))
+                .to_path_buf();
+            let portable_db_path = exe_dir.join("jmdict.db");
+
+            // Priority: Portable db -> Tauri resource db -> local fallback
+            let actual_db_path = if portable_db_path.exists() {
+                portable_db_path
+            } else if db_path.exists() {
                 db_path
             } else {
                 PathBuf::from("jmdict.db")

@@ -1,10 +1,19 @@
-# Tauri + React + Typescript
+# VideoScribe
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+VideoScribe is an AI-powered offline transcription and translation tool for videos. It leverages Faster-Whisper to run STT locally with GPU acceleration.
 
-## Recommended IDE Setup
+## Building the Portable Application
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+To build the application into a standalone "Portable" version that requires no Python or FFmpeg installation on the target machine, follow these steps:
+
+1. Close all active development servers (`npm run dev`).
+2. Open a PowerShell terminal in the project root.
+3. Run the portable build script:
+```powershell
+.\build_portable.ps1
+```
+4. The script will automatically compile the frontend, package the Python backend using PyInstaller, download FFmpeg, and assemble everything into a `VideoScribe-Portable` directory.
+5. You can now zip the `VideoScribe-Portable` directory and distribute it. Users can simply run `VideoScribe.exe` inside it.
 
 ## Troubleshooting / Known Issues
 

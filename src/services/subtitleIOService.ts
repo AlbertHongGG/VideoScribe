@@ -57,9 +57,9 @@ export class SubtitleIOService {
 
       const filePath = Array.isArray(selected) ? selected[0] : selected;
       const content = await readTextFile(filePath.path || filePath as string);
-      
+
       const parsed = JSON.parse(content);
-      
+
       // Basic validation
       if (!Array.isArray(parsed)) {
         throw new Error("Invalid file format: Root is not an array");
@@ -72,7 +72,7 @@ export class SubtitleIOService {
       const results = parsed as STTResult[];
       setResults(results);
       setStatus('completed');
-      
+
       // If there are translations in the imported data, we assume translation is completed
       const hasTranslation = results.some(r => r.translation);
       if (hasTranslation) {
