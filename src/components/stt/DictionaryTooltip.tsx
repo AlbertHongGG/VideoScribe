@@ -103,7 +103,7 @@ export const DictionaryTooltip: React.FC<Props> = ({ text, x, y, onClose, onMous
             </div>
 
             <div className="max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
-              {result?.entries.slice(0, 3).map((entry, idx) => (
+              {result?.entries.slice(0, 3).map((entry) => (
                 <div key={entry.id} className="mb-3 last:mb-0">
                   <div className="flex flex-wrap gap-1 mb-1">
                     {entry.kanji.slice(0, 2).map((k) => (

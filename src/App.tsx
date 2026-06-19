@@ -12,18 +12,10 @@ function App() {
   useEffect(() => {
     const unlisten = listen("setting-changed", (event: any) => {
       const { key, value } = event.payload;
-      if (key === "enableDictionary") {
-        useSTTStore.getState().setEnableDictionary(value);
-      } else if (key === "enableTranslation") {
-        useSTTStore.getState().setEnableTranslation(value);
-      } else if (key === "targetLanguage") {
-        useSTTStore.getState().setTargetLanguage(value);
-      } else if (key === "model") {
-        useSTTStore.getState().setModel(value);
-      } else if (key === "showSubtitles") {
-        useSTTStore.getState().setShowSubtitles(value);
-      } else if (key === "language") {
-        useSTTStore.getState().setLanguage(value);
+      const store = useSTTStore.getState() as any;
+      const setterName = `set${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+      if (typeof store[setterName] === 'function') {
+        store[setterName](value);
       }
     });
 

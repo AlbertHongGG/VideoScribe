@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useMemo, useCallback } from "react";
+import React, { useRef, useEffect, useState, useMemo } from "react";
 import { useVideoStore } from "../../store/videoStore";
 import { useSTTStore } from "../../store/sttStore";
 import { VideoControls } from "./VideoControls";
@@ -22,58 +22,27 @@ export const VideoPlayer: React.FC = () => {
     setIsPlaying, 
     setCurrentTime,
     setDuration,
-    setSeekToTime,
-    setIsFullscreen
+    setSeekToTime
   } = useVideoStore();
 
-  const { results, language, enableDictionary, showSubtitles } = useSTTStore();
+  const { 
+    results, 
+    language, 
+    enableDictionary, 
+    showSubtitles,
+    subtitlePositionX,
+    subtitlePositionY,
+    subtitleSpacing,
+    sttFontSize,
+    translationFontSize
+  } = useSTTStore();
   const [currentSubtitle, setCurrentSubtitle] = useState<string | null>(null);
   const [currentTranslation, setCurrentTranslation] = useState<string | null>(null);
   
   const [hoverText, setHoverText] = useState<{ text: string; x: number; y: number; startIndex: number } | null>(null);
   const hoverTimeoutRef = useRef<number | null>(null);
 
-  const [videoLayout, setVideoLayout] = useState({
-    containerHeight: 0,
-    videoBottomEdge: 0
-  });
 
-  const updateVideoLayout = useCallback(() => {
-    if (!videoRef.current || !containerRef.current) return;
-    const cw = containerRef.current.clientWidth;
-    const ch = containerRef.current.clientHeight;
-    const vw = videoRef.current.videoWidth;
-    const vh = videoRef.current.videoHeight;
-    
-    if (vw === 0 || vh === 0) return;
-    
-    const containerRatio = cw / ch;
-    const videoRatio = vw / vh;
-    
-    let renderedHeight;
-    if (containerRatio > videoRatio) {
-      renderedHeight = ch;
-    } else {
-      renderedHeight = cw / videoRatio;
-    }
-    
-    const top = (ch - renderedHeight) / 2;
-    
-    setVideoLayout({
-      containerHeight: ch,
-      videoBottomEdge: top + renderedHeight
-    });
-  }, []);
-
-  useEffect(() => {
-    const observer = new ResizeObserver(() => {
-      updateVideoLayout();
-    });
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
-    return () => observer.disconnect();
-  }, [updateVideoLayout]);
 
   // Memoize results to prevent unnecessary scans if results haven't changed
   const memoizedResults = useMemo(() => results, [results]);
@@ -259,12 +228,8 @@ export const VideoPlayer: React.FC = () => {
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
       setDuration(videoRef.current.duration);
-      updateVideoLayout();
     }
   };
-
-  const distanceFromContainerBottom = videoLayout.containerHeight - videoLayout.videoBottomEdge;
-  const baseBottomDistance = videoLayout.containerHeight === 0 ? 32 : distanceFromContainerBottom + 32;
 
   return (
     <div ref={playerWrapperRef} className={isFullscreen ? "fixed inset-0 z-[9999] bg-[#0a0a0a] flex flex-col overflow-hidden" : "w-full h-full flex flex-col bg-[#0a0a0a] overflow-hidden"}>
@@ -297,22 +262,38 @@ export const VideoPlayer: React.FC = () => {
             
             <AnimatePresence>
               {showSubtitles && currentSubtitle && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute left-0 w-full flex justify-center pointer-events-none px-12 transition-all duration-300 ease-out z-30"
-                  style={{ bottom: `${baseBottomDistance}px` }}
+                <div
+                  className="absolute pointer-events-none z-30"
+                  style={{ 
+                    left: `${subtitlePositionX ?? 50}%`, 
+                    top: `${subtitlePositionY ?? 90}%`,
+                    transform: 'translate(-50%, -50%)',
+                    width: '100%',
+                    display: 'flex',
+                    justifyContent: 'center'
+                  }}
                 >
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex justify-center transition-all duration-300 ease-out px-12 w-full"
+                  >
                   <div 
                     className="bg-black/40 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.5)] max-w-4xl pointer-events-auto"
                     onMouseLeave={() => {
                       hoverTimeoutRef.current = window.setTimeout(() => setHoverText(null), 150);
                     }}
                   >
-                    <div className="flex flex-col items-center gap-1.5">
-                      <p className="text-white font-medium text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center leading-relaxed tracking-wide flex flex-wrap justify-center">
+                    <div 
+                      className="flex flex-col items-center"
+                      style={{ gap: `${subtitleSpacing ?? 6}px` }}
+                    >
+                      <p 
+                        className="text-white font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center leading-relaxed tracking-wide flex flex-wrap justify-center"
+                        style={{ fontSize: `${sttFontSize ?? 20}px` }}
+                      >
                         {language === "ja" && enableDictionary ? (
                           Array.from(currentSubtitle).map((char, i) => (
                             <span
@@ -342,13 +323,17 @@ export const VideoPlayer: React.FC = () => {
                       </p>
                       
                       {currentTranslation && (
-                        <p className="text-[#facc15] font-medium text-lg drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center leading-relaxed tracking-wide mt-1">
+                        <p 
+                          className="text-[#facc15] font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center leading-relaxed tracking-wide mt-1"
+                          style={{ fontSize: `${translationFontSize ?? 18}px` }}
+                        >
                           {currentTranslation}
                         </p>
                       )}
                     </div>
                   </div>
-                </motion.div>
+                  </motion.div>
+                </div>
               )}
             </AnimatePresence>
           </div>

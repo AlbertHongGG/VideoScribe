@@ -19,6 +19,11 @@ interface STTStore {
   enableDictionary: boolean;
   enableTranslation: boolean;
   targetLanguage: string;
+  subtitlePositionX: number;
+  subtitlePositionY: number;
+  subtitleSpacing: number;
+  sttFontSize: number;
+  translationFontSize: number;
   status: STTStatus;
   progress: number;
   translationStatus: TranslationStatus;
@@ -34,6 +39,11 @@ interface STTStore {
   setEnableDictionary: (enable: boolean) => void;
   setEnableTranslation: (enable: boolean) => void;
   setTargetLanguage: (lang: string) => void;
+  setSubtitlePositionX: (x: number) => void;
+  setSubtitlePositionY: (y: number) => void;
+  setSubtitleSpacing: (spacing: number) => void;
+  setSttFontSize: (size: number) => void;
+  setTranslationFontSize: (size: number) => void;
   setStatus: (status: STTStatus, progress?: number) => void;
   setTranslationStatus: (status: TranslationStatus, progress?: number) => void;
   setResults: (results: STTResult[]) => void;
@@ -52,6 +62,11 @@ export const useSTTStore = create<STTStore>()(
       enableDictionary: false,
   enableTranslation: false,
   targetLanguage: 'zh-TW',
+  subtitlePositionX: 50,
+  subtitlePositionY: 90,
+  subtitleSpacing: 6,
+  sttFontSize: 20,
+  translationFontSize: 18,
   status: 'idle',
   progress: 0,
   translationStatus: 'idle',
@@ -67,6 +82,11 @@ export const useSTTStore = create<STTStore>()(
       setEnableDictionary: (enable) => set({ enableDictionary: enable }),
   setEnableTranslation: (enable) => set({ enableTranslation: enable }),
   setTargetLanguage: (lang) => set({ targetLanguage: lang }),
+  setSubtitlePositionX: (x) => set({ subtitlePositionX: x }),
+  setSubtitlePositionY: (y) => set({ subtitlePositionY: y }),
+  setSubtitleSpacing: (spacing) => set({ subtitleSpacing: spacing }),
+  setSttFontSize: (size) => set({ sttFontSize: size }),
+  setTranslationFontSize: (size) => set({ translationFontSize: size }),
   setStatus: (status, progress = 0) => set({ status, progress }),
   setTranslationStatus: (translationStatus, translationProgress = 0) => set({ translationStatus, translationProgress }),
   setResults: (results) => set({ results, _buffer: [...results] }),
@@ -96,6 +116,11 @@ export const useSTTStore = create<STTStore>()(
         enableDictionary: state.enableDictionary,
         enableTranslation: state.enableTranslation,
         targetLanguage: state.targetLanguage,
+        subtitlePositionX: state.subtitlePositionX,
+        subtitlePositionY: state.subtitlePositionY,
+        subtitleSpacing: state.subtitleSpacing,
+        sttFontSize: state.sttFontSize,
+        translationFontSize: state.translationFontSize,
       }),
     }
   )

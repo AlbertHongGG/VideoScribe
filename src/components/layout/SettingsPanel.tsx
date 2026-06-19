@@ -1,7 +1,7 @@
-import React from "react";
 import { Select } from "../ui/Select";
+import { Slider } from "../ui/Slider";
 import { useSTTStore } from "../../store/sttStore";
-import { emit, listen } from "@tauri-apps/api/event";
+import { emit } from "@tauri-apps/api/event";
 
 const MODEL_OPTIONS = [
   { value: "tiny", label: "Tiny (Fastest, least accurate)" },
@@ -33,7 +33,12 @@ export const SettingsPanel: React.FC = () => {
     showSubtitles, setShowSubtitles,
     enableDictionary, setEnableDictionary, 
     enableTranslation, setEnableTranslation, 
-    targetLanguage, setTargetLanguage 
+    targetLanguage, setTargetLanguage,
+    subtitlePositionX, setSubtitlePositionX,
+    subtitlePositionY, setSubtitlePositionY,
+    subtitleSpacing, setSubtitleSpacing,
+    sttFontSize, setSttFontSize,
+    translationFontSize, setTranslationFontSize
   } = useSTTStore();
 
   return (
@@ -156,6 +161,80 @@ export const SettingsPanel: React.FC = () => {
                     await emit("setting-changed", { key: "targetLanguage", value: val });
                   }} 
                 />
+              </div>
+            </div>
+          </section>
+
+          {/* Subtitle Appearance & Layout Section */}
+          <section className="bg-[#141414] border border-white/5 rounded-2xl p-6 shadow-sm hover:border-white/10 transition-colors">
+            <h3 className="text-sm font-bold tracking-widest text-gray-200 uppercase mb-6 flex items-center gap-2">
+              <div className="w-1 h-3.5 bg-[#facc15] rounded-full shadow-[0_0_8px_rgba(250,204,21,0.5)]"></div>
+              Subtitle Appearance & Layout
+            </h3>
+            
+            <div className="space-y-8">
+              {/* Positioning Group */}
+              <div>
+                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Positioning</h4>
+                <div className="space-y-6 bg-white/[0.02] p-4 rounded-xl border border-white/5">
+                  <Slider 
+                    label="Horizontal Position (X)" 
+                    value={subtitlePositionX} 
+                    min={0} max={100} 
+                    unit="%"
+                    onChange={async (val) => {
+                      setSubtitlePositionX(val);
+                      await emit("setting-changed", { key: "subtitlePositionX", value: val });
+                    }} 
+                  />
+                  <Slider 
+                    label="Vertical Position (Y)" 
+                    value={subtitlePositionY} 
+                    min={0} max={100} 
+                    unit="%"
+                    onChange={async (val) => {
+                      setSubtitlePositionY(val);
+                      await emit("setting-changed", { key: "subtitlePositionY", value: val });
+                    }} 
+                  />
+                </div>
+              </div>
+
+              {/* Typography Group */}
+              <div>
+                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Typography & Spacing</h4>
+                <div className="space-y-6 bg-white/[0.02] p-4 rounded-xl border border-white/5">
+                  <Slider 
+                    label="Main Subtitle Size" 
+                    value={sttFontSize} 
+                    min={12} max={48} 
+                    unit="px"
+                    onChange={async (val) => {
+                      setSttFontSize(val);
+                      await emit("setting-changed", { key: "sttFontSize", value: val });
+                    }} 
+                  />
+                  <Slider 
+                    label="Translation Size" 
+                    value={translationFontSize} 
+                    min={12} max={48} 
+                    unit="px"
+                    onChange={async (val) => {
+                      setTranslationFontSize(val);
+                      await emit("setting-changed", { key: "translationFontSize", value: val });
+                    }} 
+                  />
+                  <Slider 
+                    label="Dual Subtitle Spacing" 
+                    value={subtitleSpacing} 
+                    min={0} max={40} 
+                    unit="px"
+                    onChange={async (val) => {
+                      setSubtitleSpacing(val);
+                      await emit("setting-changed", { key: "subtitleSpacing", value: val });
+                    }} 
+                  />
+                </div>
               </div>
             </div>
           </section>

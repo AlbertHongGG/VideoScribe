@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { useVideoStore } from "../../store/videoStore";
 import { Play, Pause, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Volume2, VolumeX } from "lucide-react";
 import * as Slider from "@radix-ui/react-slider";
@@ -12,7 +12,6 @@ export const VideoControls: React.FC = () => {
     volume,
     playbackRate,
     setIsPlaying, 
-    setCurrentTime,
     setVolume,
     setSeekToTime
   } = useVideoStore();
