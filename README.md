@@ -38,3 +38,36 @@ explicit = true
 ```
 
 *Note: If you still encounter DLL load errors (e.g., `cublas64_12.dll` not found), ensure that you have the appropriate NVIDIA CUDA 12 toolkit installed on your Windows system and that its `bin` directory is in your system `%PATH%`.*
+
+## Adding a Custom AI Provider
+
+If you want to integrate your own custom AI Provider (like a local LLM server or a third-party API) into the translation system, you will need to follow these steps:
+
+1. **Implement the SDK and Provider Interface**: 
+   Create a new directory for your provider under `src/multiagent/providers/`. Implement your API client and create a Provider class that implements the `AIProvider` interface.
+   
+2. **Register in ProviderFactory**: 
+   Update `src/multiagent/providers/ProviderFactory.ts` to include your new provider in the `switch` statement and read any necessary configuration from environment variables.
+
+3. **Update Environment Variables**: 
+   Add your provider's configuration options to both `.env.example` and your local `.env` file. Change `VITE_AGENT_TRANSLATOR_PROVIDER` to your new provider's name to use it.
+
+4. **Configure Tauri Security Capabilities (Crucial)**: 
+   Tauri has strict security policies for frontend network requests. If your custom API endpoint is not explicitly allowed, Tauri will block the request and throw a `url not allowed on the configured scope` error. 
+   
+   To fix this, you must add your API endpoint's URL or domain to the allowed `http` scope in `src-tauri/capabilities/default.json`. For example, if your local server runs on port 8000:
+   
+   ```json
+   "permissions": [
+     // ... other permissions
+     {
+       "identifier": "http:default",
+       "allow": [
+         { "url": "http://127.0.0.1:8000/*" },
+         { "url": "http://localhost:8000/*" }
+         // Add your custom API domains here
+       ]
+     }
+   ]
+   ```
+   *Note: After modifying `capabilities/default.json`, you must restart the Tauri development server (`npm run dev`) for the changes to take effect.*

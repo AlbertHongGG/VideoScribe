@@ -65,10 +65,11 @@ export class TranslationService {
           const lastFew = chunk.slice(-3).map(r => r.text).join(' ');
           previousContext = lastFew;
           
-        } catch (chunkError) {
+        } catch (chunkError: any) {
           console.error(`Failed to translate chunk ${i}:`, chunkError);
           // We don't abort completely. We just leave this chunk untranslated.
-          notifyStore.show(`Warning: Failed to translate part of the subtitles.`, "warning");
+          const errorMsg = chunkError instanceof Error ? chunkError.message : String(chunkError);
+          notifyStore.show(`Warning: Failed to translate part of the subtitles. ${errorMsg}`, "warning");
         }
       }
 
