@@ -1,5 +1,5 @@
-import { AIProvider } from './AIProvider';
-import { GenerateRequest, GenerateResponse } from '../types';
+import { AIProvider } from '../AIProvider';
+import { GenerateRequest, GenerateResponse } from '../../types';
 import { fetch } from '@tauri-apps/plugin-http';
 
 export class OllamaProvider implements AIProvider {

@@ -3,6 +3,8 @@ export interface GenerateRequest {
   systemPrompt?: string;
   temperature?: number;
   maxTokens?: number;
+  images?: string[];
+  sessionId?: string;
 }
 
 export interface GenerateResponse {

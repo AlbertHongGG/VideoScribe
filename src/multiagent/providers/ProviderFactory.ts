@@ -1,6 +1,7 @@
 import { AIProvider } from './AIProvider';
-import { OllamaProvider } from './OllamaProvider';
-import { VertexAIProvider } from './VertexAIProvider';
+import { OllamaProvider } from './ollama/OllamaProvider';
+import { VertexAIProvider } from './vertexai/VertexAIProvider';
+import { GeminiFlowProvider } from './geminiflow/GeminiFlowProvider';
 
 export class ProviderFactory {
   static createProvider(agentName: string): AIProvider {
@@ -37,6 +38,10 @@ export class ProviderFactory {
         if (!accessToken) throw new Error('Configuration Error: Missing VITE_PROVIDER_VERTEX_ACCESS_TOKEN in .env');
 
         return new VertexAIProvider(model, projectId, region, accessToken);
+      }
+      case 'geminiflow': {
+        const url = import.meta.env.VITE_PROVIDER_GEMINIFLOW_URL || 'http://127.0.0.1:8000';
+        return new GeminiFlowProvider(model, url);
       }
       
       // Future providers can be added here
