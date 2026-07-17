@@ -15,10 +15,10 @@ pub struct AgentFactory;
 
 impl AgentFactory {
     pub fn create_agent(
-        agent_type: &crate::domain::types::AgentType,
+        agent_type: &crate::domain::agent::AgentType,
         provider: Arc<dyn AIProvider>,
     ) -> Result<Box<dyn Agent>, String> {
-        use crate::domain::types::AgentType;
+        use crate::domain::agent::AgentType;
         match agent_type {
             AgentType::TranslatorAgent => Ok(Box::new(translator_agent::TranslatorAgent::new(provider))),
         }

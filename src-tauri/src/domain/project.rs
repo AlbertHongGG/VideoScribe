@@ -57,3 +57,53 @@ impl Default for ProjectState {
         }
     }
 }
+
+impl ProjectState {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn is_results_empty(&self) -> bool {
+        self.results.is_empty()
+    }
+
+    pub fn get_results_clone(&self) -> Vec<STTResult> {
+        self.results.clone()
+    }
+
+    pub fn get_target_language(&self) -> &str {
+        &self.target_language
+    }
+
+    pub fn start_translation(&mut self) {
+        self.translation_status = TranslationStatus::Translating;
+        self.translation_progress = 0.0;
+    }
+
+    pub fn update_translation_progress(&mut self, progress: f64, partial_results: Vec<STTResult>) {
+        self.translation_progress = progress;
+        self.results = partial_results;
+    }
+
+    pub fn complete_translation(&mut self, final_results: Vec<STTResult>) {
+        self.translation_status = TranslationStatus::Completed;
+        self.translation_progress = 100.0;
+        self.results = final_results;
+    }
+
+    pub fn set_stt_status(&mut self, status: STTStatus) {
+        self.stt_status = status;
+    }
+
+    pub fn update_stt_progress(&mut self, progress: f64) {
+        self.stt_progress = progress;
+    }
+
+    pub fn add_stt_result(&mut self, result: STTResult) {
+        self.results.push(result);
+    }
+
+    pub fn set_stt_error(&mut self) {
+        self.stt_status = STTStatus::Error;
+    }
+}

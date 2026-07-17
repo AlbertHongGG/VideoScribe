@@ -81,16 +81,17 @@ impl SttService {
                                     match typ {
                                         "progress" => {
                                             if let Some(status) = json.get("status").and_then(|s| s.as_str()) {
-                                                project.stt_status = match status {
+                                                let stt_status = match status {
                                                     "loading_model" => crate::domain::project::STTStatus::LoadingModel,
                                                     "transcribing" => crate::domain::project::STTStatus::Transcribing,
                                                     "completed" => crate::domain::project::STTStatus::Completed,
                                                     "error" => crate::domain::project::STTStatus::Error,
                                                     _ => crate::domain::project::STTStatus::Idle,
                                                 };
+                                                project.set_stt_status(stt_status);
                                             }
                                             if let Some(prog) = json.get("progress").and_then(|p| p.as_f64()) {
-                                                project.stt_progress = prog;
+                                                project.update_stt_progress(prog);
                                             }
                                         }
                                         "result" => {
@@ -99,7 +100,7 @@ impl SttService {
                                                 json.get("end").and_then(|v| v.as_f64()),
                                                 json.get("text").and_then(|v| v.as_str()),
                                             ) {
-                                                project.results.push(crate::domain::project::STTResult {
+                                                project.add_stt_result(crate::domain::project::STTResult {
                                                     start,
                                                     end,
                                                     text: text.to_string(),
@@ -108,7 +109,7 @@ impl SttService {
                                             }
                                         }
                                         "error" => {
-                                            project.stt_status = crate::domain::project::STTStatus::Error;
+                                            project.set_stt_error();
                                         }
                                         _ => {}
                                     }

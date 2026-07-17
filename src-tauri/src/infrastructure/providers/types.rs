@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-pub use crate::domain::types::Message;
+pub use crate::domain::agent::Message;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GenerateRequest {

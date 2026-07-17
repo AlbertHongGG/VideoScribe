@@ -1,8 +1,9 @@
-use crate::domain::provider_types::{GenerateRequest, GenerateResponse, GenerateStreamChunk};
+use crate::infrastructure::providers::types::{GenerateRequest, GenerateResponse, GenerateStreamChunk};
 use crate::infrastructure::config::AppConfig;
 use async_trait::async_trait;
 use futures_util::stream::BoxStream;
 
+pub mod types;
 pub mod geminiflow;
 pub mod ollama;
 pub mod vertexai;
@@ -32,7 +33,7 @@ pub trait AIProvider: Send + Sync {
 pub struct ProviderFactory;
 
 impl ProviderFactory {
-    pub fn create_provider(agent_type: &crate::domain::types::AgentType, config: &AppConfig) -> Result<Box<dyn AIProvider>, ProviderError> {
+    pub fn create_provider(agent_type: &crate::domain::agent::AgentType, config: &AppConfig) -> Result<Box<dyn AIProvider>, ProviderError> {
         let provider_type = &config.ai_provider;
         let model = &config.ai_model;
 

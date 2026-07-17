@@ -1,7 +1,6 @@
-use crate::domain::types::AgentType;
+use crate::domain::agent::AgentType;
 use crate::infrastructure::agents::AgentFactory;
 use crate::infrastructure::state::AppState;
-use crate::domain::project::{STTResult, TranslationStatus};
 use tauri::{AppHandle, Emitter, Manager};
 use serde_json::json;
 
@@ -12,18 +11,17 @@ impl TranslationCoordinator {
         let state = app.state::<AppState>();
         
         let mut project = state.project.lock().map_err(|e| e.to_string())?;
-        if project.results.is_empty() {
+        if project.is_results_empty() {
             return Err("No STT results to translate".into());
         }
         
-        project.translation_status = TranslationStatus::Translating;
-        project.translation_progress = 0.0;
+        project.start_translation();
         let _ = app.emit("app-state-changed", ());
         
         let provider = state.translator_provider.clone();
         
-        let target_language = project.target_language.clone();
-        let results_clone = project.results.clone();
+        let target_language = project.get_target_language().to_string();
+        let results_clone = project.get_results_clone();
         
         // We drop the lock here because the translation process will take a long time
         // and we want to be able to update progress along the way.
@@ -97,17 +95,15 @@ impl TranslationCoordinator {
                 // Update state
                 let state = app.state::<AppState>();
                 if let Ok(mut proj) = state.project.lock() {
-                    proj.translation_progress = ((i + 1) as f64 / total_chunks as f64) * 100.0;
-                    proj.results = all_translated_results.clone();
+                    let progress = ((i + 1) as f64 / total_chunks as f64) * 100.0;
+                    proj.update_translation_progress(progress, all_translated_results.clone());
                 }
                 let _ = app.emit("app-state-changed", ());
             }
             
             let state = app.state::<AppState>();
             if let Ok(mut proj) = state.project.lock() {
-                proj.translation_status = TranslationStatus::Completed;
-                proj.translation_progress = 100.0;
-                proj.results = all_translated_results;
+                proj.complete_translation(all_translated_results);
             }
             let _ = app.emit("app-state-changed", ());
         });

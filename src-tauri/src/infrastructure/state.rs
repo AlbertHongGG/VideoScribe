@@ -1,6 +1,6 @@
 use crate::infrastructure::providers::{ProviderFactory, AIProvider};
 use crate::infrastructure::config::AppConfig;
-use crate::domain::types::AgentType;
+use crate::domain::agent::AgentType;
 use crate::domain::project::ProjectState;
 use std::sync::{Arc, Mutex};
 

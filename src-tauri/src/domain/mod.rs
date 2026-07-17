@@ -1,3 +1,2 @@
-pub mod types;
+pub mod agent;
 pub mod project;
-pub mod provider_types;

@@ -11,7 +11,7 @@ pub struct GeminiFlowChatPayload {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub images: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub messages: Option<Vec<crate::domain::provider_types::Message>>,
+    pub messages: Option<Vec<crate::infrastructure::providers::types::Message>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub session_id: Option<String>,
 }

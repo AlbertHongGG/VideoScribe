@@ -36,14 +36,14 @@ async fn run_stt(app: AppHandle, video_path: String, model_size: String) -> Resu
 #[tauri::command]
 #[specta::specta]
 async fn run_agent_task(
-    agent_type: crate::domain::types::AgentType,
+    agent_type: crate::domain::agent::AgentType,
     payload_json: String,
     state: State<'_, crate::infrastructure::state::AppState>,
 ) -> Result<String, String> {
     use crate::infrastructure::agents::AgentFactory;
 
     let provider = match agent_type {
-        crate::domain::types::AgentType::TranslatorAgent => state.translator_provider.clone(),
+        crate::domain::agent::AgentType::TranslatorAgent => state.translator_provider.clone(),
     };
     
     let payload: Value = serde_json::from_str(&payload_json).map_err(|e| e.to_string())?;
