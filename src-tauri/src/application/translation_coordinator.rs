@@ -1,5 +1,5 @@
 use crate::domain::types::AgentType;
-use crate::infrastructure::agent::agents::AgentFactory;
+use crate::infrastructure::agents::AgentFactory;
 use crate::infrastructure::state::AppState;
 use crate::domain::project::{STTResult, TranslationStatus};
 use tauri::{AppHandle, Emitter, Manager};

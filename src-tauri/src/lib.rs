@@ -40,7 +40,7 @@ async fn run_agent_task(
     payload_json: String,
     state: State<'_, crate::infrastructure::state::AppState>,
 ) -> Result<String, String> {
-    use crate::infrastructure::agent::agents::AgentFactory;
+    use crate::infrastructure::agents::AgentFactory;
 
     let provider = match agent_type {
         crate::domain::types::AgentType::TranslatorAgent => state.translator_provider.clone(),

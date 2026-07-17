@@ -35,7 +35,7 @@ impl AIProvider for GeminiFlowProvider {
     }
 
     async fn generate(&self, request: &GenerateRequest) -> Result<GenerateResponse, ProviderError> {
-        crate::infrastructure::agent::agent_logger::AgentLogger::log(
+        crate::infrastructure::logger::AppLogger::log(
             self.name(),
             json!({ "model": self.model, "type": "generate" }),
             json!(request),
@@ -71,7 +71,7 @@ impl AIProvider for GeminiFlowProvider {
             })),
         };
 
-        crate::infrastructure::agent::agent_logger::AgentLogger::log(
+        crate::infrastructure::logger::AppLogger::log(
             self.name(),
             json!({ "model": self.model, "type": "generate" }),
             json!(request),

@@ -1,5 +1,6 @@
 pub mod config;
+pub mod logger;
 pub mod providers;
-pub mod agent;
+pub mod agents;
 pub mod state;
 pub mod dictionary;

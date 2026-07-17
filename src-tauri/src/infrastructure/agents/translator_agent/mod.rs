@@ -1,9 +1,9 @@
 pub mod prompts;
 
-use crate::infrastructure::agent::agents::Agent;
+use crate::infrastructure::agents::Agent;
 use crate::infrastructure::providers::AIProvider;
 use crate::domain::provider_types::GenerateRequest;
-use crate::infrastructure::agent::agent_logger::AgentLogger;
+use crate::infrastructure::logger::AppLogger;
 use async_trait::async_trait;
 use serde_json::{Value, json};
 use std::sync::Arc;
@@ -74,7 +74,7 @@ impl Agent for TranslatorAgent {
                                 continue;
                             }
                             
-                            AgentLogger::log(
+                            AppLogger::log(
                                 self.name(),
                                 json!({ "targetLanguage": target_language }),
                                 json!({ "prompt": prompt, "systemPrompt": system_prompt }),
