@@ -8,9 +8,12 @@ export const commands = {
 	lookupWord: (text: string) => typedError<LookupResult, string>(__TAURI_INVOKE("lookup_word", { text })),
 	saveAgentLog: (filename: string, content: string) => typedError<null, string>(__TAURI_INVOKE("save_agent_log", { filename, content })),
 	runStt: (videoPath: string, modelSize: string) => typedError<null, string>(__TAURI_INVOKE("run_stt", { videoPath, modelSize })),
+	runAgentTask: (agentType: AgentType, payloadJson: string) => typedError<string, string>(__TAURI_INVOKE("run_agent_task", { agentType, payloadJson })),
 };
 
 /* Types */
+export type AgentType = "TranslatorAgent";
+
 export type DictionaryEntry = {
 	id: string,
 	kanji: string[],

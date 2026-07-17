@@ -1,7 +1,16 @@
 import { useSTTStore, STTResult } from '../store/sttStore';
 import { useNotifyStore } from '../store/notifyStore';
-import { SubtitleSegment, TranslatorAgent } from '../multiagent/agents/TranslatorAgent';
-import { AgentFactory } from '../multiagent/agents/AgentFactory';
+import { commands } from '../types/bindings';
+
+export interface SubtitleSegment {
+  id: number;
+  text: string;
+}
+
+export interface TranslationResult {
+  id: number;
+  translation: string;
+}
 
 export class TranslationService {
   static async startTranslation() {
@@ -21,8 +30,7 @@ export class TranslationService {
     notifyStore.show("Starting Dual Subtitle Translation...", "info");
 
     try {
-      // Setup the agent via Factory
-      const agent = AgentFactory.createAgent('translator') as TranslatorAgent;
+      // Backend Agent will be invoked via Tauri command
       
       const targetLanguage = sttStore.targetLanguage;
       
@@ -51,7 +59,18 @@ export class TranslationService {
         }));
 
         try {
-          const translations = await agent.execute(segments, targetLanguage, previousContext, sessionId);
+          const response = await commands.runAgentTask("TranslatorAgent", JSON.stringify({
+            segments,
+            targetLanguage,
+            previousContext,
+            sessionId
+          }));
+
+          if (response.status === 'error') {
+            throw new Error(response.error);
+          }
+
+          const translations = JSON.parse(response.data) as TranslationResult[];
           
           // Map back to our main results array
           for (const t of translations) {

@@ -1,11 +1,11 @@
 use std::process::{Command, Stdio};
 use std::io::{BufRead, BufReader};
 use tauri::{AppHandle, Emitter, State, Manager};
+use serde_json::Value;
 use std::sync::Mutex;
 use std::path::PathBuf;
 
-pub mod dictionary;
-use dictionary::{DictionaryState, LookupResult};
+use crate::infrastructure::dictionary::{DictionaryState, LookupResult};
 
 pub mod domain;
 pub mod infrastructure;
@@ -16,7 +16,8 @@ pub fn create_builder() -> tauri_specta::Builder<tauri::Wry> {
             greet,
             lookup_word,
             save_agent_log,
-            run_stt
+            run_stt,
+            run_agent_task
         ])
 }
 
@@ -138,6 +139,26 @@ async fn run_stt(app: AppHandle, video_path: String, model_size: String) -> Resu
     Ok(())
 }
 
+#[tauri::command]
+#[specta::specta]
+async fn run_agent_task(
+    agent_type: crate::domain::types::AgentType,
+    payload_json: String,
+    state: State<'_, crate::infrastructure::state::AppState>,
+) -> Result<String, String> {
+    use crate::infrastructure::agent::agents::AgentFactory;
+
+    let provider = match agent_type {
+        crate::domain::types::AgentType::TranslatorAgent => state.translator_provider.clone(),
+    };
+    
+    let payload: Value = serde_json::from_str(&payload_json).map_err(|e| e.to_string())?;
+    let agent = AgentFactory::create_agent(&agent_type, provider)?;
+    let result = agent.execute(payload).await?;
+    
+    serde_json::to_string(&result).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = create_builder();
@@ -169,6 +190,15 @@ pub fn run() {
                 }
                 Err(e) => {
                     eprintln!("Failed to initialize dictionary: {}", e);
+                }
+            }
+
+            match crate::infrastructure::state::AppState::new() {
+                Ok(state) => {
+                    app.manage(state);
+                }
+                Err(e) => {
+                    eprintln!("Failed to initialize AppState: {}", e);
                 }
             }
             Ok(())
