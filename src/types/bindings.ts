@@ -9,6 +9,7 @@ export const commands = {
 	saveAgentLog: (filename: string, content: string) => typedError<null, string>(__TAURI_INVOKE("save_agent_log", { filename, content })),
 	runStt: (videoPath: string, modelSize: string) => typedError<null, string>(__TAURI_INVOKE("run_stt", { videoPath, modelSize })),
 	runAgentTask: (agentType: AgentType, payloadJson: string) => typedError<string, string>(__TAURI_INVOKE("run_agent_task", { agentType, payloadJson })),
+	getAppState: () => typedError<ProjectState, string>(__TAURI_INVOKE("get_app_state")),
 };
 
 /* Types */
@@ -28,6 +29,27 @@ export type LookupResult = {
 	reading: string,
 	entries: DictionaryEntry[],
 };
+
+export type ProjectState = {
+	video_path: string | null,
+	stt_status: STTStatus,
+	stt_progress: number | null,
+	translation_status: TranslationStatus,
+	translation_progress: number | null,
+	results: STTResult[],
+	target_language: string,
+};
+
+export type STTResult = {
+	start: number | null,
+	end: number | null,
+	text: string,
+	translation: string | null,
+};
+
+export type STTStatus = "idle" | "loading_model" | "transcribing" | "completed" | "error";
+
+export type TranslationStatus = "idle" | "translating" | "completed" | "error";
 
 /* Tauri Specta runtime */
 async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {

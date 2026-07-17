@@ -1,3 +1,5 @@
+use ts_rs::TS;
+
 fn main() {
     videoscribe_lib::create_builder()
         .export(

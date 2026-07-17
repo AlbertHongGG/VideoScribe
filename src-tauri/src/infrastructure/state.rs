@@ -1,9 +1,11 @@
 use crate::infrastructure::agent::providers::{ProviderFactory, AIProvider};
 use crate::domain::types::AgentType;
-use std::sync::Arc;
+use crate::domain::project::ProjectState;
+use std::sync::{Arc, Mutex};
 
 pub struct AppState {
     pub translator_provider: Arc<dyn AIProvider>,
+    pub project: Mutex<ProjectState>,
 }
 
 impl AppState {
@@ -16,7 +18,8 @@ impl AppState {
             .map_err(|e| e.to_string())?;
             
         Ok(Self {
-            translator_provider: Arc::from(provider)
+            translator_provider: Arc::from(provider),
+            project: Mutex::new(ProjectState::default()),
         })
     }
 }

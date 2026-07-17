@@ -10,7 +10,7 @@ import { useSTTStore } from "./store/sttStore";
 
 function App() {
   useEffect(() => {
-    const unlisten = listen("setting-changed", (event: any) => {
+    const unlistenSettings = listen("setting-changed", (event: any) => {
       const { key, value } = event.payload;
       const store = useSTTStore.getState() as any;
       const setterName = `set${key.charAt(0).toUpperCase()}${key.slice(1)}`;
@@ -19,8 +19,14 @@ function App() {
       }
     });
 
+    const unlistenState = listen("app-state-changed", (event: any) => {
+      const state = event.payload;
+      useSTTStore.getState().syncAppState(state);
+    });
+
     return () => {
-      unlisten.then(f => f());
+      unlistenSettings.then(f => f());
+      unlistenState.then(f => f());
     };
   }, []);
   return (

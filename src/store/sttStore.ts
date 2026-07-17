@@ -1,15 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { ProjectState, STTResult, STTStatus, TranslationStatus } from '../types/app_types';
 
-export interface STTResult {
-  start: number;
-  end: number;
-  text: string;
-  translation?: string;
-}
-
-type STTStatus = 'idle' | 'loading_model' | 'transcribing' | 'completed' | 'error';
-type TranslationStatus = 'idle' | 'translating' | 'completed' | 'error';
+export type { STTResult, STTStatus, TranslationStatus };
 
 interface STTStore {
   isPanelOpen: boolean;
@@ -47,8 +40,7 @@ interface STTStore {
   setStatus: (status: STTStatus, progress?: number) => void;
   setTranslationStatus: (status: TranslationStatus, progress?: number) => void;
   setResults: (results: STTResult[]) => void;
-  appendResultToBuffer: (result: STTResult) => void;
-  commitResults: () => void;
+  syncAppState: (state: ProjectState) => void;
   reset: () => void;
 }
 
@@ -89,14 +81,16 @@ export const useSTTStore = create<STTStore>()(
   setTranslationFontSize: (size) => set({ translationFontSize: size }),
   setStatus: (status, progress = 0) => set({ status, progress }),
   setTranslationStatus: (translationStatus, translationProgress = 0) => set({ translationStatus, translationProgress }),
-  setResults: (results) => set({ results, _buffer: [...results] }),
+  setResults: (results) => set({ results }),
   
-  // Appends to buffer without triggering a full re-render of results-dependent components immediately.
-  // Note: Zustand still notifies subscribers of the store, but we isolate the 'results' array reference.
-  appendResultToBuffer: (result) => set((state) => ({ _buffer: [...state._buffer, result] })),
-  
-  // Flushes buffer to the main results array, causing components relying on `results` to update.
-  commitResults: () => set((state) => ({ results: [...state._buffer] })),
+  syncAppState: (state) => set({
+    status: state.stt_status,
+    progress: state.stt_progress,
+    translationStatus: state.translation_status,
+    translationProgress: state.translation_progress,
+    results: state.results,
+    targetLanguage: state.target_language,
+  }),
   
       reset: () => set({ 
         status: 'idle', 
@@ -104,7 +98,6 @@ export const useSTTStore = create<STTStore>()(
         translationStatus: 'idle',
         translationProgress: 0,
         results: [], 
-        _buffer: [], 
       }),
     }),
     {

@@ -1,6 +1,4 @@
-use std::process::{Command, Stdio};
-use std::io::{BufRead, BufReader};
-use tauri::{AppHandle, Emitter, State, Manager};
+use tauri::{AppHandle, State, Manager};
 use serde_json::Value;
 use std::sync::Mutex;
 use std::path::PathBuf;
@@ -9,6 +7,7 @@ use crate::infrastructure::dictionary::{DictionaryState, LookupResult};
 
 pub mod domain;
 pub mod infrastructure;
+pub mod application;
 
 pub fn create_builder() -> tauri_specta::Builder<tauri::Wry> {
     tauri_specta::Builder::<tauri::Wry>::new()
@@ -17,7 +16,9 @@ pub fn create_builder() -> tauri_specta::Builder<tauri::Wry> {
             lookup_word,
             save_agent_log,
             run_stt,
-            run_agent_task
+            run_agent_task,
+            get_app_state,
+            start_translation
         ])
 }
 
@@ -37,106 +38,13 @@ fn lookup_word(text: String, state: State<'_, Mutex<DictionaryState>>) -> Result
 #[tauri::command]
 #[specta::specta]
 fn save_agent_log(filename: String, content: String) -> Result<(), String> {
-    let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    
-    // In dev mode, current_dir is usually the project root (where package.json is)
-    // or src-tauri. We want to put it in `.runtime` at the project root.
-    // Let's safely try to use the current working directory's `.runtime` folder.
-    let runtime_dir = if current_dir.ends_with("src-tauri") {
-        current_dir.parent().unwrap_or(&current_dir).join(".runtime")
-    } else {
-        current_dir.join(".runtime")
-    };
-
-    if !runtime_dir.exists() {
-        std::fs::create_dir_all(&runtime_dir).map_err(|e| e.to_string())?;
-    }
-
-    let file_path = runtime_dir.join(filename);
-    std::fs::write(&file_path, content).map_err(|e| e.to_string())?;
-    
-    println!("Saved agent log to {:?}", file_path);
-    Ok(())
+    crate::application::log_service::LogService::save_agent_log(filename, content)
 }
 
 #[tauri::command]
 #[specta::specta]
 async fn run_stt(app: AppHandle, video_path: String, model_size: String) -> Result<(), String> {
-    std::thread::spawn(move || {
-        let exe_dir = std::env::current_exe()
-            .unwrap_or_else(|_| PathBuf::from("."))
-            .parent()
-            .unwrap_or_else(|| std::path::Path::new("."))
-            .to_path_buf();
-
-        let backend_exe = exe_dir.join("backend").join("VideoScribe-backend.exe");
-        
-        let mut child_cmd;
-        
-        if backend_exe.exists() {
-            // Portable mode
-            child_cmd = Command::new(&backend_exe);
-            child_cmd
-                .arg(&video_path)
-                .arg("--model")
-                .arg(&model_size);
-                
-            // Add ffmpeg to PATH
-            let ffmpeg_dir = exe_dir.join("ffmpeg").join("bin");
-            if let Some(path_var) = std::env::var_os("PATH") {
-                let mut paths = std::env::split_paths(&path_var).collect::<Vec<_>>();
-                paths.insert(0, ffmpeg_dir);
-                if let Ok(new_path) = std::env::join_paths(paths) {
-                    child_cmd.env("PATH", new_path);
-                }
-            }
-        } else {
-            // Dev mode
-            let backend_dir = std::env::current_dir()
-                .unwrap_or_default()
-                .join("..")
-                .join("src-backend");
-
-            child_cmd = Command::new("uv");
-            child_cmd
-                .arg("run")
-                .arg("main.py")
-                .arg(&video_path)
-                .arg("--model")
-                .arg(&model_size)
-                .current_dir(backend_dir);
-        }
-
-        child_cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
-
-        #[cfg(target_os = "windows")]
-        {
-            const CREATE_NO_WINDOW: u32 = 0x08000000;
-            use std::os::windows::process::CommandExt;
-            child_cmd.creation_flags(CREATE_NO_WINDOW);
-        }
-
-        let mut child = match child_cmd.spawn() {
-            Ok(c) => c,
-            Err(e) => {
-                let _ = app.emit("stt-progress", format!(r#"{{"type":"error","message":"Failed to spawn STT process: {}"}}"#, e));
-                return;
-            }
-        };
-
-        if let Some(stdout) = child.stdout.take() {
-            let reader = BufReader::new(stdout);
-            for line in reader.lines() {
-                if let Ok(line_str) = line {
-                    let _ = app.emit("stt-progress", line_str);
-                }
-            }
-        }
-        
-        let _ = child.wait();
-    });
-    
-    Ok(())
+    crate::application::stt_service::SttService::run_stt(app, video_path, model_size)
 }
 
 #[tauri::command]
@@ -157,6 +65,19 @@ async fn run_agent_task(
     let result = agent.execute(payload).await?;
     
     serde_json::to_string(&result).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_app_state(state: State<'_, crate::infrastructure::state::AppState>) -> Result<crate::domain::project::ProjectState, String> {
+    let project = state.project.lock().map_err(|e| e.to_string())?;
+    Ok(project.clone())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn start_translation(app: AppHandle) -> Result<(), String> {
+    crate::application::translation_coordinator::TranslationCoordinator::start_translation(app)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
