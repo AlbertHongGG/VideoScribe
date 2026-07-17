@@ -6,7 +6,9 @@ use rusqlite::{Connection, OpenFlags};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Serialize, Deserialize, Debug)]
+use specta::Type;
+
+#[derive(Serialize, Deserialize, Debug, Clone, Type)]
 pub struct DictionaryEntry {
     pub id: String,
     pub kanji: Vec<String>,
@@ -14,7 +16,7 @@ pub struct DictionaryEntry {
     pub glossary: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Type)]
 pub struct LookupResult {
     pub original_text: String,
     pub token: String,

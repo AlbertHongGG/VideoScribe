@@ -7,18 +7,34 @@ use std::path::PathBuf;
 pub mod dictionary;
 use dictionary::{DictionaryState, LookupResult};
 
+pub mod domain;
+pub mod infrastructure;
+
+pub fn create_builder() -> tauri_specta::Builder<tauri::Wry> {
+    tauri_specta::Builder::<tauri::Wry>::new()
+        .commands(tauri_specta::collect_commands![
+            greet,
+            lookup_word,
+            save_agent_log,
+            run_stt
+        ])
+}
+
 #[tauri::command]
+#[specta::specta]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
 #[tauri::command]
+#[specta::specta]
 fn lookup_word(text: String, state: State<'_, Mutex<DictionaryState>>) -> Result<LookupResult, String> {
     let dict = state.lock().map_err(|e| e.to_string())?;
     dict.lookup(&text)
 }
 
 #[tauri::command]
+#[specta::specta]
 fn save_agent_log(filename: String, content: String) -> Result<(), String> {
     let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     
@@ -43,6 +59,7 @@ fn save_agent_log(filename: String, content: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 async fn run_stt(app: AppHandle, video_path: String, model_size: String) -> Result<(), String> {
     std::thread::spawn(move || {
         let exe_dir = std::env::current_exe()
@@ -123,6 +140,8 @@ async fn run_stt(app: AppHandle, video_path: String, model_size: String) -> Resu
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let builder = create_builder();
+
     tauri::Builder::default()
         .setup(|app| {
             let resource_dir = app.path().resource_dir().unwrap_or_else(|_| PathBuf::from("."));
@@ -159,7 +178,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
-        .invoke_handler(tauri::generate_handler![greet, run_stt, lookup_word, save_agent_log])
+        .invoke_handler(builder.invoke_handler())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

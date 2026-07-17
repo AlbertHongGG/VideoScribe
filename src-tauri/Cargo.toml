@@ -28,4 +28,18 @@ rusqlite = { version = "0.31.0", features = ["bundled"] }
 lindera = { version = "3.0.7", features = ["embed-ipadic"] }
 tauri-plugin-fs = "2.5.1"
 tauri-plugin-http = "2"
+specta = { version = "=2.0.0-rc.25", features = ["serde_json"] }
+tauri-specta = { version = "=2.0.0-rc.25", features = ["javascript", "typescript"] }
+specta-typescript = "=0.0.12"
+ts-rs = "12.0.1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
+reqwest = { version = "0.12", features = ["json", "stream"] }
+async-trait = "0.1"
+dotenvy = "0.15"
+eventsource-stream = "0.2"
+futures-util = "0.3"
+chrono = "0.4"
+thiserror = "2.0"
+lazy_static = "1.5"
+
 
