@@ -3,10 +3,10 @@ use futures_util::stream::{BoxStream, StreamExt};
 use reqwest::Client;
 use serde_json::Value;
 
-use crate::infrastructure::agent::providers::geminiflow::sdk::types::{
+use crate::infrastructure::providers::geminiflow::sdk::types::{
     GeminiFlowChatPayload, GeminiFlowChatResponse, GeminiFlowStreamData,
 };
-use crate::infrastructure::agent::providers::ProviderError;
+use crate::infrastructure::providers::ProviderError;
 
 pub struct GeminiFlowClient {
     base_url: String,

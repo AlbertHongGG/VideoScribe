@@ -12,19 +12,12 @@ pub mod application;
 pub fn create_builder() -> tauri_specta::Builder<tauri::Wry> {
     tauri_specta::Builder::<tauri::Wry>::new()
         .commands(tauri_specta::collect_commands![
-            greet,
             lookup_word,
             run_stt,
             run_agent_task,
             get_app_state,
             start_translation
         ])
-}
-
-#[tauri::command]
-#[specta::specta]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
 #[tauri::command]

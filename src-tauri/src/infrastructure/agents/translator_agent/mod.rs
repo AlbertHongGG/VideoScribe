@@ -1,8 +1,8 @@
 pub mod prompts;
 
 use crate::infrastructure::agent::agents::Agent;
-use crate::infrastructure::agent::providers::AIProvider;
-use crate::infrastructure::agent::types::GenerateRequest;
+use crate::infrastructure::providers::AIProvider;
+use crate::domain::provider_types::GenerateRequest;
 use crate::infrastructure::agent::agent_logger::AgentLogger;
 use async_trait::async_trait;
 use serde_json::{Value, json};

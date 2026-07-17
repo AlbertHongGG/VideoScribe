@@ -4,7 +4,6 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 
 /** Commands */
 export const commands = {
-	greet: (name: string) => __TAURI_INVOKE<string>("greet", { name }),
 	lookupWord: (text: string) => typedError<LookupResult, string>(__TAURI_INVOKE("lookup_word", { text })),
 	runStt: (videoPath: string, modelSize: string) => typedError<null, string>(__TAURI_INVOKE("run_stt", { videoPath, modelSize })),
 	runAgentTask: (agentType: AgentType, payloadJson: string) => typedError<string, string>(__TAURI_INVOKE("run_agent_task", { agentType, payloadJson })),

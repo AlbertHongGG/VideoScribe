@@ -1,4 +1,4 @@
-use crate::infrastructure::agent::providers::AIProvider;
+use crate::infrastructure::providers::AIProvider;
 use serde_json::Value;
 use std::sync::Arc;
 use async_trait::async_trait;

@@ -1,5 +1,5 @@
-use crate::infrastructure::agent::providers::{AIProvider, ProviderError};
-use crate::infrastructure::agent::types::{GenerateRequest, GenerateResponse, GenerateStreamChunk};
+use crate::infrastructure::providers::{AIProvider, ProviderError};
+use crate::domain::provider_types::{GenerateRequest, GenerateResponse, GenerateStreamChunk};
 use async_trait::async_trait;
 use eventsource_stream::Eventsource;
 use futures_util::stream::{BoxStream, StreamExt};
