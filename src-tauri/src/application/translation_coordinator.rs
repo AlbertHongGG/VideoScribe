@@ -1,24 +1,26 @@
 use crate::domain::agent::AgentType;
 use crate::infrastructure::agents::AgentFactory;
-use crate::infrastructure::state::AppState;
-use tauri::{AppHandle, Emitter, Manager};
-use serde_json::json;
+use crate::domain::project::ProjectState;
+use crate::infrastructure::providers::AIProvider;
+use crate::domain::events::EventDispatcher;
+use std::sync::{Arc, Mutex};
+use serde_json::{json, Value};
 
 pub struct TranslationCoordinator;
 
 impl TranslationCoordinator {
-    pub fn start_translation(app: AppHandle) -> Result<(), String> {
-        let state = app.state::<AppState>();
-        
-        let mut project = state.project.lock().map_err(|e| e.to_string())?;
+    pub fn start_translation(
+        project_mutex: Arc<Mutex<ProjectState>>,
+        provider: Arc<dyn AIProvider>,
+        dispatcher: Arc<dyn EventDispatcher>
+    ) -> Result<(), String> {
+        let mut project = project_mutex.lock().map_err(|e| e.to_string())?;
         if project.is_results_empty() {
             return Err("No STT results to translate".into());
         }
         
         project.start_translation();
-        let _ = app.emit("app-state-changed", ());
-        
-        let provider = state.translator_provider.clone();
+        let _ = dispatcher.emit("app-state-changed", Value::Null);
         
         let target_language = project.get_target_language().to_string();
         let results_clone = project.get_results_clone();
@@ -93,19 +95,17 @@ impl TranslationCoordinator {
                 }
                 
                 // Update state
-                let state = app.state::<AppState>();
-                if let Ok(mut proj) = state.project.lock() {
+                if let Ok(mut proj) = project_mutex.lock() {
                     let progress = ((i + 1) as f64 / total_chunks as f64) * 100.0;
                     proj.update_translation_progress(progress, all_translated_results.clone());
                 }
-                let _ = app.emit("app-state-changed", ());
+                let _ = dispatcher.emit("app-state-changed", Value::Null);
             }
             
-            let state = app.state::<AppState>();
-            if let Ok(mut proj) = state.project.lock() {
+            if let Ok(mut proj) = project_mutex.lock() {
                 proj.complete_translation(all_translated_results);
             }
-            let _ = app.emit("app-state-changed", ());
+            let _ = dispatcher.emit("app-state-changed", Value::Null);
         });
         
         Ok(())

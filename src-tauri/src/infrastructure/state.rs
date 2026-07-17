@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 pub struct AppState {
     pub config: AppConfig,
     pub translator_provider: Arc<dyn AIProvider>,
-    pub project: Mutex<ProjectState>,
+    pub project: Arc<Mutex<ProjectState>>,
 }
 
 impl AppState {
@@ -20,7 +20,7 @@ impl AppState {
         Ok(Self {
             config,
             translator_provider: Arc::from(provider),
-            project: Mutex::new(ProjectState::default()),
+            project: Arc::new(Mutex::new(ProjectState::default())),
         })
     }
 }

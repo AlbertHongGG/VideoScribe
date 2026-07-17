@@ -4,31 +4,11 @@ import { Dropzone } from "./components/ui/Dropzone";
 import { VideoPlayer } from "./components/player/VideoPlayer";
 import { STTPanel } from "./components/stt/STTPanel";
 
-import { useEffect } from "react";
-import { listen } from "@tauri-apps/api/event";
-import { useSTTStore } from "./store/sttStore";
+import { useAppEvents } from "./hooks/useAppEvents";
 
 function App() {
-  useEffect(() => {
-    const unlistenSettings = listen("setting-changed", (event: any) => {
-      const { key, value } = event.payload;
-      const store = useSTTStore.getState() as any;
-      const setterName = `set${key.charAt(0).toUpperCase()}${key.slice(1)}`;
-      if (typeof store[setterName] === 'function') {
-        store[setterName](value);
-      }
-    });
+  useAppEvents();
 
-    const unlistenState = listen("app-state-changed", (event: any) => {
-      const state = event.payload;
-      useSTTStore.getState().syncAppState(state);
-    });
-
-    return () => {
-      unlistenSettings.then(f => f());
-      unlistenState.then(f => f());
-    };
-  }, []);
   return (
     <div className="flex w-screen h-screen bg-transparent text-white overflow-hidden rounded-lg relative">
       <TitleBar />

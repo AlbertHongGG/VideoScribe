@@ -7,6 +7,7 @@ pub mod types;
 pub mod geminiflow;
 pub mod ollama;
 pub mod vertexai;
+pub mod local_stt;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProviderError {

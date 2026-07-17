@@ -29,8 +29,22 @@ fn lookup_word(text: String, state: State<'_, Mutex<DictionaryState>>) -> Result
 
 #[tauri::command]
 #[specta::specta]
-async fn run_stt(app: AppHandle, video_path: String, model_size: String) -> Result<(), String> {
-    crate::application::stt_service::SttService::run_stt(app, video_path, model_size)
+async fn run_stt(
+    app: AppHandle, 
+    video_path: String, 
+    model_size: String,
+    state: State<'_, crate::infrastructure::state::AppState>
+) -> Result<(), String> {
+    let dispatcher = std::sync::Arc::new(crate::infrastructure::tauri_events::TauriEventDispatcher::new(app));
+    let provider = std::sync::Arc::new(crate::infrastructure::providers::local_stt::LocalSTTProvider::new());
+    
+    crate::application::stt_service::SttService::run_stt(
+        state.project.clone(),
+        dispatcher,
+        provider,
+        video_path,
+        model_size
+    )
 }
 
 #[tauri::command]
@@ -62,8 +76,13 @@ fn get_app_state(state: State<'_, crate::infrastructure::state::AppState>) -> Re
 
 #[tauri::command]
 #[specta::specta]
-fn start_translation(app: AppHandle) -> Result<(), String> {
-    crate::application::translation_coordinator::TranslationCoordinator::start_translation(app)
+fn start_translation(app: AppHandle, state: State<'_, crate::infrastructure::state::AppState>) -> Result<(), String> {
+    let dispatcher = std::sync::Arc::new(crate::infrastructure::tauri_events::TauriEventDispatcher::new(app));
+    crate::application::translation_coordinator::TranslationCoordinator::start_translation(
+        state.project.clone(),
+        state.translator_provider.clone(),
+        dispatcher
+    )
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
