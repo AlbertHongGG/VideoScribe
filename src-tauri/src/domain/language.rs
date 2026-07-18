@@ -44,6 +44,12 @@ pub struct DictionaryEntry {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Type)]
+pub struct FuriganaToken {
+    pub surface: String,
+    pub reading: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Type)]
 pub struct LookupResult {
     pub original_text: String,
     pub token: String,
@@ -55,6 +61,9 @@ pub struct LookupResult {
 pub trait LanguagePlugin: Send + Sync {
     /// Look up a word in the language-specific dictionary.
     fn lookup_word(&self, text: &str) -> Result<LookupResult, String>;
+    
+    /// Get furigana tokens for the entire sentence
+    fn get_furigana(&self, text: &str) -> Result<Vec<FuriganaToken>, String>;
     
     /// Get the language this plugin handles.
     fn get_language(&self) -> Language;

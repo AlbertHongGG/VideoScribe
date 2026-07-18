@@ -1,7 +1,7 @@
 pub mod tokenizer;
 pub mod dictionary;
 
-use crate::domain::language::{Language, LanguagePlugin, LookupResult};
+use crate::domain::language::{Language, LanguagePlugin, LookupResult, FuriganaToken};
 use tokenizer::JapaneseTokenizer;
 use dictionary::JMDictService;
 use std::path::PathBuf;
@@ -43,5 +43,33 @@ impl LanguagePlugin for JapanesePlugin {
             reading: token_info.reading,
             entries,
         })
+    }
+
+    fn get_furigana(&self, text: &str) -> Result<Vec<FuriganaToken>, String> {
+        let token_infos = self.tokenizer.tokenize_all(text)?;
+        
+        let mut furigana_tokens = Vec::new();
+        for info in token_infos {
+            let surface = info.token_text;
+            
+            // Check if surface contains Kanji (Unicode range 4E00-9FAF)
+            let has_kanji = surface.chars().any(|c| {
+                let code = c as u32;
+                code >= 0x4E00 && code <= 0x9FAF
+            });
+            
+            let reading = if has_kanji {
+                info.reading.map(|r| tokenizer::katakana_to_hiragana(&r))
+            } else {
+                None
+            };
+            
+            furigana_tokens.push(FuriganaToken {
+                surface,
+                reading,
+            });
+        }
+        
+        Ok(furigana_tokens)
     }
 }

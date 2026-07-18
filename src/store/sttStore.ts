@@ -10,6 +10,7 @@ interface STTStore {
   language: string | null;
   showSubtitles: boolean;
   enableDictionary: boolean;
+  enableFurigana: boolean;
   enableTranslation: boolean;
   targetLanguage: string;
   subtitlePositionX: number;
@@ -30,6 +31,7 @@ interface STTStore {
   setLanguage: (language: string | null) => void;
   setShowSubtitles: (show: boolean) => void;
   setEnableDictionary: (enable: boolean) => void;
+  setEnableFurigana: (enable: boolean) => void;
   setEnableTranslation: (enable: boolean) => void;
   setTargetLanguage: (lang: string) => void;
   setSubtitlePositionX: (x: number) => void;
@@ -52,6 +54,7 @@ export const useSTTStore = create<STTStore>()(
       language: 'auto',
       showSubtitles: true,
       enableDictionary: false,
+      enableFurigana: false,
   enableTranslation: false,
   targetLanguage: 'zh-TW',
   subtitlePositionX: 50,
@@ -72,6 +75,7 @@ export const useSTTStore = create<STTStore>()(
       setLanguage: (language) => set({ language }),
       setShowSubtitles: (showSubtitles) => set({ showSubtitles }),
       setEnableDictionary: (enable) => set({ enableDictionary: enable }),
+      setEnableFurigana: (enable) => set({ enableFurigana: enable }),
   setEnableTranslation: (enable) => set({ enableTranslation: enable }),
   setTargetLanguage: (lang) => set({ targetLanguage: lang }),
   setSubtitlePositionX: (x) => set({ subtitlePositionX: x }),
@@ -107,6 +111,7 @@ export const useSTTStore = create<STTStore>()(
         language: state.language,
         showSubtitles: state.showSubtitles,
         enableDictionary: state.enableDictionary,
+        enableFurigana: state.enableFurigana,
         enableTranslation: state.enableTranslation,
         targetLanguage: state.targetLanguage,
         subtitlePositionX: state.subtitlePositionX,

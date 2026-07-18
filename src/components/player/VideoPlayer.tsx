@@ -5,6 +5,7 @@ import { VideoControls } from "./VideoControls";
 import { Upload } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
 import { DictionaryTooltip } from "../stt/DictionaryTooltip";
 
 export const VideoPlayer: React.FC = () => {
@@ -41,6 +42,10 @@ export const VideoPlayer: React.FC = () => {
   
   const [hoverText, setHoverText] = useState<{ text: string; x: number; y: number; startIndex: number } | null>(null);
   const hoverTimeoutRef = useRef<number | null>(null);
+
+  // Furigana state
+  const { enableFurigana } = useSTTStore();
+  const [furiganaTokens, setFuriganaTokens] = useState<{surface: string, reading?: string}[] | null>(null);
 
 
 
@@ -90,6 +95,23 @@ export const VideoPlayer: React.FC = () => {
       setCurrentTranslation(null);
     }
   }, [currentTime, memoizedResults]);
+
+  // 3. Fetch Furigana tokens when subtitle changes
+  useEffect(() => {
+    if (!currentSubtitle || language !== "ja" || (!enableFurigana && !enableDictionary)) {
+      setFuriganaTokens(null);
+      return;
+    }
+
+    let active = true;
+    invoke<{surface: string, reading?: string}[]>("get_furigana", { text: currentSubtitle })
+      .then(tokens => {
+        if (active) setFuriganaTokens(tokens);
+      })
+      .catch(console.error);
+
+    return () => { active = false; };
+  }, [currentSubtitle, language, enableFurigana, enableDictionary]);
 
   const lastSyncTime = useRef(0);
   const scrubTargetTime = useRef<number | null>(null);
@@ -291,10 +313,60 @@ export const VideoPlayer: React.FC = () => {
                       style={{ gap: `${subtitleSpacing ?? 6}px` }}
                     >
                       <p 
-                        className="text-white font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center leading-relaxed tracking-wide flex flex-wrap justify-center"
+                        className="text-white font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center leading-relaxed tracking-wide flex flex-wrap justify-center items-end"
                         style={{ fontSize: `${sttFontSize ?? 20}px` }}
                       >
-                        {language === "ja" && enableDictionary ? (
+                        {language === "ja" && furiganaTokens ? (
+                          (() => {
+                            let charIndex = 0;
+                            return furiganaTokens.map((token, tokenIdx) => {
+                              const startIdx = charIndex;
+                              charIndex += token.surface.length;
+
+                              return (
+                                <ruby key={tokenIdx} className="group/ruby leading-none" style={{ rubyPosition: "over" }}>
+                                  <span className="inline-flex">
+                                    {Array.from(token.surface).map((char, charOffset) => {
+                                      const absoluteIdx = startIdx + charOffset;
+                                      return (
+                                        <span
+                                          key={charOffset}
+                                          className={`rounded px-px cursor-pointer transition-colors ${
+                                            enableDictionary ? (
+                                              hoverText?.startIndex === absoluteIdx 
+                                                ? "text-yellow-400 bg-yellow-500/20" 
+                                                : "hover:text-yellow-400 hover:bg-white/10"
+                                            ) : ""
+                                          }`}
+                                          onMouseEnter={(e) => {
+                                            if (!enableDictionary) return;
+                                            if (hoverTimeoutRef.current) window.clearTimeout(hoverTimeoutRef.current);
+                                            const textToLookup = Array.from(currentSubtitle).slice(absoluteIdx, absoluteIdx + 15).join('');
+                                            setHoverText({
+                                              text: textToLookup,
+                                              x: e.clientX,
+                                              y: e.clientY,
+                                              startIndex: absoluteIdx
+                                            });
+                                          }}
+                                        >
+                                          {char}
+                                        </span>
+                                      );
+                                    })}
+                                  </span>
+                                  {enableFurigana && token.reading ? (
+                                    <rt className="text-[#facc15] font-semibold tracking-widest text-center pointer-events-none pb-1 select-none" style={{ fontSize: `${(sttFontSize ?? 20) * 0.45}px` }}>
+                                      {token.reading}
+                                    </rt>
+                                  ) : (
+                                    <rt className="pointer-events-none select-none pb-1" style={{ fontSize: `${(sttFontSize ?? 20) * 0.45}px` }}></rt>
+                                  )}
+                                </ruby>
+                              );
+                            });
+                          })()
+                        ) : language === "ja" && enableDictionary ? (
                           Array.from(currentSubtitle).map((char, i) => (
                             <span
                               key={i}

@@ -2,7 +2,7 @@ use tauri::{AppHandle, State, Manager};
 use serde_json::Value;
 use std::path::PathBuf;
 
-use crate::domain::language::LookupResult;
+use crate::domain::language::{LookupResult, FuriganaToken};
 use crate::infrastructure::plugins::PluginManager;
 use crate::infrastructure::plugins::japanese::JapanesePlugin;
 
@@ -18,7 +18,8 @@ pub fn create_builder() -> tauri_specta::Builder<tauri::Wry> {
             run_agent_task,
             get_app_state,
             start_translation,
-            import_stt_results
+            import_stt_results,
+            get_furigana
         ])
 }
 
@@ -31,6 +32,18 @@ fn lookup_word(text: String, state: State<'_, crate::infrastructure::state::AppS
         state.plugin_manager.clone(),
         language,
         &text
+    )
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_furigana(text: String, state: State<'_, crate::infrastructure::state::AppState>) -> Result<Vec<FuriganaToken>, String> {
+    let language = crate::domain::language::Language::Japanese; // Hardcode Japanese for now
+    
+    crate::application::language_service::LanguageService::get_furigana(
+        &text,
+        &language,
+        &state.plugin_manager
     )
 }
 
