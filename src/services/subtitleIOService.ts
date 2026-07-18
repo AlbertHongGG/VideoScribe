@@ -1,5 +1,6 @@
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
+import { invoke } from '@tauri-apps/api/core';
 import { useSTTStore, STTResult } from '../store/sttStore';
 import { useNotifyStore } from '../store/notifyStore';
 
@@ -70,6 +71,11 @@ export class SubtitleIOService {
       }
 
       const results = parsed as STTResult[];
+      
+      // Update backend state first
+      await invoke('import_stt_results', { results });
+      
+      // Then update frontend
       setResults(results);
       setStatus('completed');
 

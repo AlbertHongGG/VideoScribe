@@ -30,12 +30,6 @@ export const useAppEvents = () => {
               import("../store/notifyStore").then(({ useNotifyStore }) => {
                 useNotifyStore.getState().show("STT processing completed", "success");
               });
-              
-              if (useSTTStore.getState().enableTranslation) {
-                import("../services/translationService").then(({ TranslationService }) => {
-                  TranslationService.startTranslation();
-                });
-              }
             }
           }
         } catch (e) {

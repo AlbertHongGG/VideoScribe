@@ -106,4 +106,11 @@ impl ProjectState {
     pub fn set_stt_error(&mut self) {
         self.stt_status = STTStatus::Error;
     }
+
+    pub fn import_results(&mut self, results: Vec<STTResult>) {
+        let has_translation = results.iter().any(|r| r.translation.is_some());
+        self.results = results;
+        self.stt_status = STTStatus::Completed;
+        self.translation_status = if has_translation { TranslationStatus::Completed } else { TranslationStatus::Idle };
+    }
 }

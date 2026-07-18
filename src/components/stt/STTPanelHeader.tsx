@@ -1,5 +1,5 @@
 import React from "react";
-import { Download, Upload } from "lucide-react";
+import { Download, Upload, Languages } from "lucide-react";
 import { Tooltip } from "../ui/Tooltip";
 import { SubtitleIOService } from "../../services/subtitleIOService";
 
@@ -14,6 +14,7 @@ export const STTPanelHeader: React.FC<Props> = ({ status, progress, translationS
   const showSttProgress = status !== "idle" && status !== "completed";
   const showTranslationProgress = status === "completed" && translationStatus === "translating";
   const showActions = status === "idle" || (status === "completed" && translationStatus !== "translating");
+  const canTranslate = status === "completed";
 
   return (
     <div className="px-6 py-5 border-b border-white/10 bg-black/20 flex items-center justify-between">
@@ -40,6 +41,20 @@ export const STTPanelHeader: React.FC<Props> = ({ status, progress, translationS
       
       {showActions && (
         <div className="flex items-center gap-3">
+          {canTranslate && (
+            <Tooltip content="Translate Subtitles" position="bottom">
+              <button 
+                onClick={() => {
+                  import("../../services/translationService").then(({ TranslationService }) => {
+                    TranslationService.startTranslation();
+                  });
+                }}
+                className="text-gray-400 hover:text-[#facc15] transition-colors p-1"
+              >
+                <Languages size={16} />
+              </button>
+            </Tooltip>
+          )}
           <Tooltip content="Import Subtitles" position="bottom">
             <button 
               onClick={() => SubtitleIOService.importSubtitles()}

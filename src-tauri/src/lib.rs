@@ -18,7 +18,8 @@ pub fn create_builder() -> tauri_specta::Builder<tauri::Wry> {
             run_stt,
             run_agent_task,
             get_app_state,
-            start_translation
+            start_translation,
+            import_stt_results
         ])
 }
 
@@ -90,6 +91,15 @@ fn start_translation(app: AppHandle, state: State<'_, crate::infrastructure::sta
         state.translator_provider.clone(),
         dispatcher
     )
+}
+
+#[tauri::command]
+#[specta::specta]
+fn import_stt_results(results: Vec<crate::domain::project::STTResult>, state: State<'_, crate::infrastructure::state::AppState>) -> Result<(), String> {
+    if let Ok(mut project) = state.project.lock() {
+        project.import_results(results);
+    }
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

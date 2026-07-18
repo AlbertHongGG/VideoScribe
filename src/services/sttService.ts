@@ -12,6 +12,14 @@ export class STTService {
 
     try {
       await invoke("run_stt", { videoPath, modelSize });
+      
+      // Explicitly trigger translation if enabled
+      if (useSTTStore.getState().enableTranslation) {
+        import("./translationService").then(({ TranslationService }) => {
+          TranslationService.startTranslation();
+        });
+      }
+      
     } catch (e: any) {
       console.error(e);
       useSTTStore.getState().setStatus("error");
