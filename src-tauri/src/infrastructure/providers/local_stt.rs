@@ -6,13 +6,11 @@ use reqwest::Client;
 use reqwest_eventsource::{Event, EventSource};
 use futures_util::StreamExt;
 
-pub struct LocalSTTProvider {
-    backend_port: u16,
-}
+pub struct LocalSTTProvider {}
 
 impl LocalSTTProvider {
-    pub fn new(backend_port: u16) -> Self {
-        Self { backend_port }
+    pub fn new() -> Self {
+        Self {}
     }
 }
 
@@ -25,7 +23,19 @@ impl STTProvider for LocalSTTProvider {
     ) -> Result<(), String> {
         let video_path = video_path.to_string();
         let model_size = model_size.to_string();
-        let port = self.backend_port;
+        
+        let port = match std::net::TcpListener::bind("127.0.0.1:0") {
+            Ok(listener) => {
+                let p = listener.local_addr().unwrap().port();
+                drop(listener);
+                p
+            },
+            Err(e) => {
+                let err_msg = serde_json::json!({"type": "error", "message": format!("OS failed to allocate a dynamic port: {}", e)});
+                on_event(err_msg);
+                return Ok(());
+            }
+        };
         
         std::thread::spawn(move || {
             let exe_dir = std::env::current_exe()
@@ -94,20 +104,38 @@ impl STTProvider for LocalSTTProvider {
                 }
             };
 
-            rt.block_on(async {
-                let mut retries = 0;
-                let client = Client::new();
-                let url = format!("http://127.0.0.1:{}/api/v1/stt/transcribe", port);
-                
-                // Wait for FastAPI server to boot
-                while retries < 20 {
-                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-                    if reqwest::get(&url.replace("/api/v1/stt/transcribe", "/docs")).await.is_ok() {
-                        break;
-                    }
-                    retries += 1;
+            let url = format!("http://127.0.0.1:{}/api/v1/stt/transcribe", port);
+            let mut is_server_up = false;
+
+            // Wait for FastAPI server to boot
+            for _ in 0..20 {
+                if let Ok(Some(status)) = child.try_wait() {
+                    let err_msg = serde_json::json!({"type": "error", "message": format!("Python backend crashed during boot with status: {}", status)});
+                    on_event(err_msg);
+                    return;
                 }
 
+                let check_url = url.replace("/api/v1/stt/transcribe", "/docs");
+                let is_ok = rt.block_on(async {
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                    reqwest::get(&check_url).await.is_ok()
+                });
+
+                if is_ok {
+                    is_server_up = true;
+                    break;
+                }
+            }
+
+            if !is_server_up {
+                let err_msg = serde_json::json!({"type": "error", "message": "Python backend failed to start within timeout."});
+                on_event(err_msg);
+                let _ = child.kill();
+                return;
+            }
+
+            rt.block_on(async {
+                let client = Client::new();
                 let req_body = serde_json::json!({
                     "video_path": video_path,
                     "model": model_size,

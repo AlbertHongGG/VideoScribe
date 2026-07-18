@@ -7,10 +7,6 @@ export class TranslationService {
     const sttStore = useSTTStore.getState();
     const notifyStore = useNotifyStore.getState();
 
-    if (!sttStore.enableTranslation) {
-      return; // Translation not enabled
-    }
-
     notifyStore.show("Starting Dual Subtitle Translation...", "info");
 
     try {

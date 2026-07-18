@@ -7,7 +7,7 @@ pub struct AppConfig {
     pub ai_model: String,
     
     // Backend Server
-    pub backend_port: u16,
+
     
     // Ollama
     pub ollama_base_url: Option<String>,
@@ -31,11 +31,6 @@ impl AppConfig {
         Self {
             ai_provider: env::var("AI_PROVIDER").unwrap_or_else(|_| "GEMINIFLOW".to_string()),
             ai_model: env::var("AI_MODEL").unwrap_or_else(|_| "gemini-3.5-flash".to_string()),
-            
-            backend_port: env::var("BACKEND_PORT")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(8000),
             
             ollama_base_url: env::var("OLLAMA_BASE_URL").ok(),
             

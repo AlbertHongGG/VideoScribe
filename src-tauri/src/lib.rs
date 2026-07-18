@@ -43,7 +43,7 @@ async fn run_stt(
     state: State<'_, crate::infrastructure::state::AppState>
 ) -> Result<(), String> {
     let dispatcher = std::sync::Arc::new(crate::infrastructure::tauri_events::TauriEventDispatcher::new(app));
-    let provider = std::sync::Arc::new(crate::infrastructure::providers::local_stt::LocalSTTProvider::new(state.config.backend_port));
+    let provider = std::sync::Arc::new(crate::infrastructure::providers::local_stt::LocalSTTProvider::new());
     
     crate::application::stt_service::SttService::run_stt(
         state.project.clone(),
