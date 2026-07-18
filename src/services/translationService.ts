@@ -1,10 +1,9 @@
-import { useSTTStore } from '../store/sttStore';
+
 import { useNotifyStore } from '../store/notifyStore';
 import { commands } from '../types/bindings';
 
 export class TranslationService {
   static async startTranslation() {
-    const sttStore = useSTTStore.getState();
     const notifyStore = useNotifyStore.getState();
 
     notifyStore.show("Starting Dual Subtitle Translation...", "info");
