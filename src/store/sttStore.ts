@@ -19,6 +19,7 @@ interface STTStore {
   sttFontSize: number;
   translationFontSize: number;
   status: STTStatus;
+  errorMessage: string | null;
   progress: number;
   translationStatus: TranslationStatus;
   translationProgress: number;
@@ -39,7 +40,7 @@ interface STTStore {
   setSubtitleSpacing: (spacing: number) => void;
   setSttFontSize: (size: number) => void;
   setTranslationFontSize: (size: number) => void;
-  setStatus: (status: STTStatus, progress?: number) => void;
+  setStatus: (status: STTStatus, progress?: number, errorMessage?: string | null) => void;
   setTranslationStatus: (status: TranslationStatus, progress?: number) => void;
   setResults: (results: STTResult[]) => void;
   syncAppState: (state: ProjectState) => void;
@@ -63,6 +64,7 @@ export const useSTTStore = create<STTStore>()(
   sttFontSize: 20,
   translationFontSize: 18,
   status: 'idle',
+  errorMessage: null,
   progress: 0,
   translationStatus: 'idle',
   translationProgress: 0,
@@ -83,12 +85,13 @@ export const useSTTStore = create<STTStore>()(
   setSubtitleSpacing: (spacing) => set({ subtitleSpacing: spacing }),
   setSttFontSize: (size) => set({ sttFontSize: size }),
   setTranslationFontSize: (size) => set({ translationFontSize: size }),
-  setStatus: (status, progress = 0) => set({ status, progress }),
+  setStatus: (status, progress = 0, errorMessage = null) => set({ status, progress, errorMessage }),
   setTranslationStatus: (translationStatus, translationProgress = 0) => set({ translationStatus, translationProgress }),
   setResults: (results) => set({ results }),
   
   syncAppState: (state) => set({
     status: state.stt_status,
+    errorMessage: state.stt_error_message,
     progress: state.stt_progress,
     translationStatus: state.translation_status,
     translationProgress: state.translation_progress,
@@ -98,6 +101,7 @@ export const useSTTStore = create<STTStore>()(
   
       reset: () => set({ 
         status: 'idle', 
+        errorMessage: null,
         progress: 0, 
         translationStatus: 'idle',
         translationProgress: 0,

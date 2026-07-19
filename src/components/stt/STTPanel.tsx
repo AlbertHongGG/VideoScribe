@@ -8,6 +8,7 @@ import { STTProcessingOverlay } from "./STTProcessingOverlay";
 import { STTTranslationOverlay } from "./STTTranslationOverlay";
 import { STTResultList } from "./STTResultList";
 import { STTEmptyState } from "./STTEmptyState";
+import { STTErrorState } from "./STTErrorState";
 
 export const STTPanel: React.FC = () => {
   const { isPanelOpen, results, status, progress, translationStatus, translationProgress } = useSTTStore();
@@ -42,8 +43,38 @@ export const STTPanel: React.FC = () => {
     });
   };
 
-  const showProcessing = status !== "idle" && status !== "completed";
-  const showTranslating = status === "completed" && translationStatus === "translating";
+  const renderContent = () => {
+    if (status === "error") {
+      return <STTErrorState />;
+    }
+    if (status === "idle") {
+      return <STTEmptyState />;
+    }
+    if (status === "loading_model" || status === "transcribing") {
+      return <STTProcessingOverlay progress={progress} />;
+    }
+    if (status === "completed") {
+      return (
+        <div 
+          ref={containerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto custom-scrollbar p-4 relative"
+        >
+          {translationStatus === "translating" && <STTTranslationOverlay progress={translationProgress} />}
+          {results.length > 0 && (
+            <STTResultList 
+              results={results} 
+              currentTime={currentTime} 
+              onSeek={handleSeek} 
+              onCopy={handleCopy}
+              containerRef={containerRef}
+            />
+          )}
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <AnimatePresence>
@@ -63,26 +94,7 @@ export const STTPanel: React.FC = () => {
           />
 
           <div className="flex-1 relative overflow-hidden flex flex-col">
-            {showProcessing && <STTProcessingOverlay progress={progress} />}
-            {showTranslating && <STTTranslationOverlay progress={translationProgress} />}
-
-            <div 
-              ref={containerRef}
-              onScroll={handleScroll}
-              className="flex-1 overflow-y-auto custom-scrollbar p-4"
-            >
-              {results.length > 0 ? (
-                <STTResultList 
-                  results={results} 
-                  currentTime={currentTime} 
-                  onSeek={handleSeek} 
-                  onCopy={handleCopy}
-                  containerRef={containerRef}
-                />
-              ) : (
-                status === "idle" && <STTEmptyState />
-              )}
-            </div>
+            {renderContent()}
           </div>
         </motion.div>
       )}

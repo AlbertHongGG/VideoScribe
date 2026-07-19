@@ -53,7 +53,8 @@ impl SttService {
                                 }
                             }
                             "error" => {
-                                project.set_stt_error();
+                                let msg = json.get("message").and_then(|m| m.as_str()).unwrap_or("Unknown error").to_string();
+                                project.set_stt_error(msg);
                             }
                             _ => {}
                         }

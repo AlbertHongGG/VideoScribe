@@ -37,6 +37,7 @@ pub enum TranslationStatus {
 pub struct ProjectState {
     pub video_path: Option<String>,
     pub stt_status: STTStatus,
+    pub stt_error_message: Option<String>,
     pub stt_progress: f64,
     pub translation_status: TranslationStatus,
     pub translation_progress: f64,
@@ -49,6 +50,7 @@ impl Default for ProjectState {
         Self {
             video_path: None,
             stt_status: STTStatus::Idle,
+            stt_error_message: None,
             stt_progress: 0.0,
             translation_status: TranslationStatus::Idle,
             translation_progress: 0.0,
@@ -97,6 +99,9 @@ impl ProjectState {
 
     pub fn set_stt_status(&mut self, status: STTStatus) {
         self.stt_status = status;
+        if self.stt_status != STTStatus::Error {
+            self.stt_error_message = None;
+        }
     }
 
     pub fn update_stt_progress(&mut self, progress: f64) {
@@ -107,8 +112,9 @@ impl ProjectState {
         self.results.push(result);
     }
 
-    pub fn set_stt_error(&mut self) {
+    pub fn set_stt_error(&mut self, message: String) {
         self.stt_status = STTStatus::Error;
+        self.stt_error_message = Some(message);
     }
 
     pub fn import_results(&mut self, results: Vec<STTResult>) {

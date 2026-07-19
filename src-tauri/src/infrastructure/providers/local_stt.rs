@@ -6,11 +6,15 @@ use reqwest::Client;
 use reqwest_eventsource::{Event, EventSource};
 use futures_util::StreamExt;
 
-pub struct LocalSTTProvider {}
+use tauri::Manager;
+
+pub struct LocalSTTProvider {
+    app: tauri::AppHandle,
+}
 
 impl LocalSTTProvider {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(app: tauri::AppHandle) -> Self {
+        Self { app }
     }
 }
 
@@ -36,15 +40,12 @@ impl STTProvider for LocalSTTProvider {
                 return Ok(());
             }
         };
-        
-        std::thread::spawn(move || {
-            let exe_dir = std::env::current_exe()
-                .unwrap_or_else(|_| PathBuf::from("."))
-                .parent()
-                .unwrap_or_else(|| std::path::Path::new("."))
-                .to_path_buf();
+        let app = self.app.clone();
 
-            let backend_exe = exe_dir.join("backend").join("VideoScribe-backend.exe");
+        std::thread::spawn(move || {
+            // Portable Resource resolution via Tauri API
+            let resource_dir = app.path().resource_dir().unwrap_or_else(|_| PathBuf::from("."));
+            let backend_exe = resource_dir.join("backend").join("VideoScribe-backend.exe");
             
             let mut child_cmd;
             
@@ -53,8 +54,7 @@ impl STTProvider for LocalSTTProvider {
                 child_cmd
                     .arg("--port")
                     .arg(port.to_string());
-                    
-                let ffmpeg_dir = exe_dir.join("ffmpeg").join("bin");
+                    let ffmpeg_dir = resource_dir.join("ffmpeg").join("bin");
                 if let Some(path_var) = std::env::var_os("PATH") {
                     let mut paths = std::env::split_paths(&path_var).collect::<Vec<_>>();
                     paths.insert(0, ffmpeg_dir);
@@ -63,10 +63,31 @@ impl STTProvider for LocalSTTProvider {
                     }
                 }
             } else {
-                let backend_dir = std::env::current_dir()
-                    .unwrap_or_default()
-                    .join("..")
-                    .join("src-backend");
+                // Development fallback: using exe path to walk up to workspace root
+                let exe_dir = std::env::current_exe()
+                    .unwrap_or_else(|_| PathBuf::from("."))
+                    .parent()
+                    .unwrap_or_else(|| std::path::Path::new("."))
+                    .to_path_buf();
+                
+                // If we are running from target/release or target/debug, we can find src-backend relative to exe_dir
+                // Typical exe_dir: target/debug or target/release
+                let workspace_root = exe_dir.join("..").join("..").join("..");  
+                let mut backend_dir = workspace_root.join("src-backend");
+
+                if !backend_dir.exists() {
+                    // Fallback to current_dir
+                    backend_dir = std::env::current_dir()
+                        .unwrap_or_default()
+                        .join("..")
+                        .join("src-backend");
+                }
+
+                if !backend_dir.exists() {
+                    let err_msg = serde_json::json!({"type": "error", "message": format!("Could not find src-backend at {:?}", backend_dir)});
+                    on_event(err_msg);
+                    return;
+                }
 
                 child_cmd = Command::new("uv");
                 child_cmd
