@@ -1,12 +1,12 @@
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
-import { useSTTStore, STTResult } from '../store/sttStore';
+import { useSTTJobStore, STTResult } from '../store/sttJobStore';
 import { useNotifyStore } from '../store/notifyStore';
 
 export class SubtitleIOService {
   static async exportSubtitles() {
-    const { results } = useSTTStore.getState();
+    const { results } = useSTTJobStore.getState();
     const { show } = useNotifyStore.getState();
 
     if (!results || results.length === 0) {
@@ -39,7 +39,7 @@ export class SubtitleIOService {
   }
 
   static async importSubtitles() {
-    const { setResults, setStatus, setTranslationStatus } = useSTTStore.getState();
+    const { setResults, setStatus, setTranslationStatus } = useSTTJobStore.getState();
     const { show } = useNotifyStore.getState();
 
     try {

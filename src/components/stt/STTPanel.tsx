@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { useVideoStore } from "../../store/videoStore";
-import { useSTTStore } from "../../store/sttStore";
+import { useSTTJobStore } from "../../store/sttJobStore";
+import { useSTTSettingsStore } from "../../store/sttSettingsStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNotifyStore } from "../../store/notifyStore";
 import { STTPanelHeader } from "./STTPanelHeader";
@@ -11,7 +12,8 @@ import { STTEmptyState } from "./STTEmptyState";
 import { STTErrorState } from "./STTErrorState";
 
 export const STTPanel: React.FC = () => {
-  const { isPanelOpen, results, status, progress, translationStatus, translationProgress } = useSTTStore();
+  const { isPanelOpen } = useSTTSettingsStore();
+  const { results, status, progress, translationStatus, translationProgress } = useSTTJobStore();
   const { currentTime, setSeekToTime, setIsPlaying } = useVideoStore();
   const { show } = useNotifyStore();
   
@@ -44,13 +46,13 @@ export const STTPanel: React.FC = () => {
   };
 
   const renderContent = () => {
-    if (status === "error") {
+    if (status === "error" || status === "failed") {
       return <STTErrorState />;
     }
-    if (status === "idle") {
+    if (status === "idle" || status === "cancelled") {
       return <STTEmptyState />;
     }
-    if (status === "loading_model" || status === "transcribing") {
+    if (status === "starting" || status === "loading_model" || status === "transcribing" || status === "cancelling") {
       return <STTProcessingOverlay progress={progress} />;
     }
     if (status === "completed") {

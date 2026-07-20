@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useMemo } from "react";
 import { useVideoStore } from "../../store/videoStore";
-import { useSTTStore } from "../../store/sttStore";
+import { useSTTJobStore } from "../../store/sttJobStore";
+import { useSTTSettingsStore } from "../../store/sttSettingsStore";
 import { VideoControls } from "./VideoControls";
 import { AnimatePresence, motion } from "framer-motion";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -27,7 +28,10 @@ export const VideoPlayer: React.FC = () => {
   } = useVideoStore();
 
   const { 
-    results, 
+    results
+  } = useSTTJobStore();
+
+  const { 
     language, 
     enableDictionary, 
     showSubtitles,
@@ -35,18 +39,16 @@ export const VideoPlayer: React.FC = () => {
     subtitlePositionY,
     subtitleSpacing,
     sttFontSize,
-    translationFontSize
-  } = useSTTStore();
+    translationFontSize,
+    enableFurigana
+  } = useSTTSettingsStore();
   const [currentSubtitle, setCurrentSubtitle] = useState<string | null>(null);
   const [currentTranslation, setCurrentTranslation] = useState<string | null>(null);
   
   const [hoverText, setHoverText] = useState<{ text: string; x: number; y: number; startIndex: number } | null>(null);
   const hoverTimeoutRef = useRef<number | null>(null);
 
-  // Furigana state
-  const { enableFurigana } = useSTTStore();
   const [furiganaTokens, setFuriganaTokens] = useState<{surface: string, reading?: string}[] | null>(null);
-
 
 
   // Memoize results to prevent unnecessary scans if results haven't changed

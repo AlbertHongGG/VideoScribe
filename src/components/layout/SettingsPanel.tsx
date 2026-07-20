@@ -1,6 +1,6 @@
 import { Select } from "../ui/Select";
 import { Slider } from "../ui/Slider";
-import { useSTTStore } from "../../store/sttStore";
+import { useSTTSettingsStore } from "../../store/sttSettingsStore";
 import { emit } from "@tauri-apps/api/event";
 
 const MODEL_OPTIONS = [
@@ -40,7 +40,7 @@ export const SettingsPanel: React.FC = () => {
     subtitleSpacing, setSubtitleSpacing,
     sttFontSize, setSttFontSize,
     translationFontSize, setTranslationFontSize
-  } = useSTTStore();
+  } = useSTTSettingsStore();
 
   return (
     <div className="w-full h-full p-8 text-white overflow-y-auto custom-scrollbar bg-[#0f0f0f]">

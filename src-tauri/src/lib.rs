@@ -14,7 +14,9 @@ pub fn create_builder() -> tauri_specta::Builder<tauri::Wry> {
     tauri_specta::Builder::<tauri::Wry>::new()
         .commands(tauri_specta::collect_commands![
             lookup_word,
-            run_stt,
+            start_stt_job,
+            cancel_stt_job,
+            get_stt_job_state,
             run_agent_task,
             get_app_state,
             start_translation,
@@ -49,22 +51,30 @@ fn get_furigana(text: String, state: State<'_, crate::infrastructure::state::App
 
 #[tauri::command]
 #[specta::specta]
-async fn run_stt(
-    app: AppHandle, 
-    video_path: String, 
+fn start_stt_job(
+    video_path: String,
     model_size: String,
-    state: State<'_, crate::infrastructure::state::AppState>
+    language: String,
+    manager: State<'_, std::sync::Arc<crate::application::stt_job_controller::SttJobController>>
+) -> Result<String, String> {
+    manager.start_job(video_path, model_size, language)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn cancel_stt_job(
+    job_id: String,
+    manager: State<'_, std::sync::Arc<crate::application::stt_job_controller::SttJobController>>
 ) -> Result<(), String> {
-    let dispatcher = std::sync::Arc::new(crate::infrastructure::tauri_events::TauriEventDispatcher::new(app.clone()));
-    let provider = std::sync::Arc::new(crate::infrastructure::providers::local_stt::LocalSTTProvider::new(app));
-    
-    crate::application::stt_service::SttService::run_stt(
-        state.project.clone(),
-        dispatcher,
-        provider,
-        video_path,
-        model_size
-    )
+    manager.cancel_job(job_id)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_stt_job_state(
+    manager: State<'_, std::sync::Arc<crate::application::stt_job_controller::SttJobController>>
+) -> Result<Option<crate::domain::stt_job::SttJobSnapshot>, String> {
+    Ok(manager.get_current_state())
 }
 
 #[tauri::command]
@@ -154,6 +164,9 @@ pub fn run() {
                     eprintln!("Failed to initialize AppState: {}", e);
                 }
             }
+            
+            let stt_manager = crate::application::stt_job_controller::SttJobController::new(app.handle().clone());
+            app.manage(stt_manager);
             Ok(())
         })
         .plugin(tauri_plugin_shell::init())

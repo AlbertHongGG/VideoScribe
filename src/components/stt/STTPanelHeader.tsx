@@ -11,9 +11,9 @@ interface Props {
 }
 
 export const STTPanelHeader: React.FC<Props> = ({ status, progress, translationStatus, translationProgress }) => {
-  const showSttProgress = status !== "idle" && status !== "completed";
+  const showSttProgress = status !== "idle" && status !== "completed" && status !== "error" && status !== "failed" && status !== "cancelled";
   const showTranslationProgress = status === "completed" && translationStatus === "translating";
-  const showActions = status === "idle" || (status === "completed" && translationStatus !== "translating");
+  const showActions = status === "idle" || status === "cancelled" || (status === "completed" && translationStatus !== "translating");
   const canTranslate = status === "completed";
 
   return (
@@ -26,7 +26,7 @@ export const STTPanelHeader: React.FC<Props> = ({ status, progress, translationS
       {showSttProgress && (
         <div className="flex items-center gap-2">
           <span className="text-xs text-[#facc15] font-mono font-bold tracking-wider">
-            {status === "loading_model" ? "LOADING..." : `${progress}%`}
+            {status === "loading_model" ? "LOADING..." : status === "starting" ? "STARTING..." : status === "cancelling" ? "CANCELLING..." : `${progress}%`}
           </span>
         </div>
       )}

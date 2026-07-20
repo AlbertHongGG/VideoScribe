@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import { formatTime } from "../../utils/time";
 import { Play, Copy } from "lucide-react";
-import { STTResult } from "../../store/sttStore";
+import { STTResult } from "../../store/sttJobStore";
 
 interface Props {
   results: STTResult[];

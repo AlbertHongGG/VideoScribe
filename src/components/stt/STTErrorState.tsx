@@ -1,8 +1,8 @@
 import React from "react";
-import { useSTTStore } from "../../store/sttStore";
+import { useSTTJobStore } from "../../store/sttJobStore";
 
 export const STTErrorState: React.FC = () => {
-  const { errorMessage, setStatus } = useSTTStore();
+  const { errorMessage, setStatus } = useSTTJobStore();
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[#121212]">

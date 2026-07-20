@@ -5,7 +5,8 @@ import { Minus, Square, X, Maximize, FileVideo, Command, Settings, PanelRightOpe
 import { Tooltip } from "../ui/Tooltip";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useVideoStore } from "../../store/videoStore";
-import { useSTTStore } from "../../store/sttStore";
+import { useSTTJobStore } from "../../store/sttJobStore";
+import { useSTTSettingsStore } from "../../store/sttSettingsStore";
 import { useNotifyStore } from "../../store/notifyStore";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { STTService } from "../../services/sttService";
@@ -15,7 +16,8 @@ export const TitleBar: React.FC = () => {
   const appWindow = getCurrentWindow();
 
   const { videoUrl, setVideo } = useVideoStore();
-  const { isPanelOpen, togglePanel, status, setPanelOpen, model } = useSTTStore();
+  const { isPanelOpen, togglePanel, setPanelOpen, model } = useSTTSettingsStore();
+  const { status } = useSTTJobStore();
   const { show } = useNotifyStore();
 
   useEffect(() => {

@@ -1,57 +1,79 @@
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
-import { useSTTStore } from "../store/sttStore";
+import { useSTTSettingsStore } from "../store/sttSettingsStore";
+import { useSTTJobStore } from "../store/sttJobStore";
 import { ProjectState } from "../types/app_types";
 
 export const useAppEvents = () => {
   useEffect(() => {
-    let unlistenSettings: () => void;
-    let unlistenState: () => void;
-    let unlistenError: () => void;
+    let unlistenFunctions: (() => void)[] = [];
+    let isMounted = true;
 
     const setupListeners = async () => {
-      unlistenSettings = await listen("setting-changed", (event: any) => {
+      const u1 = await listen("setting-changed", (event: any) => {
         const { key, value } = event.payload;
-        const store = useSTTStore.getState() as any;
+        const store = useSTTSettingsStore.getState() as any;
         const setterName = `set${key.charAt(0).toUpperCase()}${key.slice(1)}`;
         if (typeof store[setterName] === 'function') {
           store[setterName](value);
         }
       });
+      if (isMounted) unlistenFunctions.push(u1); else u1();
 
-      unlistenState = await listen("app-state-changed", async () => {
+      const u2 = await listen("app-state-changed", async () => {
         try {
-          const prevState = useSTTStore.getState().status;
           const state = await invoke<ProjectState>("get_app_state");
           if (state) {
-            useSTTStore.getState().syncAppState(state);
-
-            if (prevState !== 'completed' && state.stt_status === 'completed') {
-              import("../store/notifyStore").then(({ useNotifyStore }) => {
-                useNotifyStore.getState().show("STT processing completed", "success");
-              });
-            }
+            useSTTJobStore.getState().syncAppState(state);
+            useSTTSettingsStore.getState().setTargetLanguage(state.target_language);
           }
         } catch (e) {
           console.error("Failed to sync app state:", e);
         }
       });
+      if (isMounted) unlistenFunctions.push(u2); else u2();
 
-      unlistenError = await listen("error", (event: any) => {
-        const { message } = event.payload;
+      const u3 = await listen("stt_job_state", (event: any) => {
+        const snapshot = event.payload;
+        const prevState = useSTTJobStore.getState().status;
+        useSTTJobStore.getState().syncJobState(snapshot);
+        
+        if (prevState !== 'completed' && snapshot.status === 'completed') {
+          import("../store/notifyStore").then(({ useNotifyStore }) => {
+            useNotifyStore.getState().show("STT processing completed", "success");
+          });
+        }
+      });
+      if (isMounted) unlistenFunctions.push(u3); else u3();
+
+      const u4 = await listen("stt_segment_batch", (event: any) => {
+        if (event.payload && event.payload.cues) {
+          const formattedCues = event.payload.cues.map((cue: any) => ({
+            start: cue.start_ms / 1000,
+            end: cue.end_ms / 1000,
+            text: cue.text,
+            translation: null,
+          }));
+          useSTTJobStore.getState().appendCues(formattedCues);
+        }
+      });
+      if (isMounted) unlistenFunctions.push(u4); else u4();
+
+      const u5 = await listen("stt_error", (event: any) => {
+        const { message } = event.payload || event;
         import("../store/notifyStore").then(({ useNotifyStore }) => {
           useNotifyStore.getState().show(message || "An unknown error occurred", "error");
         });
       });
+      if (isMounted) unlistenFunctions.push(u5); else u5();
     };
 
     setupListeners();
 
     return () => {
-      if (unlistenSettings) unlistenSettings();
-      if (unlistenState) unlistenState();
-      if (unlistenError) unlistenError();
+      isMounted = false;
+      unlistenFunctions.forEach(unlisten => unlisten());
     };
   }, []);
 };

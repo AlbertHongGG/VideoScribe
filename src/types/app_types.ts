@@ -4,6 +4,6 @@ export interface ProjectState { video_path: string | null, stt_status: STTStatus
 
 export type STTResult = { start: number, end: number, text: string, translation: string | null, };
 
-export type STTStatus = "idle" | "loading_model" | "transcribing" | "completed" | "error";
+export type STTStatus = "idle" | "starting" | "loading_model" | "transcribing" | "cancelling" | "completed" | "error" | "failed" | "cancelled";
 
 export type TranslationStatus = "idle" | "translating" | "completed" | "error";

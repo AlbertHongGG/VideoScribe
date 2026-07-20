@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useSTTStore } from "../store/sttStore";
+import { useSTTJobStore } from "../store/sttJobStore";
+import { useSTTSettingsStore } from "../store/sttSettingsStore";
 import { useNotifyStore } from "../store/notifyStore";
 
 export class STTService {
@@ -7,14 +8,15 @@ export class STTService {
     const notifyStore = useNotifyStore.getState();
 
     // Optimistically update frontend state while backend boots
-    useSTTStore.getState().setStatus("loading_model", 0);
+    useSTTJobStore.getState().reset();
+    useSTTJobStore.getState().setStatus("loading_model", 0);
     notifyStore.show("Starting Speech-to-Text process...", "info");
 
     try {
-      await invoke("run_stt", { videoPath, modelSize });
+      await invoke("start_stt_job", { videoPath, modelSize, language: "auto" });
       
       // Explicitly trigger translation if enabled
-      if (useSTTStore.getState().enableTranslation) {
+      if (useSTTSettingsStore.getState().enableTranslation) {
         import("./translationService").then(({ TranslationService }) => {
           TranslationService.startTranslation();
         });
@@ -22,7 +24,7 @@ export class STTService {
       
     } catch (e: any) {
       console.error(e);
-      useSTTStore.getState().setStatus("error");
+      useSTTJobStore.getState().setStatus("error");
       useNotifyStore.getState().show(`Failed to start STT: ${e.toString()}`, "error");
     }
   }
