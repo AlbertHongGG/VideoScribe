@@ -84,7 +84,7 @@ export const STTPanel: React.FC = () => {
           animate={{ width: 380, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
-          className="h-full bg-[#121212]/95 backdrop-blur-xl border-l border-white/10 flex flex-col overflow-hidden shrink-0 z-20 shadow-[-20px_0_40px_rgba(0,0,0,0.5)]"
+          className="h-full bg-[#121212] border-l border-white/10 flex flex-col overflow-hidden shrink-0 z-20 shadow-[-20px_0_40px_rgba(0,0,0,0.5)]"
         >
           <STTPanelHeader 
             status={status} 
