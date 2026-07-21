@@ -3,8 +3,9 @@ from typing import Iterator, Tuple, Optional, Any
 from faster_whisper import WhisperModel, BatchedInferencePipeline
 from videoscribe.domain.models import AudioWindow, Word, TranscriptionInfo
 from videoscribe.domain.interfaces import SpeechRecognizer
-from videoscribe.domain.transcription_options import TranscriptionOptions
+from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType
 from videoscribe.domain.cancellation import CancellationToken, CancelledException
+from videoscribe.infrastructure.audio.vad.factory import VADFactory
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ class FasterWhisperEngine(SpeechRecognizer):
         self._model = WhisperModel(options.model_size, device=options.device, compute_type=options.compute_type)
         
         if options.use_batch:
-            logger.info(f"Initializing BatchedInferencePipeline with batch_size={options.batch_size} and vad_filter={options.vad_filter}.")
+            logger.info(f"Initializing BatchedInferencePipeline with batch_size={options.batch_size}.")
             self._pipeline = BatchedInferencePipeline(model=self._model)
             self._is_batched = True
         else:
@@ -33,10 +34,33 @@ class FasterWhisperEngine(SpeechRecognizer):
             
         transcribe_kwargs = {
             "beam_size": 5,
-            "vad_filter": options.vad_filter,
             "word_timestamps": True,
             "condition_on_previous_text": False
         }
+        
+        # Configure VAD based on engine type
+        custom_vad_windows = None
+        if options.vad_engine == VADEngineType.CUSTOM:
+            vad_analyzer = VADFactory.create(options)
+            if vad_analyzer:
+                logger.info(f"Running Custom VAD Analyzer internally: {vad_analyzer.__class__.__name__}")
+                windows_iter = vad_analyzer.analyze(audio_path, options)
+                if windows_iter is not None:
+                    custom_vad_windows = list(windows_iter)
+                    logger.info(f"Custom VAD generated {len(custom_vad_windows)} chunks.")
+        
+        if options.vad_engine == VADEngineType.CUSTOM and custom_vad_windows is not None:
+            transcribe_kwargs["vad_filter"] = False
+            if self._is_batched:
+                transcribe_kwargs["clip_timestamps"] = [{"start": w.start, "end": w.end} for w in custom_vad_windows]
+            else:
+                # Flat list of start/end pairs for standard model
+                flat_list = []
+                for w in custom_vad_windows:
+                    flat_list.extend([w.start, w.end])
+                transcribe_kwargs["clip_timestamps"] = flat_list
+        else:
+            transcribe_kwargs["vad_filter"] = (options.vad_engine == VADEngineType.NATIVE)
         
         if options.language != "auto" and options.language:
             transcribe_kwargs["language"] = options.language

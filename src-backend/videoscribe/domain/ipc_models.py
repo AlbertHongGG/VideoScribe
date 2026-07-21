@@ -6,7 +6,7 @@ class StartPayload:
     video_path: str
     model: str = "medium"
     language: str = "auto"
-    use_vad: bool = False
+    vad_engine: str = "native"
     use_batch: bool = True
     batch_size: int = 16
 

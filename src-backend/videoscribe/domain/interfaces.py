@@ -8,6 +8,14 @@ class AudioAnalyzer(Protocol):
         """Get the total duration of the audio in seconds."""
         ...
 
+class VADAnalyzer(Protocol):
+    def analyze(self, audio_path: str, options: TranscriptionOptions) -> Optional[Iterator[AudioWindow]]:
+        """
+        Analyze audio and return a sequence of speech segments (AudioWindow).
+        If the implementation delegates VAD to the STT engine natively, it should return None.
+        """
+        ...
+
 class SpeechRecognizer(Protocol):
     def load_model(self, options: TranscriptionOptions) -> None:
         """Load the STT model using the provided options."""

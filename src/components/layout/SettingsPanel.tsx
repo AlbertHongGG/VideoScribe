@@ -23,13 +23,23 @@ const TRANSLATION_LANGUAGES = [
   { value: "zh-CN", label: "简体中文" },
   { value: "en", label: "English" },
   { value: "ja", label: "日本語" },
+  { value: "ja", label: "日本語" },
   { value: "ko", label: "한국어" },
+];
+
+const VAD_ENGINE_OPTIONS = [
+  { value: "off", label: "Off (No VAD)" },
+  { value: "native", label: "Native (Whisper Built-in)" },
+  { value: "custom", label: "Custom (Silero VAD Plugin)" }
 ];
 
 export const SettingsPanel: React.FC = () => {
   const { 
     model, setModel, 
     language, setLanguage, 
+    vadEngine, setVadEngine,
+    useBatch, setUseBatch,
+    batchSize, setBatchSize,
     showSubtitles, setShowSubtitles,
     enableDictionary, setEnableDictionary, 
     enableFurigana, setEnableFurigana,
@@ -76,6 +86,78 @@ export const SettingsPanel: React.FC = () => {
                 </div>
               </div>
             </div>
+          </section>
+
+          {/* Performance & Pipeline Section */}
+          <section className="bg-[#141414] border border-white/5 rounded-2xl p-6 shadow-sm hover:border-white/10 transition-colors">
+            <h3 className="text-sm font-bold tracking-widest text-gray-200 uppercase mb-6 flex items-center gap-2">
+              <div className="w-1 h-3.5 bg-[#facc15] rounded-full shadow-[0_0_8px_rgba(250,204,21,0.5)]"></div>
+              Performance & Pipeline
+            </h3>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-gray-300">Use Batch Processing</label>
+                <p className="text-xs text-gray-500 mt-1">Dramatically speeds up transcription by processing multiple audio segments at once.</p>
+              </div>
+              
+              <button 
+                onClick={async () => {
+                  const newValue = !useBatch;
+                  setUseBatch(newValue);
+                  await emit("setting-changed", { key: "useBatch", value: newValue });
+                  if (newValue && vadEngine === 'off') {
+                    setVadEngine('native');
+                    await emit("setting-changed", { key: "vadEngine", value: 'native' });
+                  }
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none ${useBatch ? 'bg-[#facc15] shadow-[0_0_15px_rgba(250,204,21,0.3)]' : 'bg-gray-600'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${useBatch ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            <div className="h-px bg-white/5 w-full my-6"></div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:items-center">
+              <div>
+                <label className="text-sm font-medium text-gray-300">Voice Activity Detection Engine</label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Filter out silence. {useBatch && "(Required for Batch Processing)"}
+                </p>
+              </div>
+              <div className="md:col-span-2">
+                <Select 
+                  options={useBatch ? VAD_ENGINE_OPTIONS.filter(o => o.value !== 'off') : VAD_ENGINE_OPTIONS} 
+                  value={vadEngine} 
+                  onChange={async (val) => {
+                    setVadEngine(val);
+                    await emit("setting-changed", { key: "vadEngine", value: val });
+                  }} 
+                />
+              </div>
+            </div>
+
+            {useBatch && (
+              <>
+                <div className="h-px bg-white/5 w-full my-6"></div>
+                <div className="space-y-4">
+                  <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Batch Settings</h4>
+                  <div className="bg-white/[0.02] p-4 rounded-xl border border-white/5">
+                    <Slider 
+                      label="Batch Size" 
+                      value={batchSize} 
+                      min={1} max={64} 
+                      unit=""
+                      onChange={async (val) => {
+                        setBatchSize(val);
+                        await emit("setting-changed", { key: "batchSize", value: val });
+                      }} 
+                    />
+                  </div>
+                </div>
+              </>
+            )}
           </section>
 
           {/* Display Section */}

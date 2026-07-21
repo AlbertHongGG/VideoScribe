@@ -10,7 +10,7 @@ interface STTSettingsStore {
   enableFurigana: boolean;
   enableTranslation: boolean;
   targetLanguage: string;
-  useVad: boolean;
+  vadEngine: string;
   useBatch: boolean;
   batchSize: number;
   subtitlePositionX: number;
@@ -28,7 +28,7 @@ interface STTSettingsStore {
   setEnableFurigana: (enable: boolean) => void;
   setEnableTranslation: (enable: boolean) => void;
   setTargetLanguage: (lang: string) => void;
-  setUseVad: (use: boolean) => void;
+  setVadEngine: (engine: string) => void;
   setUseBatch: (use: boolean) => void;
   setBatchSize: (size: number) => void;
   setSubtitlePositionX: (x: number) => void;
@@ -49,8 +49,8 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
       enableFurigana: false,
       enableTranslation: false,
       targetLanguage: 'zh-TW',
-      useVad: false,
-      useBatch: true,
+      vadEngine: 'off',
+      useBatch: false,
       batchSize: 16,
       subtitlePositionX: 50,
       subtitlePositionY: 90,
@@ -67,7 +67,7 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
       setEnableFurigana: (enable) => set({ enableFurigana: enable }),
       setEnableTranslation: (enable) => set({ enableTranslation: enable }),
       setTargetLanguage: (lang) => set({ targetLanguage: lang }),
-      setUseVad: (useVad) => set({ useVad }),
+      setVadEngine: (engine) => set({ vadEngine: engine }),
       setUseBatch: (useBatch) => set({ useBatch }),
       setBatchSize: (batchSize) => set({ batchSize }),
       setSubtitlePositionX: (x) => set({ subtitlePositionX: x }),
@@ -86,7 +86,7 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
         enableFurigana: state.enableFurigana,
         enableTranslation: state.enableTranslation,
         targetLanguage: state.targetLanguage,
-        useVad: state.useVad,
+        vadEngine: state.vadEngine,
         useBatch: state.useBatch,
         batchSize: state.batchSize,
         subtitlePositionX: state.subtitlePositionX,

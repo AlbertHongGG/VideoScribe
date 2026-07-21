@@ -32,7 +32,11 @@ class TranscriptionJob:
             self._reporter.report_progress("transcribing", 0)
             
             # Step 2: Transcribe the whole file, yielding segments
-            segments_iter, info = self._recognizer.transcribe_file(audio_path, options, cancel_token)
+            segments_iter, info = self._recognizer.transcribe_file(
+                audio_path, 
+                options, 
+                cancel_token
+            )
             
             if info:
                 self._reporter.report_language(info.language)

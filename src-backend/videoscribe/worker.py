@@ -17,7 +17,7 @@ from videoscribe.infrastructure.audio.ffmpeg_analyzer import FFmpegAudioAnalyzer
 from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
 from videoscribe.domain.cancellation import CancellationToken
 from videoscribe.domain.ipc_models import IpcCommand, StartPayload
-from videoscribe.domain.transcription_options import TranscriptionOptions
+from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType
 from videoscribe.domain.prompt_registry import PromptRegistry
 
 logging.basicConfig(
@@ -76,13 +76,15 @@ class CommandRouter:
         
         reporter.report_initial_state(device, compute_type, payload.language)
         
+        vad_engine_enum = VADEngineType(payload.vad_engine) if payload.vad_engine in ["off", "native", "custom"] else VADEngineType.NATIVE
+
         # Build options
         options = TranscriptionOptions(
             model_size=payload.model,
             device=device,
             compute_type=compute_type,
             language=payload.language,
-            vad_filter=payload.use_vad,
+            vad_engine=vad_engine_enum,
             use_batch=use_batch,
             batch_size=payload.batch_size,
             initial_prompt=PromptRegistry.get_prompt(payload.language)
