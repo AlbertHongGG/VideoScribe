@@ -35,7 +35,8 @@ class FasterWhisperEngine(SpeechRecognizer):
         transcribe_kwargs = {
             "beam_size": 5,
             "word_timestamps": True,
-            "condition_on_previous_text": False
+            "condition_on_previous_text": True,
+            "vad_parameters": dict(min_silence_duration_ms=500, speech_pad_ms=400)
         }
         
         # 1. Ask Factory for external VAD Analyzer
@@ -49,7 +50,7 @@ class FasterWhisperEngine(SpeechRecognizer):
                 logger.info(f"External VAD generated {len(vad_result.windows)} chunks.")
                 transcribe_kwargs["vad_filter"] = False
                 transcribe_kwargs["clip_timestamps"] = (
-                    vad_result.to_dict_list() if self._is_batched else vad_result.to_flat_list()
+                    vad_result.to_samples_dict_list() if self._is_batched else vad_result.to_flat_list()
                 )
             else:
                 # Fallback if VAD fails or returns empty
@@ -61,9 +62,9 @@ class FasterWhisperEngine(SpeechRecognizer):
         if options.language != "auto" and options.language:
             transcribe_kwargs["language"] = options.language
             
-        if options.initial_prompt:
-            transcribe_kwargs["initial_prompt"] = options.initial_prompt
-            
+        # [REMOVED initial_prompt] To prevent prompt hallucination on silent chunks, we completely disable initial_prompt.
+        #if options.initial_prompt:
+        #    transcribe_kwargs["initial_prompt"] = options.initial_prompt            
         if self._is_batched:
             transcribe_kwargs["batch_size"] = options.batch_size
             logger.info(f"Starting batched transcription with kwargs: {transcribe_kwargs}")

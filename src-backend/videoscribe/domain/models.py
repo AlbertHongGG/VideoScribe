@@ -52,3 +52,6 @@ class VADResult:
         for w in self.windows:
             flat_list.extend([w.start_time, w.end_time])
         return flat_list
+
+    def to_samples_dict_list(self, sample_rate: int = 16000) -> List[dict]:
+        return [{"start": int(w.start_time * sample_rate), "end": int(w.end_time * sample_rate)} for w in self.windows]
