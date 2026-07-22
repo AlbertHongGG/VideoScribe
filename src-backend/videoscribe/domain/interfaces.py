@@ -1,5 +1,5 @@
 from typing import Protocol, Iterator, Tuple, Optional, Any
-from .models import TranscriptionSegment, TranscriptionInfo, AudioWindow, Word, VADResult
+from .models import TranscriptionSegment, TranscriptionInfo, AudioWindow, Word, VADResult, MSSResult
 from .transcription_options import TranscriptionOptions
 from .cancellation import CancellationToken
 
@@ -17,10 +17,10 @@ class VADAnalyzer(Protocol):
         ...
 
 class MSSAnalyzer(Protocol):
-    def separate(self, audio_path: str, options: TranscriptionOptions) -> str:
+    def separate(self, audio_path: str, options: TranscriptionOptions) -> MSSResult:
         """
-        Separate audio source (e.g. vocals from instrumental) and return the path
-        to the processed audio containing only the target source (vocals).
+        Separate audio source (e.g. vocals from instrumental) and return MSSResult
+        containing paths to vocals and instrumental stems.
         """
         ...
 

@@ -1,7 +1,7 @@
 import sys
 import json
 import uuid
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from videoscribe.domain.interfaces import ProgressReporter
 from videoscribe.domain.models import TranscriptionSegment
@@ -38,6 +38,16 @@ class IpcReporter(ProgressReporter):
             "status": status,
             "progress": progress
         })
+
+    def report_audio_stems(self, vocals_path: str, instrumental_path: Optional[str] = None) -> None:
+        data = {
+            "job_id": self.job_id,
+            "status": "separating_audio",
+            "vocals_path": vocals_path,
+        }
+        if instrumental_path:
+            data["instrumental_path"] = instrumental_path
+        self._write_event("job_state", data)
 
     def report_result(self, segment: TranscriptionSegment) -> None:
         cue = {

@@ -40,6 +40,10 @@ pub struct JobStateData {
     pub runtime_device: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub runtime_compute_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vocals_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub instrumental_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -52,3 +52,11 @@ class VADResult:
         for w in self.windows:
             flat_list.extend([w.start_time, w.end_time])
         return flat_list
+
+@dataclass
+class MSSResult:
+    """
+    Domain model representing separated audio stems.
+    """
+    vocals_path: str
+    instrumental_path: Optional[str] = None

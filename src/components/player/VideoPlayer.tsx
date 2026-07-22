@@ -5,12 +5,15 @@ import { useSTTSettingsStore } from "../../store/sttSettingsStore";
 import { VideoControls } from "./VideoControls";
 import { AnimatePresence, motion } from "framer-motion";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { DictionaryTooltip } from "../stt/DictionaryTooltip";
 import { VideoEmptyState } from "./VideoEmptyState";
 
 export const VideoPlayer: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const vocalsAudioRef = useRef<HTMLAudioElement>(null);
+  const backgroundAudioRef = useRef<HTMLAudioElement>(null);
+  
   const containerRef = useRef<HTMLDivElement>(null);
   const playerWrapperRef = useRef<HTMLDivElement>(null);
   const { 
@@ -28,7 +31,9 @@ export const VideoPlayer: React.FC = () => {
   } = useVideoStore();
 
   const { 
-    results
+    results,
+    vocalsAudioPath,
+    backgroundAudioPath
   } = useSTTJobStore();
 
   const { 
@@ -40,7 +45,9 @@ export const VideoPlayer: React.FC = () => {
     subtitleSpacing,
     sttFontSize,
     translationFontSize,
-    enableFurigana
+    enableFurigana,
+    vocalVolume,
+    backgroundVolume
   } = useSTTSettingsStore();
   const [currentSubtitle, setCurrentSubtitle] = useState<string | null>(null);
   const [currentTranslation, setCurrentTranslation] = useState<string | null>(null);
@@ -53,6 +60,102 @@ export const VideoPlayer: React.FC = () => {
 
   // Memoize results to prevent unnecessary scans if results haven't changed
   const memoizedResults = useMemo(() => results, [results]);
+
+  const hasAudioStems = Boolean(vocalsAudioPath || backgroundAudioPath);
+  const vocalsUrl = useMemo(() => vocalsAudioPath ? convertFileSrc(vocalsAudioPath) : null, [vocalsAudioPath]);
+  const backgroundUrl = useMemo(() => backgroundAudioPath ? convertFileSrc(backgroundAudioPath) : null, [backgroundAudioPath]);
+
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const vocalGainRef = useRef<GainNode | null>(null);
+  const bgGainRef = useRef<GainNode | null>(null);
+
+  // 0. Initialize Web Audio API pipeline when stems are available
+  useEffect(() => {
+    if (!hasAudioStems) return;
+
+    if (!audioCtxRef.current) {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      audioCtxRef.current = new AudioCtx();
+    }
+
+    const ctx = audioCtxRef.current;
+    if (ctx.state === 'suspended' && isPlaying) {
+      ctx.resume().catch(console.error);
+    }
+
+    if (vocalsAudioRef.current && !vocalGainRef.current) {
+      try {
+        const source = ctx.createMediaElementSource(vocalsAudioRef.current);
+        const gain = ctx.createGain();
+        source.connect(gain);
+        gain.connect(ctx.destination);
+        vocalGainRef.current = gain;
+      } catch (e) {
+        console.error("Failed to connect vocals media element source", e);
+      }
+    }
+
+    if (backgroundAudioRef.current && !bgGainRef.current) {
+      try {
+        const source = ctx.createMediaElementSource(backgroundAudioRef.current);
+        const gain = ctx.createGain();
+        source.connect(gain);
+        gain.connect(ctx.destination);
+        bgGainRef.current = gain;
+      } catch (e) {
+        console.error("Failed to connect background media element source", e);
+      }
+    }
+  }, [hasAudioStems, vocalsUrl, backgroundUrl]);
+
+  // Handle Mute/Unmute main video element
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.muted = hasAudioStems;
+    }
+  }, [hasAudioStems]);
+
+  // Update Gain values dynamically in real-time
+  useEffect(() => {
+    if (vocalGainRef.current) {
+      vocalGainRef.current.gain.value = vocalVolume * volume;
+    }
+    if (bgGainRef.current) {
+      bgGainRef.current.gain.value = backgroundVolume * volume;
+    }
+  }, [vocalVolume, backgroundVolume, volume]);
+
+  // Sync playback state (play/pause) for audio stems
+  useEffect(() => {
+    if (!hasAudioStems) return;
+
+    const playOrPause = (audioEl: HTMLAudioElement | null) => {
+      if (!audioEl) return;
+      if (isPlaying) {
+        audioEl.play().catch(console.error);
+      } else {
+        audioEl.pause();
+      }
+    };
+
+    playOrPause(vocalsAudioRef.current);
+    playOrPause(backgroundAudioRef.current);
+  }, [isPlaying, hasAudioStems, vocalsUrl, backgroundUrl]);
+
+  // Sync playback rate and time for audio stems
+  useEffect(() => {
+    if (!hasAudioStems) return;
+    const syncAudio = (audioEl: HTMLAudioElement | null) => {
+      if (!audioEl || !videoRef.current) return;
+      audioEl.playbackRate = playbackRate;
+      if (Math.abs(audioEl.currentTime - videoRef.current.currentTime) > 0.15) {
+        audioEl.currentTime = videoRef.current.currentTime;
+      }
+    };
+
+    syncAudio(vocalsAudioRef.current);
+    syncAudio(backgroundAudioRef.current);
+  }, [currentTime, playbackRate, hasAudioStems]);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -269,6 +372,12 @@ export const VideoPlayer: React.FC = () => {
               onEnded={() => setIsPlaying(false)}
               onClick={() => setIsPlaying(!isPlaying)}
             />
+            {vocalsUrl && (
+              <audio ref={vocalsAudioRef} src={vocalsUrl} preload="auto" />
+            )}
+            {backgroundUrl && (
+              <audio ref={backgroundAudioRef} src={backgroundUrl} preload="auto" />
+            )}
             
             {hoverText && (
               <DictionaryTooltip

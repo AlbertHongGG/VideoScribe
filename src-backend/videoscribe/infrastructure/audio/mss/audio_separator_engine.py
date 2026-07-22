@@ -6,20 +6,22 @@ from videoscribe.domain.interfaces import MSSAnalyzer
 from videoscribe.domain.transcription_options import TranscriptionOptions
 from videoscribe.infrastructure.utils import get_tmp_dir
 
+from videoscribe.domain.models import MSSResult
+
 class AudioSeparatorEngine(MSSAnalyzer):
     """
     Music Source Separation Engine based on audio-separator.
-    Separates vocals from instrumentals and returns the path to the vocals file.
+    Separates vocals from instrumentals and returns MSSResult containing both audio files.
     """
     def __init__(self, output_dir: Optional[str] = None, output_format: str = "wav"):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.output_format = output_format.lower()
         self.output_dir = output_dir
 
-    def separate(self, audio_path: str, options: TranscriptionOptions) -> str:
+    def separate(self, audio_path: str, options: TranscriptionOptions) -> MSSResult:
         """
-        Loads the model specified in options and separates vocals.
-        Returns the path to the separated vocals audio file.
+        Loads the model specified in options and separates vocals and instrumental.
+        Returns MSSResult containing paths to vocals and instrumental files.
         """
         if not os.path.exists(audio_path):
             raise FileNotFoundError(f"Input audio file not found: {audio_path}")
@@ -45,28 +47,31 @@ class AudioSeparatorEngine(MSSAnalyzer):
 
         self.logger.info(f"Starting audio separation for: {audio_path}")
         try:
-            # audio-separator typically returns a list of output filenames.
-            # Depending on the model, it might return [vocals_path, instrumental_path]
             output_files = separator.separate(audio_path)
             
-            # Identify the vocals file. By default convention, it often contains 'Vocals' or 'vocals'.
-            # We'll return the first file that looks like a vocal track, or the first file as fallback.
             vocals_file = None
+            instrumental_file = None
             for f in output_files:
-                if 'vocals' in f.lower() or 'vocal' in f.lower():
+                f_lower = f.lower()
+                if 'vocals' in f_lower or 'vocal' in f_lower:
                     vocals_file = f
-                    break
-            
+                elif 'instrumental' in f_lower or 'background' in f_lower or 'other' in f_lower:
+                    instrumental_file = f
+
             if not vocals_file and output_files:
                 vocals_file = output_files[0]
-                
+                if len(output_files) > 1:
+                    instrumental_file = output_files[1]
+
             if not vocals_file:
                 raise RuntimeError("No output files generated from separation.")
 
-            result_path = os.path.join(actual_output_dir, vocals_file)
-            self.logger.info(f"Separation complete. Vocals path: {result_path}")
+            vocals_path = os.path.join(actual_output_dir, vocals_file)
+            instrumental_path = os.path.join(actual_output_dir, instrumental_file) if instrumental_file else None
             
-            return result_path
+            self.logger.info(f"Separation complete. Vocals: {vocals_path}, Instrumental: {instrumental_path}")
+            
+            return MSSResult(vocals_path=vocals_path, instrumental_path=instrumental_path)
             
         except Exception as e:
             self.logger.error(f"Audio separation failed: {e}")

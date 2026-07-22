@@ -31,6 +31,8 @@ pub struct SttJobSnapshot {
     pub error_message: Option<String>,
     pub runtime_device: Option<String>,
     pub runtime_compute_type: Option<String>,
+    pub vocals_path: Option<String>,
+    pub instrumental_path: Option<String>,
 }
 
 impl SttJobSnapshot {
@@ -43,6 +45,8 @@ impl SttJobSnapshot {
             error_message: None,
             runtime_device: None,
             runtime_compute_type: None,
+            vocals_path: None,
+            instrumental_path: None,
         }
     }
 }

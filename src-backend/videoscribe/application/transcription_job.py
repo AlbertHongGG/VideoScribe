@@ -39,8 +39,11 @@ class TranscriptionJob:
                     logger.info("Starting MSS preprocessing...")
                     # Update progress state specifically for MSS if desired, or keep as transcribing
                     self._reporter.report_progress("separating_audio", 0)
-                    processed_audio_path = mss_engine.separate(audio_path, options)
-                    logger.info(f"MSS preprocessing completed. Using audio: {processed_audio_path}")
+                    mss_result = mss_engine.separate(audio_path, options)
+                    processed_audio_path = mss_result.vocals_path
+                    logger.info(f"MSS preprocessing completed. Vocals: {mss_result.vocals_path}, Instrumental: {mss_result.instrumental_path}")
+                    if hasattr(self._reporter, "report_audio_stems"):
+                        self._reporter.report_audio_stems(mss_result.vocals_path, mss_result.instrumental_path)
             
             self._reporter.report_progress("transcribing", 0)
             

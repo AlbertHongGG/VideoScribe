@@ -78,10 +78,14 @@ export const SettingsPanel: React.FC = () => {
             </SettingRow>
             
             {store.mssEngine !== 'off' && (
-              <div className="mt-4">
+              <div className="mt-4 space-y-4">
                 <SettingRow label="MSS Model" layout="grid">
                   <SettingSelect settingKey="mssModel" value={store.mssModel} options={MSS_MODEL_OPTIONS} setter={store.setMssModel} />
                 </SettingRow>
+                <SettingGroup title="Playback Audio Stem Suppression & Mixing">
+                  <SettingSlider settingKey="vocalVolume" label="Vocals Volume" value={Math.round(store.vocalVolume * 100)} min={0} max={100} unit="%" setter={(val) => store.setVocalVolume(val / 100)} />
+                  <SettingSlider settingKey="backgroundVolume" label="Background Music Volume" value={Math.round(store.backgroundVolume * 100)} min={0} max={100} unit="%" setter={(val) => store.setBackgroundVolume(val / 100)} />
+                </SettingGroup>
               </div>
             )}
             

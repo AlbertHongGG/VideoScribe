@@ -20,6 +20,8 @@ interface STTSettingsStore {
   subtitleSpacing: number;
   sttFontSize: number;
   translationFontSize: number;
+  vocalVolume: number;
+  backgroundVolume: number;
   
   togglePanel: () => void;
   setPanelOpen: (isOpen: boolean) => void;
@@ -40,6 +42,8 @@ interface STTSettingsStore {
   setSubtitleSpacing: (spacing: number) => void;
   setSttFontSize: (size: number) => void;
   setTranslationFontSize: (size: number) => void;
+  setVocalVolume: (vol: number) => void;
+  setBackgroundVolume: (vol: number) => void;
 }
 
 export const useSTTSettingsStore = create<STTSettingsStore>()(
@@ -63,6 +67,8 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
       subtitleSpacing: 6,
       sttFontSize: 20,
       translationFontSize: 18,
+      vocalVolume: 1,
+      backgroundVolume: 1,
 
       togglePanel: () => set((state) => ({ isPanelOpen: !state.isPanelOpen })),
       setPanelOpen: (isOpen) => set({ isPanelOpen: isOpen }),
@@ -83,6 +89,8 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
       setSubtitleSpacing: (spacing) => set({ subtitleSpacing: spacing }),
       setSttFontSize: (size) => set({ sttFontSize: size }),
       setTranslationFontSize: (size) => set({ translationFontSize: size }),
+      setVocalVolume: (vocalVolume) => set({ vocalVolume }),
+      setBackgroundVolume: (backgroundVolume) => set({ backgroundVolume }),
     }),
     {
       name: 'stt-settings',
@@ -104,6 +112,8 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
         subtitleSpacing: state.subtitleSpacing,
         sttFontSize: state.sttFontSize,
         translationFontSize: state.translationFontSize,
+        vocalVolume: state.vocalVolume,
+        backgroundVolume: state.backgroundVolume,
       }),
     }
   )

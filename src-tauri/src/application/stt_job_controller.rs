@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 use crate::domain::stt_job::{SttJobSnapshot, SttStatus};
 use crate::domain::ipc_models::{WorkerCommand, WorkerEvent, WorkerEventData, StartPayload};
@@ -71,6 +71,23 @@ impl SttJobController {
                     }
                     if let Some(ref ct) = data.runtime_compute_type {
                         snapshot.runtime_compute_type = Some(ct.clone());
+                    }
+                    if let Some(ref v) = data.vocals_path {
+                        snapshot.vocals_path = Some(v.clone());
+                    }
+                    if let Some(ref inst) = data.instrumental_path {
+                        snapshot.instrumental_path = Some(inst.clone());
+                    }
+
+                    if let Some(state) = app.try_state::<crate::infrastructure::state::AppState>() {
+                        if let Ok(mut proj) = state.project.lock() {
+                            if let Some(ref v) = data.vocals_path {
+                                proj.vocals_audio_path = Some(v.clone());
+                            }
+                            if let Some(ref inst) = data.instrumental_path {
+                                proj.background_audio_path = Some(inst.clone());
+                            }
+                        }
                     }
                     
                     *job_lock = Some(snapshot.clone());

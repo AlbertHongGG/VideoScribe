@@ -43,6 +43,8 @@ pub struct ProjectState {
     pub translation_progress: f64,
     pub results: Vec<STTResult>,
     pub target_language: String,
+    pub vocals_audio_path: Option<String>,
+    pub background_audio_path: Option<String>,
 }
 
 impl Default for ProjectState {
@@ -56,6 +58,8 @@ impl Default for ProjectState {
             translation_progress: 0.0,
             results: Vec::new(),
             target_language: "zh-TW".to_string(),
+            vocals_audio_path: None,
+            background_audio_path: None,
         }
     }
 }
