@@ -90,8 +90,8 @@ class SileroVADv6Analyzer(VADAnalyzer):
         # Optimized parameters for high sensitivity to falsetto, singing, and speech over background music
         max_speech_s = float(options.batch_size) if options.use_batch else 30.0
         kwargs = {
-            "threshold": 0.3,               # Lowered from 0.5 to capture falsetto, singing & speech mixed with background music
-            "min_speech_duration_ms": 100,  # Lowered from 250ms to capture short vocal cues and sung notes
+            "threshold": 0.5,               # Lowered from 0.5 to capture falsetto, singing & speech mixed with background music
+            "min_speech_duration_ms": 250,  # Lowered from 250ms to capture short vocal cues and sung notes
             "max_speech_duration_s": max_speech_s,
             "min_silence_duration_ms": 500, # Increased from 160ms to prevent splitting mid-sentence breath/singing pauses
             "speech_pad_ms": 30,

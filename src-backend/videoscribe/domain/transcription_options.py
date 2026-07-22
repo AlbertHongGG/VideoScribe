@@ -7,6 +7,7 @@ class VADEngineType(Enum):
     NATIVE = "native"
     SILERO = "silero"
     SILERO_V6 = "silero_v6"
+    FIRERED_VAD = "firered_vad"
 
 class MSSEngineType(Enum):
     OFF = "off"
