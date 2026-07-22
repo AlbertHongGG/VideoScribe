@@ -7,6 +7,8 @@ class StartPayload:
     model: str = "medium"
     language: str = "auto"
     vad_engine: str = "native"
+    mss_engine: str = "off"
+    mss_model: str = "model_mel_band_roformer_ep_3005_sdr_11.4360.ckpt"
     use_batch: bool = True
     batch_size: int = 16
 

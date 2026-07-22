@@ -19,6 +19,8 @@ export class STTService {
         modelSize, 
         language: settingsStore.language || "auto",
         vadEngine: settingsStore.vadEngine,
+        mssEngine: settingsStore.mssEngine,
+        mssModel: settingsStore.mssModel,
         useBatch: settingsStore.useBatch,
         batchSize: settingsStore.batchSize
       });

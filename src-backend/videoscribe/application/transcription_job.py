@@ -5,6 +5,8 @@ from videoscribe.domain.interfaces import AudioAnalyzer, SpeechRecognizer, Progr
 from videoscribe.domain.transcription_options import TranscriptionOptions
 from videoscribe.application.segment_refiner import SegmentRefiner
 from videoscribe.domain.cancellation import CancellationToken, CancelledException
+from videoscribe.infrastructure.audio.mss_factory import MSSFactory
+from videoscribe.domain.transcription_options import MSSEngineType
 
 logger = logging.getLogger(__name__)
 
@@ -28,12 +30,23 @@ class TranscriptionJob:
             duration = self._analyzer.get_duration(audio_path)
             if duration > 0:
                 logger.info(f"Total duration: {duration}s")
+
+            # Step 1.5: MSS (Music Source Separation) Pre-processing
+            processed_audio_path = audio_path
+            if options.mss_engine != MSSEngineType.OFF:
+                mss_engine = MSSFactory.create(options)
+                if mss_engine:
+                    logger.info("Starting MSS preprocessing...")
+                    # Update progress state specifically for MSS if desired, or keep as transcribing
+                    self._reporter.report_progress("separating_audio", 0)
+                    processed_audio_path = mss_engine.separate(audio_path, options)
+                    logger.info(f"MSS preprocessing completed. Using audio: {processed_audio_path}")
             
             self._reporter.report_progress("transcribing", 0)
             
-            # Step 2: Transcribe the whole file, yielding segments
+            # Step 2: Transcribe the file, yielding segments (use processed_audio_path)
             segments_iter, info = self._recognizer.transcribe_file(
-                audio_path, 
+                processed_audio_path, 
                 options, 
                 cancel_token
             )

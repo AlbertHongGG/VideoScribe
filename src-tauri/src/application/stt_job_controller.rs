@@ -137,7 +137,7 @@ impl SttJobController {
         });
     }
 
-    pub fn start_job(&self, video_path: String, model: String, language: String, vad_engine: String, use_batch: bool, batch_size: u32) -> Result<String, String> {
+    pub fn start_job(&self, video_path: String, model: String, language: String, vad_engine: String, mss_engine: String, mss_model: String, use_batch: bool, batch_size: u32) -> Result<String, String> {
         let _job_id = Uuid::new_v4().to_string();
         let mut job_lock = self.current_job.lock().unwrap();
         
@@ -158,6 +158,8 @@ impl SttJobController {
                 model,
                 language,
                 vad_engine,
+                mss_engine,
+                mss_model,
                 use_batch,
                 batch_size,
             }

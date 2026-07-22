@@ -7,6 +7,8 @@ pub struct StartPayload {
     pub model: String,
     pub language: String,
     pub vad_engine: String,
+    pub mss_engine: String,
+    pub mss_model: String,
     pub use_batch: bool,
     pub batch_size: u32,
 }

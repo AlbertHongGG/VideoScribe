@@ -11,6 +11,8 @@ interface STTSettingsStore {
   enableTranslation: boolean;
   targetLanguage: string;
   vadEngine: string;
+  mssEngine: string;
+  mssModel: string;
   useBatch: boolean;
   batchSize: number;
   subtitlePositionX: number;
@@ -29,6 +31,8 @@ interface STTSettingsStore {
   setEnableTranslation: (enable: boolean) => void;
   setTargetLanguage: (lang: string) => void;
   setVadEngine: (engine: string) => void;
+  setMssEngine: (engine: string) => void;
+  setMssModel: (model: string) => void;
   setUseBatch: (use: boolean) => void;
   setBatchSize: (size: number) => void;
   setSubtitlePositionX: (x: number) => void;
@@ -50,6 +54,8 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
       enableTranslation: false,
       targetLanguage: 'zh-TW',
       vadEngine: 'off',
+      mssEngine: 'off',
+      mssModel: 'model_mel_band_roformer_ep_3005_sdr_11.4360.ckpt',
       useBatch: false,
       batchSize: 16,
       subtitlePositionX: 50,
@@ -68,6 +74,8 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
       setEnableTranslation: (enable) => set({ enableTranslation: enable }),
       setTargetLanguage: (lang) => set({ targetLanguage: lang }),
       setVadEngine: (engine) => set({ vadEngine: engine }),
+      setMssEngine: (engine) => set({ mssEngine: engine }),
+      setMssModel: (model) => set({ mssModel: model }),
       setUseBatch: (useBatch) => set({ useBatch }),
       setBatchSize: (batchSize) => set({ batchSize }),
       setSubtitlePositionX: (x) => set({ subtitlePositionX: x }),
@@ -87,6 +95,8 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
         enableTranslation: state.enableTranslation,
         targetLanguage: state.targetLanguage,
         vadEngine: state.vadEngine,
+        mssEngine: state.mssEngine,
+        mssModel: state.mssModel,
         useBatch: state.useBatch,
         batchSize: state.batchSize,
         subtitlePositionX: state.subtitlePositionX,

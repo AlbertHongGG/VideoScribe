@@ -34,11 +34,24 @@ const VAD_ENGINE_OPTIONS = [
   { value: "silero", label: "Silero VAD Plugin" }
 ];
 
+const MSS_ENGINE_OPTIONS = [
+  { value: "off", label: "Off (No MSS)" },
+  { value: "audio_separator", label: "Audio-Separator" }
+];
+
+const MSS_MODEL_OPTIONS = [
+  { value: "model_mel_band_roformer_ep_3005_sdr_11.4360.ckpt", label: "MelBandRoformer (High Quality)" },
+  { value: "model_bs_roformer_ep_317_sdr_12.9755.ckpt", label: "BSRoformer" },
+  { value: "UVR-MDX-NET-Inst_HQ_3.onnx", label: "MDX-Net (Fast)" }
+];
+
 export const SettingsPanel: React.FC = () => {
   const { 
     model, setModel, 
     language, setLanguage, 
     vadEngine, setVadEngine,
+    mssEngine, setMssEngine,
+    mssModel, setMssModel,
     useBatch, setUseBatch,
     batchSize, setBatchSize,
     showSubtitles, setShowSubtitles,
@@ -114,6 +127,45 @@ export const SettingsPanel: React.FC = () => {
                 />
               </div>
             </div>
+
+            <div className="h-px bg-white/5 w-full my-6"></div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:items-center">
+              <div>
+                <label className="text-sm font-medium text-gray-300">Music Source Separation (MSS)</label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Extract vocals from mixed audio before transcription.
+                </p>
+              </div>
+              <div className="md:col-span-2">
+                <Select 
+                  options={MSS_ENGINE_OPTIONS} 
+                  value={mssEngine} 
+                  onChange={async (val) => {
+                    setMssEngine(val);
+                    await emit("setting-changed", { key: "mssEngine", value: val });
+                  }} 
+                />
+              </div>
+            </div>
+
+            {mssEngine !== 'off' && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:items-center mt-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-300">MSS Model</label>
+                </div>
+                <div className="md:col-span-2">
+                  <Select 
+                    options={MSS_MODEL_OPTIONS} 
+                    value={mssModel} 
+                    onChange={async (val) => {
+                      setMssModel(val);
+                      await emit("setting-changed", { key: "mssModel", value: val });
+                    }} 
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="h-px bg-white/5 w-full my-6"></div>
 

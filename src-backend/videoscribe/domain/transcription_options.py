@@ -7,6 +7,10 @@ class VADEngineType(Enum):
     NATIVE = "native"
     SILERO = "silero"
 
+class MSSEngineType(Enum):
+    OFF = "off"
+    AUDIO_SEPARATOR = "audio_separator"
+
 @dataclass
 class CuePolicy:
     """Policy for splitting words into transcription cues/segments."""
@@ -23,6 +27,8 @@ class TranscriptionOptions:
     use_batch: bool = False
     batch_size: int = 16
     vad_engine: VADEngineType = VADEngineType.OFF
+    mss_engine: MSSEngineType = MSSEngineType.OFF
+    mss_model: str = "model_mel_band_roformer_ep_3005_sdr_11.4360.ckpt"
     initial_prompt: Optional[str] = None
     cue_policy: CuePolicy = field(default_factory=CuePolicy)
 

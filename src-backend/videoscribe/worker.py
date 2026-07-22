@@ -17,7 +17,7 @@ from videoscribe.infrastructure.audio.ffmpeg_analyzer import FFmpegAudioAnalyzer
 from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
 from videoscribe.domain.cancellation import CancellationToken
 from videoscribe.domain.ipc_models import IpcCommand, StartPayload
-from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType
+from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType, MSSEngineType
 from videoscribe.domain.prompt_registry import PromptRegistry
 
 logging.basicConfig(
@@ -77,6 +77,8 @@ class CommandRouter:
         reporter.report_initial_state(device, compute_type, payload.language)
         
         vad_engine_enum = VADEngineType(payload.vad_engine) if payload.vad_engine in ["off", "native", "silero"] else VADEngineType.OFF
+        
+        mss_engine_enum = MSSEngineType(payload.mss_engine) if payload.mss_engine in ["off", "audio_separator"] else MSSEngineType.OFF
 
         # Build options
         options = TranscriptionOptions(
@@ -85,6 +87,8 @@ class CommandRouter:
             compute_type=compute_type,
             language=payload.language,
             vad_engine=vad_engine_enum,
+            mss_engine=mss_engine_enum,
+            mss_model=payload.mss_model,
             use_batch=use_batch,
             batch_size=payload.batch_size,
             initial_prompt=PromptRegistry.get_prompt(payload.language)

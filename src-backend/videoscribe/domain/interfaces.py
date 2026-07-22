@@ -16,6 +16,14 @@ class VADAnalyzer(Protocol):
         """
         ...
 
+class MSSAnalyzer(Protocol):
+    def separate(self, audio_path: str, options: TranscriptionOptions) -> str:
+        """
+        Separate audio source (e.g. vocals from instrumental) and return the path
+        to the processed audio containing only the target source (vocals).
+        """
+        ...
+
 class SpeechRecognizer(Protocol):
     def load_model(self, options: TranscriptionOptions) -> None:
         """Load the STT model using the provided options."""

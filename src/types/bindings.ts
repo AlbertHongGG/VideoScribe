@@ -5,7 +5,7 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	lookupWord: (text: string) => typedError<LookupResult, string>(__TAURI_INVOKE("lookup_word", { text })),
-	runStt: (videoPath: string, modelSize: string) => typedError<null, string>(__TAURI_INVOKE("run_stt", { videoPath, modelSize })),
+	runStt: (videoPath: string, modelSize: string, language: string, vadEngine: string, mssEngine: string, mssModel: string, useBatch: boolean, batchSize: number) => typedError<null, string>(__TAURI_INVOKE("run_stt", { videoPath, modelSize, language, vadEngine, mssEngine, mssModel, useBatch, batchSize })),
 	runAgentTask: (agentType: AgentType, payloadJson: string) => typedError<string, string>(__TAURI_INVOKE("run_agent_task", { agentType, payloadJson })),
 	getAppState: () => typedError<ProjectState, string>(__TAURI_INVOKE("get_app_state")),
 	startTranslation: () => typedError<null, string>(__TAURI_INVOKE("start_translation")),

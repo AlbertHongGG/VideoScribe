@@ -5,19 +5,25 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "audio-separator>=0.20.0",
     "ctranslate2>=4.8.0",
     "fastapi>=0.139.2",
     "faster-whisper>=1.2.1",
+    "numpy<2.5",
     "pydantic>=2.13.4",
     "sse-starlette>=3.4.5",
     "torch>=2.6.0",
     "uvicorn>=0.51.0",
 ]
 
+[tool.uv]
+prerelease = "allow"
+environments = ["sys_platform == 'win32'"]
+
 [tool.uv.sources]
-torch = [{ index = "pytorch-cu128" }]
+torch = [{ index = "pytorch-nightly" }]
 
 [[tool.uv.index]]
-name = "pytorch-cu128"
-url = "https://download.pytorch.org/whl/cu128"
+name = "pytorch-nightly"
+url = "https://download.pytorch.org/whl/nightly/cu130"
 explicit = true
