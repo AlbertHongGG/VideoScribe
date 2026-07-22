@@ -15,7 +15,6 @@ pub struct STTResult {
 #[ts(export, export_to = "../../src/types/app_types.ts")]
 #[serde(rename_all = "snake_case")]
 pub enum TaskType {
-    ExtractAudio,
     Mss,
     Vad,
     Stt,

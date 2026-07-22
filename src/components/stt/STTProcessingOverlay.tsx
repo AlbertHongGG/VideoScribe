@@ -8,8 +8,7 @@ interface Props {
 }
 
 const TASK_LABELS: Record<string, string> = {
-  extract_audio: "Extracting Audio",
-  mss: "Isolating Vocals",
+  mss: "Separating Audio Sources",
   vad: "Detecting Voice Activity",
   stt: "Transcribing Speech",
   translation: "Translating Subtitles",

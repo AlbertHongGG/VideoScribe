@@ -21,7 +21,8 @@ export class STTService {
         mssEngine: settingsStore.mssEngine,
         mssModel: settingsStore.mssModel,
         useBatch: settingsStore.useBatch,
-        batchSize: settingsStore.batchSize
+        batchSize: settingsStore.batchSize,
+        enableTranslation: settingsStore.enableTranslation
       });
       
       // Explicitly trigger translation if enabled
