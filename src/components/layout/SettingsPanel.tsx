@@ -34,8 +34,8 @@ const VAD_ENGINE_OPTIONS = [
 ];
 
 const MSS_ENGINE_OPTIONS = [
-  { value: "off", label: "Off (No MSS)" },
-  { value: "audio_separator", label: "Audio-Separator" }
+  { value: "off", label: "Off (Disabled)" },
+  { value: "audio_separator", label: "Audio-Separator Plugin" }
 ];
 
 const MSS_MODEL_OPTIONS = [
@@ -52,7 +52,7 @@ export const SettingsPanel: React.FC = () => {
       <div className="max-w-3xl mx-auto pt-4">
         <div className="space-y-8">
           
-          <SettingSection title="Speech-to-Text Engine">
+          <SettingSection title="Speech-to-Text (STT) Engine">
             <SettingRow label="Model Size" layout="grid">
               <SettingSelect settingKey="model" value={store.model} options={MODEL_OPTIONS} setter={store.setModel} />
             </SettingRow>
@@ -60,10 +60,8 @@ export const SettingsPanel: React.FC = () => {
             <SettingRow label="Language Detection" layout="grid">
               <SettingSelect settingKey="language" value={store.language || "auto"} options={LANGUAGE_OPTIONS} setter={store.setLanguage} />
             </SettingRow>
-          </SettingSection>
-
-          <SettingSection title="Performance & Pipeline">
-            <SettingRow label="Voice Activity Detection Engine" description={`Filter out silence. ${store.useBatch ? "(Required for Batch Processing)" : ""}`} layout="grid">
+            <SettingDivider />
+            <SettingRow label="Voice Activity Detection (VAD)" description={`Filter out silence. ${store.useBatch ? "(Required for Batch Processing)" : ""}`} layout="grid">
               <SettingSelect 
                 settingKey="vadEngine" 
                 value={store.vadEngine} 
@@ -72,26 +70,8 @@ export const SettingsPanel: React.FC = () => {
               />
             </SettingRow>
             <SettingDivider />
-            
-            <SettingRow label="Music Source Separation (MSS)" description="Extract vocals from mixed audio before transcription." layout="grid">
-              <SettingSelect settingKey="mssEngine" value={store.mssEngine} options={MSS_ENGINE_OPTIONS} setter={store.setMssEngine} />
-            </SettingRow>
-            
-            {store.mssEngine !== 'off' && (
-              <div className="mt-4 space-y-4">
-                <SettingRow label="MSS Model" layout="grid">
-                  <SettingSelect settingKey="mssModel" value={store.mssModel} options={MSS_MODEL_OPTIONS} setter={store.setMssModel} />
-                </SettingRow>
-                <SettingGroup title="Playback Audio Stem Suppression & Mixing">
-                  <SettingSlider settingKey="vocalVolume" label="Vocals Volume" value={Math.round(store.vocalVolume * 100)} min={0} max={100} unit="%" setter={(val) => store.setVocalVolume(val / 100)} />
-                  <SettingSlider settingKey="backgroundVolume" label="Background Music Volume" value={Math.round(store.backgroundVolume * 100)} min={0} max={100} unit="%" setter={(val) => store.setBackgroundVolume(val / 100)} />
-                </SettingGroup>
-              </div>
-            )}
-            
-            <SettingDivider />
 
-            <SettingRow label="Use Batch Processing" description="Faster transcription via chunking.">
+            <SettingRow label="Batch Processing" description="Accelerate transcription via chunking.">
               <SettingToggle 
                 settingKey="useBatch" 
                 checked={store.useBatch} 
@@ -110,6 +90,26 @@ export const SettingsPanel: React.FC = () => {
                 <SettingDivider />
                 <SettingGroup title="Batch Settings">
                   <SettingSlider settingKey="batchSize" label="Batch Size" value={store.batchSize} min={1} max={64} unit="" setter={store.setBatchSize} />
+                </SettingGroup>
+              </>
+            )}
+          </SettingSection>
+
+          <SettingSection title="Music Source Separation (MSS)">
+            <SettingRow label="Audio Separation Engine" description="Separate vocals from background music/instruments before transcription." layout="grid">
+              <SettingSelect settingKey="mssEngine" value={store.mssEngine} options={MSS_ENGINE_OPTIONS} setter={store.setMssEngine} />
+            </SettingRow>
+            
+            {store.mssEngine !== 'off' && (
+              <>
+                <SettingDivider />
+                <SettingRow label="Separation Model" description="Select neural network model for stem extraction." layout="grid">
+                  <SettingSelect settingKey="mssModel" value={store.mssModel} options={MSS_MODEL_OPTIONS} setter={store.setMssModel} />
+                </SettingRow>
+                <SettingDivider />
+                <SettingGroup title="Audio Stem Mixing & Volume Balance">
+                  <SettingSlider settingKey="vocalVolume" label="Vocals Volume" value={store.vocalVolume} min={0} max={100} unit="%" setter={store.setVocalVolume} />
+                  <SettingSlider settingKey="backgroundVolume" label="Background Music Volume" value={store.backgroundVolume} min={0} max={100} unit="%" setter={store.setBackgroundVolume} />
                 </SettingGroup>
               </>
             )}
@@ -157,4 +157,3 @@ export const SettingsPanel: React.FC = () => {
     </div>
   );
 };
-

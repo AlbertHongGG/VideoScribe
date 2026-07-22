@@ -67,8 +67,8 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
       subtitleSpacing: 6,
       sttFontSize: 20,
       translationFontSize: 18,
-      vocalVolume: 1,
-      backgroundVolume: 1,
+      vocalVolume: 100,
+      backgroundVolume: 100,
 
       togglePanel: () => set((state) => ({ isPanelOpen: !state.isPanelOpen })),
       setPanelOpen: (isOpen) => set({ isPanelOpen: isOpen }),
@@ -89,8 +89,8 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
       setSubtitleSpacing: (spacing) => set({ subtitleSpacing: spacing }),
       setSttFontSize: (size) => set({ sttFontSize: size }),
       setTranslationFontSize: (size) => set({ translationFontSize: size }),
-      setVocalVolume: (vocalVolume) => set({ vocalVolume }),
-      setBackgroundVolume: (backgroundVolume) => set({ backgroundVolume }),
+      setVocalVolume: (vol) => set({ vocalVolume: Math.max(0, Math.min(100, Number.isNaN(vol) ? 100 : vol)) }),
+      setBackgroundVolume: (vol) => set({ backgroundVolume: Math.max(0, Math.min(100, Number.isNaN(vol) ? 100 : vol)) }),
     }),
     {
       name: 'stt-settings',

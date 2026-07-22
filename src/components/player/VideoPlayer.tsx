@@ -2,10 +2,11 @@ import React, { useRef, useEffect, useState, useMemo } from "react";
 import { useVideoStore } from "../../store/videoStore";
 import { useSTTJobStore } from "../../store/sttJobStore";
 import { useSTTSettingsStore } from "../../store/sttSettingsStore";
+import { useAudioMixer } from "./useAudioMixer";
 import { VideoControls } from "./VideoControls";
 import { AnimatePresence, motion } from "framer-motion";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import { DictionaryTooltip } from "../stt/DictionaryTooltip";
 import { VideoEmptyState } from "./VideoEmptyState";
 
@@ -50,6 +51,22 @@ export const VideoPlayer: React.FC = () => {
     backgroundVolume
   } = useSTTSettingsStore();
 
+  // Unified Logarithmic Audio Mixer Hook
+  const { vocalsUrl, backgroundUrl } = useAudioMixer({
+    videoRef,
+    vocalsAudioRef,
+    backgroundAudioRef,
+    videoUrl,
+    vocalsAudioPath,
+    backgroundAudioPath,
+    isPlaying,
+    currentTime,
+    masterVolume: volume,
+    vocalVolume,
+    backgroundVolume,
+    playbackRate,
+  });
+
   const [currentSubtitle, setCurrentSubtitle] = useState<string | null>(null);
   const [currentTranslation, setCurrentTranslation] = useState<string | null>(null);
   
@@ -61,82 +78,6 @@ export const VideoPlayer: React.FC = () => {
   // Memoize results to prevent unnecessary scans if results haven't changed
   const memoizedResults = useMemo(() => results, [results]);
 
-  const hasAudioStems = Boolean(vocalsAudioPath || backgroundAudioPath);
-  const vocalsUrl = useMemo(() => vocalsAudioPath ? convertFileSrc(vocalsAudioPath) : null, [vocalsAudioPath]);
-  const backgroundUrl = useMemo(() => backgroundAudioPath ? convertFileSrc(backgroundAudioPath) : null, [backgroundAudioPath]);
-
-  // 1. Handle Mute/Unmute of main video element
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.muted = hasAudioStems;
-    }
-  }, [hasAudioStems]);
-
-  // 2. Sync volume to audio stems
-  useEffect(() => {
-    if (!hasAudioStems) return;
-    const targetVocalVol = Math.max(0, Math.min(1, vocalVolume * volume));
-    const targetBgVol = Math.max(0, Math.min(1, backgroundVolume * volume));
-
-    if (vocalsAudioRef.current) {
-      vocalsAudioRef.current.volume = targetVocalVol;
-    }
-    if (backgroundAudioRef.current) {
-      backgroundAudioRef.current.volume = targetBgVol;
-    }
-  }, [vocalVolume, backgroundVolume, volume, hasAudioStems]);
-
-  // 3. Sync Play / Pause state across video and stems
-  useEffect(() => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.play().catch(console.error);
-        if (hasAudioStems) {
-          vocalsAudioRef.current?.play().catch(console.error);
-          backgroundAudioRef.current?.play().catch(console.error);
-        }
-      } else {
-        videoRef.current.pause();
-        if (hasAudioStems) {
-          vocalsAudioRef.current?.pause();
-          backgroundAudioRef.current?.pause();
-        }
-      }
-    }
-  }, [isPlaying, videoUrl, hasAudioStems, vocalsUrl, backgroundUrl]);
-
-  // 4. Sync main video volume when stems are not active
-  useEffect(() => {
-    if (videoRef.current && !hasAudioStems) {
-      videoRef.current.volume = volume;
-    }
-  }, [volume, hasAudioStems]);
-
-  // 5. Sync playbackRate across video and stems
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.playbackRate = playbackRate;
-    }
-    if (hasAudioStems) {
-      if (vocalsAudioRef.current) vocalsAudioRef.current.playbackRate = playbackRate;
-      if (backgroundAudioRef.current) backgroundAudioRef.current.playbackRate = playbackRate;
-    }
-  }, [playbackRate, hasAudioStems]);
-
-  // 6. Sync currentTime (seeking & clock drift) across video and stems
-  useEffect(() => {
-    if (!hasAudioStems) return;
-    const syncTime = (audioEl: HTMLAudioElement | null) => {
-      if (audioEl && videoRef.current) {
-        if (Math.abs(audioEl.currentTime - videoRef.current.currentTime) > 0.1) {
-          audioEl.currentTime = videoRef.current.currentTime;
-        }
-      }
-    };
-    syncTime(vocalsAudioRef.current);
-    syncTime(backgroundAudioRef.current);
-  }, [currentTime, hasAudioStems]);
-
   // Handle explicit user seeks directly and instantly without latency.
   useEffect(() => {
     if (videoRef.current && seekToTime !== null) {
@@ -146,7 +87,7 @@ export const VideoPlayer: React.FC = () => {
       setCurrentTime(seekToTime); // Sync UI immediately
       setSeekToTime(null);
     }
-  }, [seekToTime]);
+  }, [seekToTime, setSeekToTime, setCurrentTime]);
 
   // Update subtitle text. Purely UI.
   useEffect(() => {
