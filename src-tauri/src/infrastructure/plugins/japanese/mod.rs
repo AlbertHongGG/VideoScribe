@@ -1,10 +1,13 @@
 pub mod tokenizer;
 pub mod dictionary;
 
-use crate::domain::language::{Language, LanguagePlugin, LookupResult, FuriganaToken};
+use std::path::PathBuf;
+use std::sync::Arc;
+use tauri::{AppHandle, Manager};
+use crate::domain::language::{LookupResult, FuriganaToken, DictionaryLookup, FuriganaProvider};
+use crate::infrastructure::plugins::manager::PluginManager;
 use tokenizer::JapaneseTokenizer;
 use dictionary::JMDictService;
-use std::path::PathBuf;
 
 pub struct JapanesePlugin {
     tokenizer: JapaneseTokenizer,
@@ -12,19 +15,46 @@ pub struct JapanesePlugin {
 }
 
 impl JapanesePlugin {
-    pub fn new(db_path: PathBuf) -> Result<Self, String> {
+    pub fn new(app: &AppHandle) -> Result<Self, String> {
+        let resource_dir = app.path().resource_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let db_path = resource_dir.join("jmdict.db");
+        
+        let exe_dir = std::env::current_exe()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."))
+            .to_path_buf();
+        let portable_db_path = exe_dir.join("jmdict.db");
+
+        let actual_db_path = if portable_db_path.exists() {
+            portable_db_path
+        } else if db_path.exists() {
+            db_path
+        } else {
+            PathBuf::from("jmdict.db")
+        };
+
         let tokenizer = JapaneseTokenizer::new()?;
-        let dict_service = JMDictService::new(db_path);
+        let dict_service = JMDictService::new(actual_db_path);
 
         Ok(Self { tokenizer, dict_service })
     }
+
+    /// Self-registration method to register provided capabilities into PluginManager.
+    pub fn register(app: &AppHandle, manager: &mut PluginManager) -> Result<(), String> {
+        let plugin = Arc::new(Self::new(app)?);
+
+        // Register dictionary lookup capability for Japanese
+        manager.register_service::<dyn DictionaryLookup>("japanese", plugin.clone());
+
+        // Register furigana provider capability for Japanese
+        manager.register_service::<dyn FuriganaProvider>("japanese", plugin.clone());
+
+        Ok(())
+    }
 }
 
-impl LanguagePlugin for JapanesePlugin {
-    fn get_language(&self) -> Language {
-        Language::Japanese
-    }
-
+impl DictionaryLookup for JapanesePlugin {
     fn lookup_word(&self, text: &str) -> Result<LookupResult, String> {
         let token_info = self.tokenizer.tokenize(text)?;
         
@@ -44,7 +74,9 @@ impl LanguagePlugin for JapanesePlugin {
             entries,
         })
     }
+}
 
+impl FuriganaProvider for JapanesePlugin {
     fn get_furigana(&self, text: &str) -> Result<Vec<FuriganaToken>, String> {
         let token_infos = self.tokenizer.tokenize_all(text)?;
         

@@ -1,10 +1,8 @@
 use tauri::{AppHandle, State, Manager};
 use serde_json::Value;
-use std::path::PathBuf;
 
-use crate::domain::language::{LookupResult, FuriganaToken};
-use crate::infrastructure::plugins::PluginManager;
-use crate::infrastructure::plugins::japanese::JapanesePlugin;
+
+use crate::domain::language::{LookupResult, FuriganaToken, DictionaryLookup, FuriganaProvider};
 
 pub mod domain;
 pub mod infrastructure;
@@ -28,25 +26,21 @@ pub fn create_builder() -> tauri_specta::Builder<tauri::Wry> {
 #[tauri::command]
 #[specta::specta]
 fn lookup_word(text: String, state: State<'_, crate::infrastructure::state::AppState>) -> Result<LookupResult, String> {
-    let language = crate::domain::language::Language::Japanese; // Hardcode Japanese for now
-    
-    crate::application::language_service::LanguageService::lookup_word(
-        state.plugin_manager.clone(),
-        language,
-        &text
-    )
+    let provider = state.plugin_manager
+        .get_service::<dyn DictionaryLookup>("japanese")
+        .ok_or_else(|| "Dictionary lookup provider for Japanese not found".to_string())?;
+
+    provider.lookup_word(&text)
 }
 
 #[tauri::command]
 #[specta::specta]
 fn get_furigana(text: String, state: State<'_, crate::infrastructure::state::AppState>) -> Result<Vec<FuriganaToken>, String> {
-    let language = crate::domain::language::Language::Japanese; // Hardcode Japanese for now
-    
-    crate::application::language_service::LanguageService::get_furigana(
-        &text,
-        &language,
-        &state.plugin_manager
-    )
+    let provider = state.plugin_manager
+        .get_service::<dyn FuriganaProvider>("japanese")
+        .ok_or_else(|| "Furigana provider for Japanese not found".to_string())?;
+
+    provider.get_furigana(&text)
 }
 
 #[tauri::command]
@@ -136,31 +130,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .setup(|app| {
-            let resource_dir = app.path().resource_dir().unwrap_or_else(|_| PathBuf::from("."));
-            let db_path = resource_dir.join("jmdict.db");
-            
-            let exe_dir = std::env::current_exe()
-                .unwrap_or_else(|_| PathBuf::from("."))
-                .parent()
-                .unwrap_or_else(|| std::path::Path::new("."))
-                .to_path_buf();
-            let portable_db_path = exe_dir.join("jmdict.db");
-
-            // Priority: Portable db -> Tauri resource db -> local fallback
-            let actual_db_path = if portable_db_path.exists() {
-                portable_db_path
-            } else if db_path.exists() {
-                db_path
-            } else {
-                PathBuf::from("jmdict.db")
-            };
-
-            let mut plugin_manager = PluginManager::new();
-            if let Ok(japanese_plugin) = JapanesePlugin::new(actual_db_path) {
-                plugin_manager.register_plugin(std::sync::Arc::new(japanese_plugin));
-            } else {
-                eprintln!("Failed to initialize Japanese plugin");
-            }
+            let plugin_manager = crate::infrastructure::plugins::PluginManager::new(app.handle());
 
             match crate::infrastructure::state::AppState::new(plugin_manager) {
                 Ok(state) => {

@@ -58,13 +58,10 @@ pub struct LookupResult {
     pub entries: Vec<DictionaryEntry>,
 }
 
-pub trait LanguagePlugin: Send + Sync {
-    /// Look up a word in the language-specific dictionary.
+pub trait DictionaryLookup: Send + Sync {
     fn lookup_word(&self, text: &str) -> Result<LookupResult, String>;
-    
-    /// Get furigana tokens for the entire sentence
+}
+
+pub trait FuriganaProvider: Send + Sync {
     fn get_furigana(&self, text: &str) -> Result<Vec<FuriganaToken>, String>;
-    
-    /// Get the language this plugin handles.
-    fn get_language(&self) -> Language;
 }
