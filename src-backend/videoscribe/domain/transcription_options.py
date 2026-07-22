@@ -5,7 +5,6 @@ from enum import Enum
 class VADEngineType(Enum):
     OFF = "off"
     NATIVE = "native"
-    SILERO = "silero"
     SILERO_V6 = "silero_v6"
     FIRERED_VAD = "firered_vad"
 

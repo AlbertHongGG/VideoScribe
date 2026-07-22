@@ -29,7 +29,6 @@ const TRANSLATION_LANGUAGES = [
 const VAD_ENGINE_OPTIONS = [
   { value: "off", label: "Off (No VAD)" },
   { value: "native", label: "Native (Whisper Built-in)" },
-  { value: "silero", label: "Silero VAD v5 (Legacy)" },
   { value: "silero_v6", label: "Silero VAD v6 (High Precision)" },
   { value: "firered_vad", label: "FireRedVAD (Industrial GPU VAD)" },
 ];

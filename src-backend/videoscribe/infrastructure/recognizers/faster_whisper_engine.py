@@ -1,7 +1,8 @@
 import logging
 from typing import Iterator, Tuple, Optional, Any
 from faster_whisper import WhisperModel, BatchedInferencePipeline
-from videoscribe.domain.models import AudioWindow, Word, TranscriptionInfo
+from faster_whisper.audio import decode_audio
+from videoscribe.domain.models import AudioWindow, Word, TranscriptionInfo, VADResult
 from videoscribe.domain.interfaces import SpeechRecognizer
 from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType
 from videoscribe.domain.cancellation import CancellationToken, CancelledException
@@ -42,7 +43,6 @@ class FasterWhisperEngine(SpeechRecognizer):
         # Determine total audio duration for fallback / fixed chunking
         total_duration = 0.0
         try:
-            from faster_whisper.audio import decode_audio
             audio_buf = decode_audio(audio_path, sampling_rate=16000)
             total_duration = len(audio_buf) / 16000.0
         except Exception as e:
@@ -83,7 +83,7 @@ class FasterWhisperEngine(SpeechRecognizer):
             if self._is_batched:
                 # Inner: Batch ON -> Generate fixed 30s timestamp grid for Batch
                 transcribe_kwargs["batch_size"] = options.batch_size
-                fixed_chunks = vad_result.generate_fixed_chunks(total_duration, chunk_sec=30.0)
+                fixed_chunks = VADResult.generate_fixed_chunks(total_duration, chunk_sec=30.0)
                 transcribe_kwargs["clip_timestamps"] = fixed_chunks
                 logger.info(f"VAD OFF with Batch ON: Generated {len(fixed_chunks)} fixed 30s chunks.")
             else:

@@ -1,7 +1,7 @@
 from typing import Optional
 from videoscribe.domain.interfaces import VADAnalyzer
 from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType
-from .silero_analyzer import SileroVADAnalyzer
+
 from .silero_v6_analyzer import SileroVADv6Analyzer
 from .firered_analyzer import FireRedVADAnalyzer
 import logging
@@ -14,9 +14,7 @@ class VADFactory:
     """
     @classmethod
     def create(cls, options: TranscriptionOptions) -> Optional[VADAnalyzer]:
-        if options.vad_engine == VADEngineType.SILERO:
-            return SileroVADAnalyzer()
-        elif options.vad_engine == VADEngineType.SILERO_V6:
+        if options.vad_engine == VADEngineType.SILERO_V6:
             return SileroVADv6Analyzer()
         elif options.vad_engine == VADEngineType.FIRERED_VAD:
             return FireRedVADAnalyzer()
