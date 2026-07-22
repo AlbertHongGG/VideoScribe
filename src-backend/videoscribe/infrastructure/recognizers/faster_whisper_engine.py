@@ -47,7 +47,9 @@ class FasterWhisperEngine(SpeechRecognizer):
             logger.info(f"Using external VAD analyzer: {external_vad.__class__.__name__}")
             vad_result = external_vad.analyze(audio_path, options)
             if vad_result and not vad_result.is_empty:
-                logger.info(f"External VAD generated {len(vad_result.windows)} chunks.")
+                # Apply 2.0s padding and merge overlapping intervals for continuous audio context
+                vad_result = vad_result.merge_and_pad(padding_sec=2.0)
+                logger.info(f"External VAD generated {len(vad_result.windows)} merged chunks after 2.0s padding.")
                 transcribe_kwargs["vad_filter"] = False
                 transcribe_kwargs["clip_timestamps"] = (
                     vad_result.to_dict_list() if self._is_batched else vad_result.to_flat_list()

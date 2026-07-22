@@ -6,6 +6,7 @@ class VADEngineType(Enum):
     OFF = "off"
     NATIVE = "native"
     SILERO = "silero"
+    SILERO_V6 = "silero_v6"
 
 class MSSEngineType(Enum):
     OFF = "off"

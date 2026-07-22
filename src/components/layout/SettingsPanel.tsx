@@ -30,7 +30,8 @@ const TRANSLATION_LANGUAGES = [
 const VAD_ENGINE_OPTIONS = [
   { value: "off", label: "Off (No VAD)" },
   { value: "native", label: "Native (Whisper Built-in)" },
-  { value: "silero", label: "Silero VAD Plugin" }
+  { value: "silero", label: "Silero VAD v5 (Legacy)" },
+  { value: "silero_v6", label: "Silero VAD v6 (High Precision)" },
 ];
 
 const MSS_ENGINE_OPTIONS = [
