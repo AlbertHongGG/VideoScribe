@@ -12,7 +12,7 @@ export const STTPanelHeader: React.FC = () => {
     <div className="px-6 py-5 border-b border-white/10 bg-black/20 flex items-center justify-between">
       <h2 className="font-bold text-white tracking-[0.2em] text-xs flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full bg-[#facc15] shadow-[0_0_8px_rgba(250,204,21,0.8)]"></span>
-        TRANSCRIPTION
+        {isProcessing ? "PROCESSING PIPELINE" : "TRANSCRIPTION"}
       </h2>
       
       {!isProcessing && (
