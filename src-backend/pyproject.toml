@@ -9,6 +9,7 @@ dependencies = [
     "ctranslate2",
     "fastapi",
     "faster-whisper",
+    "fireredvad",
     "numpy<2.5",
     "nvidia-cublas-cu12",
     "nvidia-cuda-runtime-cu12",
