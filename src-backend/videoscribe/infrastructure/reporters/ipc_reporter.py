@@ -4,7 +4,7 @@ import uuid
 from typing import Dict, Any, Optional
 
 from videoscribe.domain.interfaces import ProgressReporter
-from videoscribe.domain.models import TranscriptionSegment
+from videoscribe.domain.models import TranscriptionSegment, TaskType, TaskStatus
 
 
 class IpcReporter(ProgressReporter):
@@ -22,32 +22,16 @@ class IpcReporter(ProgressReporter):
         sys.stdout.write(json.dumps(payload, ensure_ascii=False) + "\n")
         sys.stdout.flush()
 
-    def report_initial_state(self, device: str, compute_type: str, language: str) -> None:
-        self._write_event("job_state", {
-            "job_id": self.job_id,
-            "status": "starting",
-            "progress": 0,
-            "runtime_device": device,
-            "runtime_compute_type": compute_type,
-            "language": language
-        })
-
-    def report_progress(self, status: str, progress: int) -> None:
-        self._write_event("job_state", {
-            "job_id": self.job_id,
-            "status": status,
-            "progress": progress
-        })
-
-    def report_audio_stems(self, vocals_path: str, instrumental_path: Optional[str] = None) -> None:
+    def report_task_progress(self, task_type: TaskType, status: TaskStatus, progress: Optional[float] = None, **kwargs) -> None:
         data = {
             "job_id": self.job_id,
-            "status": "separating_audio",
-            "vocals_path": vocals_path,
+            "task_type": task_type.value,
+            "status": status.value,
         }
-        if instrumental_path:
-            data["instrumental_path"] = instrumental_path
-        self._write_event("job_state", data)
+        if progress is not None:
+            data["progress"] = progress
+        data.update(kwargs)
+        self._write_event("task_progress", data)
 
     def report_result(self, segment: TranscriptionSegment) -> None:
         cue = {
@@ -65,15 +49,6 @@ class IpcReporter(ProgressReporter):
         })
 
     def report_error(self, message: str) -> None:
-        self._write_event("job_state", {
-            "job_id": self.job_id,
-            "status": "failed",
-            "error_message": message
-        })
-
-    def report_language(self, language: str) -> None:
-        self._write_event("job_state", {
-            "job_id": self.job_id,
-            "status": "transcribing",
-            "language": language
+        self._write_event("error", {
+            "message": message
         })

@@ -29,7 +29,7 @@ class FasterWhisperEngine(SpeechRecognizer):
             self._is_batched = False
             self._pipeline = None
             
-    def transcribe_file(self, audio_path: str, options: TranscriptionOptions, cancel_token: Optional[CancellationToken] = None) -> Tuple[Iterator[Any], Optional[TranscriptionInfo]]:
+    def transcribe_file(self, audio_path: str, options: TranscriptionOptions, cancel_token: Optional[CancellationToken] = None, vad_result: Optional[VADResult] = None) -> Tuple[Iterator[Any], Optional[TranscriptionInfo]]:
         if not self._model:
             raise RuntimeError("Model not loaded. Call load_model first.")
             
@@ -48,14 +48,10 @@ class FasterWhisperEngine(SpeechRecognizer):
         except Exception as e:
             logger.warning(f"Could not calculate audio duration prior to transcription: {e}")
 
-        # 1. Ask Factory for external VAD Analyzer
-        external_vad = VADFactory.create(options)
-        raw_vad_result = external_vad.analyze(audio_path, options) if external_vad else None
-
         # 2. Outer layer: VAD State / Inner layer: Batch State
-        if raw_vad_result and not raw_vad_result.is_empty:
+        if vad_result and not vad_result.is_empty:
             # Outer: VAD ON
-            vad_result = raw_vad_result.merge_and_pad(padding_sec=2.0, total_duration=total_duration)
+            vad_result = vad_result.merge_and_pad(padding_sec=2.0, total_duration=total_duration)
             transcribe_kwargs["vad_filter"] = False
 
             if self._is_batched:

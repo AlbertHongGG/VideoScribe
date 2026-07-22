@@ -1,5 +1,5 @@
 from typing import Protocol, Iterator, Tuple, Optional, Any
-from .models import TranscriptionSegment, TranscriptionInfo, AudioWindow, Word, VADResult, MSSResult
+from .models import TranscriptionSegment, TranscriptionInfo, AudioWindow, Word, VADResult, MSSResult, TaskType, TaskStatus
 from .transcription_options import TranscriptionOptions
 from .cancellation import CancellationToken
 
@@ -29,17 +29,13 @@ class SpeechRecognizer(Protocol):
         """Load the STT model using the provided options."""
         ...
         
-    def transcribe_file(self, audio_path: str, options: TranscriptionOptions, cancel_token: Optional['CancellationToken'] = None) -> Tuple[Iterator[Any], Optional[TranscriptionInfo]]:
+    def transcribe_file(self, audio_path: str, options: TranscriptionOptions, cancel_token: Optional['CancellationToken'] = None, vad_result: Optional['VADResult'] = None) -> Tuple[Iterator[Any], Optional[TranscriptionInfo]]:
         """Transcribe an audio file and yield segments."""
         ...
 
 class ProgressReporter(Protocol):
-    def report_initial_state(self, device: str, compute_type: str, language: str) -> None:
-        """Report initial job state with runtime info."""
-        ...
-        
-    def report_progress(self, status: str, progress: int) -> None:
-        """Report operation progress (0-100)."""
+    def report_task_progress(self, task_type: 'TaskType', status: 'TaskStatus', progress: Optional[float] = None, **kwargs) -> None:
+        """Report progress for a specific pipeline task."""
         ...
         
     def report_result(self, segment: TranscriptionSegment) -> None:
@@ -47,9 +43,5 @@ class ProgressReporter(Protocol):
         ...
         
     def report_error(self, message: str) -> None:
-        """Report an error."""
-        ...
-        
-    def report_language(self, language: str) -> None:
-        """Report the detected language."""
+        """Report a global error."""
         ...

@@ -2,19 +2,11 @@ import React from "react";
 import { Download, Upload, Languages } from "lucide-react";
 import { Tooltip } from "../ui/Tooltip";
 import { SubtitleIOService } from "../../services/subtitleIOService";
+import { useSTTJobStore, selectIsProcessing, selectCanTranslate } from "../../store/sttJobStore";
 
-interface Props {
-  status: string;
-  progress: number;
-  translationStatus: string;
-  translationProgress: number;
-}
-
-export const STTPanelHeader: React.FC<Props> = ({ status, progress, translationStatus, translationProgress }) => {
-  const showSttProgress = status !== "idle" && status !== "completed" && status !== "error" && status !== "failed" && status !== "cancelled";
-  const showTranslationProgress = status === "completed" && translationStatus === "translating";
-  const showActions = status === "idle" || status === "cancelled" || (status === "completed" && translationStatus !== "translating");
-  const canTranslate = status === "completed";
+export const STTPanelHeader: React.FC = () => {
+  const isProcessing = useSTTJobStore(selectIsProcessing);
+  const canTranslate = useSTTJobStore(selectCanTranslate);
 
   return (
     <div className="px-6 py-5 border-b border-white/10 bg-black/20 flex items-center justify-between">
@@ -23,23 +15,7 @@ export const STTPanelHeader: React.FC<Props> = ({ status, progress, translationS
         TRANSCRIPTION
       </h2>
       
-      {showSttProgress && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[#facc15] font-mono font-bold tracking-wider">
-            {status === "loading_model" ? "LOADING..." : status === "starting" ? "STARTING..." : status === "cancelling" ? "CANCELLING..." : `${progress}%`}
-          </span>
-        </div>
-      )}
-      
-      {showTranslationProgress && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[#facc15] font-mono font-bold tracking-wider">
-            {translationProgress}%
-          </span>
-        </div>
-      )}
-      
-      {showActions && (
+      {!isProcessing && (
         <div className="flex items-center gap-3">
           {canTranslate && (
             <Tooltip content="Translate Subtitles" position="bottom">

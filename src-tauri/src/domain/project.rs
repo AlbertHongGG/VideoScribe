@@ -14,33 +14,39 @@ pub struct STTResult {
 #[derive(Debug, Serialize, Deserialize, Clone, TS, Type, PartialEq)]
 #[ts(export, export_to = "../../src/types/app_types.ts")]
 #[serde(rename_all = "snake_case")]
-pub enum STTStatus {
-    Idle,
-    LoadingModel,
-    Transcribing,
-    Completed,
-    Error,
+pub enum TaskType {
+    ExtractAudio,
+    Mss,
+    Vad,
+    Stt,
+    Translation,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, TS, Type, PartialEq)]
 #[ts(export, export_to = "../../src/types/app_types.ts")]
 #[serde(rename_all = "snake_case")]
-pub enum TranslationStatus {
-    Idle,
-    Translating,
+pub enum TaskStatus {
+    Pending,
+    Running,
     Completed,
     Error,
+    Cancelled,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, TS, Type)]
+#[ts(export, export_to = "../../src/types/app_types.ts")]
+pub struct PipelineTask {
+    pub task_type: TaskType,
+    pub status: TaskStatus,
+    pub progress: f64,
+    pub error_message: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, TS, Type)]
 #[ts(export, export_to = "../../src/types/app_types.ts")]
 pub struct ProjectState {
     pub video_path: Option<String>,
-    pub stt_status: STTStatus,
-    pub stt_error_message: Option<String>,
-    pub stt_progress: f64,
-    pub translation_status: TranslationStatus,
-    pub translation_progress: f64,
+    pub tasks: Vec<PipelineTask>,
     pub results: Vec<STTResult>,
     pub target_language: String,
     pub vocals_audio_path: Option<String>,
@@ -51,11 +57,7 @@ impl Default for ProjectState {
     fn default() -> Self {
         Self {
             video_path: None,
-            stt_status: STTStatus::Idle,
-            stt_error_message: None,
-            stt_progress: 0.0,
-            translation_status: TranslationStatus::Idle,
-            translation_progress: 0.0,
+            tasks: Vec::new(),
             results: Vec::new(),
             target_language: "zh-TW".to_string(),
             vocals_audio_path: None,
@@ -81,50 +83,67 @@ impl ProjectState {
         &self.target_language
     }
 
-    pub fn start_translation(&mut self) {
-        self.translation_status = TranslationStatus::Translating;
-        self.translation_progress = 0.0;
-    }
-
-    pub fn update_translation_progress(&mut self, progress: f64, partial_results: Vec<STTResult>) {
-        self.translation_progress = progress;
-        self.results = partial_results;
-    }
-
-    pub fn complete_translation(&mut self, final_results: Vec<STTResult>) {
-        self.translation_status = TranslationStatus::Completed;
-        self.translation_progress = 100.0;
-        self.results = final_results;
-    }
-
-    pub fn fail_translation(&mut self) {
-        self.translation_status = TranslationStatus::Error;
-    }
-
-    pub fn set_stt_status(&mut self, status: STTStatus) {
-        self.stt_status = status;
-        if self.stt_status != STTStatus::Error {
-            self.stt_error_message = None;
-        }
-    }
-
-    pub fn update_stt_progress(&mut self, progress: f64) {
-        self.stt_progress = progress;
-    }
-
     pub fn add_stt_result(&mut self, result: STTResult) {
         self.results.push(result);
     }
 
-    pub fn set_stt_error(&mut self, message: String) {
-        self.stt_status = STTStatus::Error;
-        self.stt_error_message = Some(message);
+    pub fn import_results(&mut self, results: Vec<STTResult>) {
+        self.results = results;
+        // Optionally, we could set tasks to show completed import here.
+        // But importing skips the pipeline. We can just clear tasks.
+        self.tasks.clear();
     }
 
-    pub fn import_results(&mut self, results: Vec<STTResult>) {
-        let has_translation = results.iter().any(|r| r.translation.is_some());
-        self.results = results;
-        self.stt_status = STTStatus::Completed;
-        self.translation_status = if has_translation { TranslationStatus::Completed } else { TranslationStatus::Idle };
+    // Pipeline management methods
+    pub fn init_pipeline(&mut self, tasks_to_run: Vec<TaskType>) {
+        self.tasks = tasks_to_run.into_iter().map(|task_type| PipelineTask {
+            task_type,
+            status: TaskStatus::Pending,
+            progress: 0.0,
+            error_message: None,
+        }).collect();
+    }
+
+    pub fn get_task_mut(&mut self, task_type: &TaskType) -> Option<&mut PipelineTask> {
+        self.tasks.iter_mut().find(|t| t.task_type == *task_type)
+    }
+
+    pub fn update_task_progress(&mut self, task_type: TaskType, progress: f64) {
+        if let Some(task) = self.get_task_mut(&task_type) {
+            task.status = TaskStatus::Running;
+            task.progress = progress;
+        }
+    }
+
+    pub fn complete_task(&mut self, task_type: TaskType) {
+        if let Some(task) = self.get_task_mut(&task_type) {
+            task.status = TaskStatus::Completed;
+            task.progress = 100.0;
+        }
+    }
+
+    pub fn fail_task(&mut self, task_type: TaskType, error: String) {
+        if let Some(task) = self.get_task_mut(&task_type) {
+            task.status = TaskStatus::Error;
+            task.error_message = Some(error);
+        }
+        // Cancel all subsequent pending tasks
+        for t in self.tasks.iter_mut() {
+            if t.status == TaskStatus::Pending {
+                t.status = TaskStatus::Cancelled;
+            }
+        }
+    }
+
+    pub fn cancel_pipeline(&mut self) {
+        for t in self.tasks.iter_mut() {
+            if t.status == TaskStatus::Running || t.status == TaskStatus::Pending {
+                t.status = TaskStatus::Cancelled;
+            }
+        }
+    }
+
+    pub fn is_pipeline_running(&self) -> bool {
+        self.tasks.iter().any(|t| t.status == TaskStatus::Running)
     }
 }

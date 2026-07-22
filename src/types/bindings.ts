@@ -6,19 +6,8 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 export const commands = {
 	lookupWord: (text: string) => typedError<LookupResult, string>(__TAURI_INVOKE("lookup_word", { text })),
 	getFurigana: (text: string) => typedError<FuriganaToken[], string>(__TAURI_INVOKE("get_furigana", { text })),
-	startSttJob: (videoPath: string, modelSize: string, language: string, vadEngine: string, mssEngine: string, mssModel: string, useBatch: boolean, batchSize: number) => typedError<string, string>(__TAURI_INVOKE("start_stt_job", { videoPath, modelSize, language, vadEngine, mssEngine, mssModel, useBatch, batchSize })),
+	startSttJob: (videoPath: string, modelSize: string, language: string, vadEngine: string, mssEngine: string, mssModel: string, useBatch: boolean, batchSize: number, enableTranslation: boolean) => typedError<string, string>(__TAURI_INVOKE("start_stt_job", { videoPath, modelSize, language, vadEngine, mssEngine, mssModel, useBatch, batchSize, enableTranslation })),
 	cancelSttJob: (jobId: string) => typedError<null, string>(__TAURI_INVOKE("cancel_stt_job", { jobId })),
-	getSttJobState: () => typedError<{
-	job_id: string,
-	status: SttStatus,
-	progress: number,
-	language: string | null,
-	error_message: string | null,
-	runtime_device: string | null,
-	runtime_compute_type: string | null,
-	vocals_path: string | null,
-	instrumental_path: string | null,
-} | null, string>(__TAURI_INVOKE("get_stt_job_state")),
 	importSttResults: (results: STTResult[]) => typedError<null, string>(__TAURI_INVOKE("import_stt_results", { results })),
 	startTranslation: () => typedError<null, string>(__TAURI_INVOKE("start_translation")),
 	runAgentTask: (agentType: AgentType, payloadJson: string) => typedError<string, string>(__TAURI_INVOKE("run_agent_task", { agentType, payloadJson })),
@@ -49,13 +38,16 @@ export type LookupResult = {
 	entries: DictionaryEntry[],
 };
 
+export type PipelineTask = {
+	task_type: TaskType,
+	status: TaskStatus,
+	progress: number | null,
+	error_message: string | null,
+};
+
 export type ProjectState = {
 	video_path: string | null,
-	stt_status: STTStatus,
-	stt_error_message: string | null,
-	stt_progress: number | null,
-	translation_status: TranslationStatus,
-	translation_progress: number | null,
+	tasks: PipelineTask[],
 	results: STTResult[],
 	target_language: string,
 	vocals_audio_path: string | null,
@@ -69,23 +61,9 @@ export type STTResult = {
 	translation: string | null,
 };
 
-export type STTStatus = "idle" | "loading_model" | "transcribing" | "completed" | "error";
+export type TaskStatus = "pending" | "running" | "completed" | "error" | "cancelled";
 
-export type SttJobSnapshot = {
-	job_id: string,
-	status: SttStatus,
-	progress: number,
-	language: string | null,
-	error_message: string | null,
-	runtime_device: string | null,
-	runtime_compute_type: string | null,
-	vocals_path: string | null,
-	instrumental_path: string | null,
-};
-
-export type SttStatus = "idle" | "starting" | "loading_model" | "transcribing" | "cancelling" | "completed" | "cancelled" | "failed";
-
-export type TranslationStatus = "idle" | "translating" | "completed" | "error";
+export type TaskType = "extract_audio" | "mss" | "vad" | "stt" | "translation";
 
 /* Tauri Specta runtime */
 async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {

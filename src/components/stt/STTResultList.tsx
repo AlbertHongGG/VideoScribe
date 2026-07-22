@@ -33,13 +33,15 @@ export const STTResultList: React.FC<Props> = ({ results, currentTime, onSeek, o
   return (
     <div className="flex flex-col gap-3 pb-6">
       {results.map((result, idx) => {
-        const isActive = currentTime >= result.start && currentTime <= result.end;
+        const start = result.start ?? 0;
+        const end = result.end ?? 0;
+        const isActive = currentTime >= start && currentTime <= end;
         
         return (
           <div
             key={idx}
             ref={isActive ? activeItemRef : null}
-            onClick={() => onSeek(result.start)}
+            onClick={() => onSeek(start)}
             className={`group p-4 rounded-xl cursor-pointer transition-all duration-200 ${
               isActive 
                 ? "bg-[#facc15]/10 border border-[#facc15]/30 ring-1 ring-[#facc15]/30" 
@@ -48,7 +50,7 @@ export const STTResultList: React.FC<Props> = ({ results, currentTime, onSeek, o
           >
             <div className="flex items-center gap-3 mb-2">
               <span className={`text-[10px] font-mono font-bold tracking-widest ${isActive ? "text-[#facc15]" : "text-gray-500"}`}>
-                {formatTime(result.start)}
+                {formatTime(start)}
               </span>
               <div className={`flex-1 h-px ${isActive ? "bg-gradient-to-r from-[#facc15]/50 to-transparent" : "bg-white/5"}`}></div>
               <div className="flex items-center gap-2">

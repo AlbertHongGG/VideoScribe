@@ -1,6 +1,21 @@
 import numpy as np
 from dataclasses import dataclass, field
 from typing import List, Optional
+from enum import Enum
+
+class TaskType(str, Enum):
+    EXTRACT_AUDIO = "extract_audio"
+    MSS = "mss"
+    VAD = "vad"
+    STT = "stt"
+    TRANSLATION = "translation"
+
+class TaskStatus(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    ERROR = "error"
+    CANCELLED = "cancelled"
 
 @dataclass
 class Word:

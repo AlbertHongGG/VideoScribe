@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { useSTTSettingsStore } from "../store/sttSettingsStore";
 import { useSTTJobStore } from "../store/sttJobStore";
-import { ProjectState } from "../types/app_types";
+import { ProjectState } from "../types/bindings";
 
 export const useAppEvents = () => {
   useEffect(() => {
@@ -23,29 +23,27 @@ export const useAppEvents = () => {
 
       const u2 = await listen("app-state-changed", async () => {
         try {
+          const prevState = useSTTJobStore.getState().tasks;
           const state = await invoke<ProjectState>("get_app_state");
           if (state) {
             useSTTJobStore.getState().syncAppState(state);
             useSTTSettingsStore.getState().setTargetLanguage(state.target_language);
+            
+            // Check for STT completion notification
+            const wasSttCompleted = prevState.find(t => t.task_type === 'stt')?.status === 'completed';
+            const isSttCompleted = state.tasks.find(t => t.task_type === 'stt')?.status === 'completed';
+            
+            if (!wasSttCompleted && isSttCompleted) {
+              import("../store/notifyStore").then(({ useNotifyStore }) => {
+                useNotifyStore.getState().show("STT processing completed", "success");
+              });
+            }
           }
         } catch (e) {
           console.error("Failed to sync app state:", e);
         }
       });
       if (isMounted) unlistenFunctions.push(u2); else u2();
-
-      const u3 = await listen("stt_job_state", (event: any) => {
-        const snapshot = event.payload;
-        const prevState = useSTTJobStore.getState().status;
-        useSTTJobStore.getState().syncJobState(snapshot);
-        
-        if (prevState !== 'completed' && snapshot.status === 'completed') {
-          import("../store/notifyStore").then(({ useNotifyStore }) => {
-            useNotifyStore.getState().show("STT processing completed", "success");
-          });
-        }
-      });
-      if (isMounted) unlistenFunctions.push(u3); else u3();
 
       const u4 = await listen("stt_segment_batch", (event: any) => {
         if (event.payload && event.payload.cues) {

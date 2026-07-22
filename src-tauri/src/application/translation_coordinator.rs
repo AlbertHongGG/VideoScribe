@@ -1,6 +1,6 @@
 use crate::domain::agent::AgentType;
 use crate::infrastructure::agents::AgentFactory;
-use crate::domain::project::ProjectState;
+use crate::domain::project::{ProjectState, TaskType};
 use crate::infrastructure::providers::AIProvider;
 use crate::domain::events::EventDispatcher;
 use std::sync::{Arc, Mutex};
@@ -19,7 +19,8 @@ impl TranslationCoordinator {
             return Err("No STT results to translate".into());
         }
         
-        project.start_translation();
+        project.init_pipeline(vec![TaskType::Translation]);
+        project.update_task_progress(TaskType::Translation, 0.0);
         let _ = dispatcher.emit("app-state-changed", Value::Null);
         
         let target_language = project.get_target_language().to_string();
@@ -85,7 +86,7 @@ impl TranslationCoordinator {
                     Err(e) => {
                         eprintln!("Translation chunk {} failed: {}", i, e);
                         if let Ok(mut proj) = project_mutex.lock() {
-                            proj.fail_translation();
+                            proj.fail_task(TaskType::Translation, e.to_string());
                         }
                         let _ = dispatcher.emit("error", json!({"message": format!("Translation failed: {}", e)}));
                         let _ = dispatcher.emit("app-state-changed", Value::Null);
@@ -103,13 +104,15 @@ impl TranslationCoordinator {
                 // Update state
                 if let Ok(mut proj) = project_mutex.lock() {
                     let progress = ((i + 1) as f64 / total_chunks as f64) * 100.0;
-                    proj.update_translation_progress(progress, all_translated_results.clone());
+                    proj.results = all_translated_results.clone();
+                    proj.update_task_progress(TaskType::Translation, progress);
                 }
                 let _ = dispatcher.emit("app-state-changed", Value::Null);
             }
             
             if let Ok(mut proj) = project_mutex.lock() {
-                proj.complete_translation(all_translated_results);
+                proj.results = all_translated_results;
+                proj.complete_task(TaskType::Translation);
             }
             let _ = dispatcher.emit("app-state-changed", Value::Null);
         });

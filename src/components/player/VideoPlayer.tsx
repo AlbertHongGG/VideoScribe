@@ -92,7 +92,7 @@ export const VideoPlayer: React.FC = () => {
   // Update subtitle text. Purely UI.
   useEffect(() => {
     if (memoizedResults.length > 0) {
-      const activeSubtitle = memoizedResults.find(r => currentTime >= r.start && currentTime <= r.end);
+      const activeSubtitle = memoizedResults.find(r => currentTime >= (r.start ?? 0) && currentTime <= (r.end ?? 0));
       setCurrentSubtitle(activeSubtitle ? activeSubtitle.text : null);
       setCurrentTranslation(activeSubtitle && activeSubtitle.translation ? activeSubtitle.translation : null);
     } else {

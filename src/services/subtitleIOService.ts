@@ -2,6 +2,7 @@ import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
 import { useSTTJobStore, STTResult } from '../store/sttJobStore';
+import { ProjectState } from '../types/bindings';
 import { useNotifyStore } from '../store/notifyStore';
 
 export class SubtitleIOService {
@@ -39,7 +40,7 @@ export class SubtitleIOService {
   }
 
   static async importSubtitles() {
-    const { setResults, setStatus, setTranslationStatus } = useSTTJobStore.getState();
+    const { syncAppState } = useSTTJobStore.getState();
     const { show } = useNotifyStore.getState();
 
     try {
@@ -71,21 +72,12 @@ export class SubtitleIOService {
       }
 
       const results = parsed as STTResult[];
-      
       // Update backend state first
       await invoke('import_stt_results', { results });
       
-      // Then update frontend
-      setResults(results);
-      setStatus('completed');
-
-      // If there are translations in the imported data, we assume translation is completed
-      const hasTranslation = results.some(r => r.translation);
-      if (hasTranslation) {
-        setTranslationStatus('completed');
-      } else {
-        setTranslationStatus('idle');
-      }
+      // Then fetch and sync frontend state
+      const newState = await invoke<ProjectState>('get_app_state');
+      syncAppState(newState);
 
       show("Subtitles imported successfully", "success");
     } catch (err: any) {

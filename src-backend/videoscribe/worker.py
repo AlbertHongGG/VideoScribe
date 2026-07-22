@@ -25,12 +25,16 @@ if sys.platform == "win32":
                 os.environ["PATH"] = bin_dir + os.pathsep + os.environ.get("PATH", "")
 
 from videoscribe.infrastructure.recognizers.faster_whisper_engine import FasterWhisperEngine
-from videoscribe.application.transcription_job import TranscriptionJob
+from videoscribe.application.pipeline import TranscriptionPipeline, PipelineContext
+from videoscribe.application.transcription_job import MssStep, VadStep, SttStep
 from videoscribe.infrastructure.audio.ffmpeg_analyzer import FFmpegAudioAnalyzer
 from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
 from videoscribe.domain.cancellation import CancellationToken
 from videoscribe.domain.ipc_models import IpcCommand, StartPayload
 from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType, MSSEngineType
+from videoscribe.domain.models import TaskType, TaskStatus
+from videoscribe.infrastructure.audio.mss.factory import MSSFactory
+from videoscribe.infrastructure.audio.vad.factory import VADFactory
 from videoscribe.domain.prompt_registry import PromptRegistry
 
 logging.basicConfig(
@@ -84,16 +88,15 @@ class CommandRouter:
         compute_type = "int8_float16" if is_gpu else "int8"
         
         # Orchestrator Decisions: Batching
-        # Only allow batching if the user requested it AND we have a GPU
         use_batch = payload.use_batch and is_gpu
         
-        reporter.report_initial_state(device, compute_type, payload.language)
+        # Initial pending state for STT is no longer necessary as pipeline sends RUNNING automatically.
+        # But we can send pending for all requested tasks before starting to populate UI properly!
+        reporter.report_task_progress(TaskType.STT, TaskStatus.PENDING, 0.0, runtime_device=device, runtime_compute_type=compute_type, language=payload.language)
         
         vad_engine_enum = VADEngineType(payload.vad_engine) if payload.vad_engine in ["off", "native", "silero", "silero_v6", "firered_vad"] else VADEngineType.OFF
-        
         mss_engine_enum = MSSEngineType(payload.mss_engine) if payload.mss_engine in ["off", "audio_separator"] else MSSEngineType.OFF
 
-        # Build options
         options = TranscriptionOptions(
             model_size=payload.model,
             device=device,
@@ -108,14 +111,32 @@ class CommandRouter:
         )
         
         self.current_cancel_token = CancellationToken()
-        job = TranscriptionJob(self.analyzer, self.recognizer, reporter)
+        
+        # Construct Pipeline
+        context = PipelineContext(
+            audio_path=payload.video_path,
+            options=options,
+            reporter=reporter,
+            cancel_token=self.current_cancel_token,
+            mss_analyzer=MSSFactory.create(options) if mss_engine_enum != MSSEngineType.OFF else None,
+            vad_analyzer=VADFactory.create(options) if vad_engine_enum not in [VADEngineType.OFF, VADEngineType.NATIVE] else None,
+            stt_recognizer=self.recognizer
+        )
+        
+        pipeline = TranscriptionPipeline(context)
+        
+        if mss_engine_enum != MSSEngineType.OFF:
+            pipeline.add_step(MssStep())
+            reporter.report_task_progress(TaskType.MSS, TaskStatus.PENDING, 0.0)
+            
+        if vad_engine_enum not in [VADEngineType.OFF, VADEngineType.NATIVE]:
+            pipeline.add_step(VadStep())
+            reporter.report_task_progress(TaskType.VAD, TaskStatus.PENDING, 0.0)
+            
+        pipeline.add_step(SttStep())
         
         try:
-            job.run(
-                audio_path=payload.video_path,
-                options=options,
-                cancel_token=self.current_cancel_token
-            )
+            pipeline.execute()
         except Exception as e:
             reporter.report_error(str(e))
         finally:

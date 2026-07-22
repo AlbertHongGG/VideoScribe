@@ -6,14 +6,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNotifyStore } from "../../store/notifyStore";
 import { STTPanelHeader } from "./STTPanelHeader";
 import { STTProcessingOverlay } from "./STTProcessingOverlay";
-import { STTTranslationOverlay } from "./STTTranslationOverlay";
 import { STTResultList } from "./STTResultList";
 import { STTEmptyState } from "./STTEmptyState";
 import { STTErrorState } from "./STTErrorState";
 
 export const STTPanel: React.FC = () => {
   const { isPanelOpen } = useSTTSettingsStore();
-  const { results, status, progress, translationStatus, translationProgress } = useSTTJobStore();
+  const { tasks, results } = useSTTJobStore();
   const { currentTime, setSeekToTime, setIsPlaying } = useVideoStore();
   const { show } = useNotifyStore();
   
@@ -45,37 +44,38 @@ export const STTPanel: React.FC = () => {
     });
   };
 
+  const isProcessing = tasks.some(t => t.status === "running" || t.status === "pending");
+  const hasError = tasks.some(t => t.status === "error");
+  const isEmpty = tasks.length === 0 && results.length === 0;
+
   const renderContent = () => {
-    if (status === "error") {
+    if (hasError) {
       return <STTErrorState />;
     }
-    if (status === "idle") {
+    if (isProcessing) {
+      return <STTProcessingOverlay tasks={tasks} />;
+    }
+    if (isEmpty) {
       return <STTEmptyState />;
     }
-    if (status === "loading_model" || status === "transcribing") {
-      return <STTProcessingOverlay progress={progress} />;
-    }
-    if (status === "completed") {
-      return (
-        <div 
-          ref={containerRef}
-          onScroll={handleScroll}
-          className="flex-1 overflow-y-auto custom-scrollbar p-4 relative"
-        >
-          {translationStatus === "translating" && <STTTranslationOverlay progress={translationProgress} />}
-          {results.length > 0 && (
-            <STTResultList 
-              results={results} 
-              currentTime={currentTime} 
-              onSeek={handleSeek} 
-              onCopy={handleCopy}
-              containerRef={containerRef}
-            />
-          )}
-        </div>
-      );
-    }
-    return null;
+    // Completed state with results
+    return (
+      <div 
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto custom-scrollbar p-4 relative"
+      >
+        {results.length > 0 && (
+          <STTResultList 
+            results={results} 
+            currentTime={currentTime} 
+            onSeek={handleSeek} 
+            onCopy={handleCopy}
+            containerRef={containerRef}
+          />
+        )}
+      </div>
+    );
   };
 
   return (
@@ -88,12 +88,7 @@ export const STTPanel: React.FC = () => {
           transition={{ duration: 0.3, ease: "easeInOut" }}
           className="h-full bg-[#121212] border-l border-white/10 flex flex-col overflow-hidden shrink-0 z-20 shadow-[-20px_0_40px_rgba(0,0,0,0.5)]"
         >
-          <STTPanelHeader 
-            status={status} 
-            progress={progress} 
-            translationStatus={translationStatus} 
-            translationProgress={translationProgress} 
-          />
+          <STTPanelHeader />
 
           <div className="flex-1 relative overflow-hidden flex flex-col">
             {renderContent()}

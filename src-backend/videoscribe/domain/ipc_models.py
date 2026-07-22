@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
+from videoscribe.domain.models import TaskType, TaskStatus
 
 @dataclass
 class StartPayload:
@@ -27,14 +28,16 @@ class IpcCommand:
         )
 
 @dataclass
-class JobStateData:
+class TaskProgressData:
     job_id: str
-    status: str
-    progress: Optional[int] = None
-    language: Optional[str] = None
+    task_type: TaskType
+    status: TaskStatus
+    progress: Optional[float] = None
     error_message: Optional[str] = None
     runtime_device: Optional[str] = None
     runtime_compute_type: Optional[str] = None
+    vocals_path: Optional[str] = None
+    instrumental_path: Optional[str] = None
 
 @dataclass
 class CueData:

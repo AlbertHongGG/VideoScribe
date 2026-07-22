@@ -10,7 +10,6 @@ export class STTService {
 
     // Optimistically update frontend state while backend boots
     useSTTJobStore.getState().reset();
-    useSTTJobStore.getState().setStatus("loading_model", 0);
     notifyStore.show("Starting Speech-to-Text process...", "info");
 
     try {
@@ -34,7 +33,6 @@ export class STTService {
       
     } catch (e: any) {
       console.error(e);
-      useSTTJobStore.getState().setStatus("error");
       useNotifyStore.getState().show(`Failed to start STT: ${e.toString()}`, "error");
     }
   }

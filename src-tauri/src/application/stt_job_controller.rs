@@ -1,16 +1,17 @@
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
-use uuid::Uuid;
+use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::domain::stt_job::{SttJobSnapshot, SttStatus};
+use crate::domain::stt_job::SttJobContext;
+use crate::domain::project::TaskType;
 use crate::domain::ipc_models::{WorkerCommand, WorkerEvent, WorkerEventData, StartPayload};
 use crate::application::worker_process::WorkerProcess;
 
 pub struct SttJobController {
     process: Arc<WorkerProcess>,
-    current_job: Arc<Mutex<Option<SttJobSnapshot>>>,
+    current_job: Arc<Mutex<Option<SttJobContext>>>,
     app: AppHandle,
     cancel_time: Arc<Mutex<Option<Instant>>>,
 }
@@ -38,75 +39,52 @@ impl SttJobController {
         controller
     }
 
-    fn handle_event(event: &WorkerEvent, current_job: &Arc<Mutex<Option<SttJobSnapshot>>>, app: &AppHandle) {
+    fn handle_event(event: &WorkerEvent, _current_job: &Arc<Mutex<Option<SttJobContext>>>, app: &AppHandle) {
         match &event.data {
-            WorkerEventData::JobState(data) => {
-                if let Ok(mut job_lock) = current_job.lock() {
-                    let mut snapshot = job_lock.clone().unwrap_or_else(|| SttJobSnapshot::new_idle());
-                    snapshot.job_id = data.job_id.clone();
-                    
-                    snapshot.status = match data.status.as_str() {
-                        "idle" => SttStatus::Idle,
-                        "starting" => SttStatus::Starting,
-                        "loading_model" => SttStatus::LoadingModel,
-                        "transcribing" => SttStatus::Transcribing,
-                        "cancelling" => SttStatus::Cancelling,
-                        "completed" => SttStatus::Completed,
-                        "cancelled" => SttStatus::Cancelled,
-                        "failed" => SttStatus::Failed,
-                        _ => snapshot.status,
-                    };
-                    
-                    if let Some(progress) = data.progress {
-                        snapshot.progress = progress;
-                    }
-                    if let Some(ref lang) = data.language {
-                        snapshot.language = Some(lang.clone());
-                    }
-                    if let Some(ref err) = data.error_message {
-                        snapshot.error_message = Some(err.clone());
-                    }
-                    if let Some(ref device) = data.runtime_device {
-                        snapshot.runtime_device = Some(device.clone());
-                    }
-                    if let Some(ref ct) = data.runtime_compute_type {
-                        snapshot.runtime_compute_type = Some(ct.clone());
-                    }
-                    if let Some(ref v) = data.vocals_path {
-                        snapshot.vocals_path = Some(v.clone());
-                    }
-                    if let Some(ref inst) = data.instrumental_path {
-                        snapshot.instrumental_path = Some(inst.clone());
-                    }
-
-                    if let Some(state) = app.try_state::<crate::infrastructure::state::AppState>() {
-                        if let Ok(mut proj) = state.project.lock() {
-                            if let Some(ref v) = data.vocals_path {
-                                proj.vocals_audio_path = Some(v.clone());
-                            }
-                            if let Some(ref inst) = data.instrumental_path {
-                                proj.background_audio_path = Some(inst.clone());
+            WorkerEventData::TaskProgress(data) => {
+                let task_type = match data.task_type.as_str() {
+                    "mss" => Some(TaskType::Mss),
+                    "vad" => Some(TaskType::Vad),
+                    "stt" => Some(TaskType::Stt),
+                    _ => None,
+                };
+                
+                if let Some(state) = app.try_state::<crate::infrastructure::state::AppState>() {
+                    if let Ok(mut proj) = state.project.lock() {
+                        if let Some(ref v) = data.vocals_path {
+                            proj.vocals_audio_path = Some(v.clone());
+                        }
+                        if let Some(ref inst) = data.instrumental_path {
+                            proj.background_audio_path = Some(inst.clone());
+                        }
+                        
+                        if let Some(tt) = task_type {
+                            match data.status.as_str() {
+                                "completed" => proj.complete_task(tt),
+                                "error" | "failed" => proj.fail_task(tt, data.error_message.clone().unwrap_or_else(|| "Unknown error".to_string())),
+                                "cancelled" => proj.cancel_pipeline(),
+                                _ => {
+                                    if let Some(prog) = data.progress {
+                                        proj.update_task_progress(tt, prog);
+                                    } else {
+                                        proj.update_task_progress(tt, 0.0);
+                                    }
+                                }
                             }
                         }
                     }
-                    
-                    *job_lock = Some(snapshot.clone());
-                    let _ = app.emit("stt_job_state", snapshot);
+                    let _ = app.emit("app-state-changed", Value::Null);
                 }
             }
             WorkerEventData::SegmentBatch(data) => {
                 let _ = app.emit("stt_segment_batch", data);
             }
             WorkerEventData::Error(data) => {
-                // If it's a fatal internal error, update the state to Failed
-                if let Ok(mut job_lock) = current_job.lock() {
-                    if let Some(ref mut job) = *job_lock {
-                        if job.status == SttStatus::Starting || job.status == SttStatus::Transcribing || job.status == SttStatus::LoadingModel {
-                            job.status = SttStatus::Failed;
-                            job.error_message = Some(data.message.clone());
-                            let _ = app.emit("stt_job_state", job.clone());
-                        }
+                if let Some(state) = app.try_state::<crate::infrastructure::state::AppState>() {
+                    if let Ok(mut proj) = state.project.lock() {
+                        proj.fail_task(TaskType::Stt, data.message.clone()); // generic fallback failure
                     }
+                    let _ = app.emit("app-state-changed", Value::Null);
                 }
                 let _ = app.emit("stt_error", data);
             }
@@ -126,7 +104,7 @@ impl SttJobController {
                 {
                     let job_guard = job_clone.lock().unwrap();
                     if let Some(job) = &*job_guard {
-                        if job.status == SttStatus::Cancelling {
+                        if job.is_cancelling {
                             let ct_guard = cancel_time_clone.lock().unwrap();
                             if let Some(t) = *ct_guard {
                                 if t.elapsed() > Duration::from_secs(5) {
@@ -144,9 +122,15 @@ impl SttJobController {
                     
                     let mut job_l = job_clone.lock().unwrap();
                     if let Some(ref mut j) = *job_l {
-                        if j.status == SttStatus::Cancelling {
-                            j.status = SttStatus::Cancelled;
-                            let _ = app_clone.emit("stt_job_state", j.clone());
+                        if j.is_cancelling {
+                            j.is_cancelling = false;
+                            
+                            if let Some(state) = app_clone.try_state::<crate::infrastructure::state::AppState>() {
+                                if let Ok(mut proj) = state.project.lock() {
+                                    proj.cancel_pipeline();
+                                }
+                                let _ = app_clone.emit("app-state-changed", Value::Null);
+                            }
                         }
                     }
                 }
@@ -154,17 +138,33 @@ impl SttJobController {
         });
     }
 
-    pub fn start_job(&self, video_path: String, model: String, language: String, vad_engine: String, mss_engine: String, mss_model: String, use_batch: bool, batch_size: u32) -> Result<String, String> {
-        let _job_id = Uuid::new_v4().to_string();
+    pub fn start_job(&self, video_path: String, model: String, language: String, vad_engine: String, mss_engine: String, mss_model: String, use_batch: bool, batch_size: u32, enable_translation: bool) -> Result<String, String> {
         let mut job_lock = self.current_job.lock().unwrap();
         
-        if let Some(job) = &*job_lock {
-            if job.status != SttStatus::Idle && job.status != SttStatus::Completed && job.status != SttStatus::Failed && job.status != SttStatus::Cancelled {
+        if let Some(state) = self.app.try_state::<crate::infrastructure::state::AppState>() {
+            let mut proj = state.project.lock().unwrap();
+            if proj.is_pipeline_running() {
                 return Err("A job is already running".to_string());
             }
+            
+            let mut tasks = Vec::new();
+            if mss_engine != "off" {
+                tasks.push(TaskType::Mss);
+            }
+            if vad_engine != "off" {
+                tasks.push(TaskType::Vad);
+            }
+            tasks.push(TaskType::Stt);
+            if enable_translation {
+                tasks.push(TaskType::Translation);
+            }
+            
+            proj.init_pipeline(tasks);
+            // Don't emit state change immediately if we emit later, but good practice
+            let _ = self.app.emit("app-state-changed", Value::Null);
         }
 
-        let new_job = SttJobSnapshot::new_idle();
+        let new_job = SttJobContext::new();
         let job_id = new_job.job_id.clone();
         *job_lock = Some(new_job);
 
@@ -190,8 +190,14 @@ impl SttJobController {
         let mut job_lock = self.current_job.lock().unwrap();
         if let Some(ref mut job) = *job_lock {
             if job.job_id == job_id {
-                job.status = SttStatus::Cancelling;
-                let _ = self.app.emit("stt_job_state", job.clone());
+                job.is_cancelling = true;
+                
+                if let Some(state) = self.app.try_state::<crate::infrastructure::state::AppState>() {
+                    if let Ok(mut proj) = state.project.lock() {
+                        proj.cancel_pipeline();
+                    }
+                    let _ = self.app.emit("app-state-changed", Value::Null);
+                }
                 
                 let command = WorkerCommand::Cancel {
                     job_id: job_id.clone()
@@ -202,9 +208,5 @@ impl SttJobController {
             }
         }
         Ok(())
-    }
-    
-    pub fn get_current_state(&self) -> Option<SttJobSnapshot> {
-        self.current_job.lock().unwrap().clone()
     }
 }

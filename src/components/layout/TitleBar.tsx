@@ -5,7 +5,7 @@ import { Minus, Square, X, Maximize, FileVideo, Command, Settings, PanelRightOpe
 import { Tooltip } from "../ui/Tooltip";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useVideoStore } from "../../store/videoStore";
-import { useSTTJobStore } from "../../store/sttJobStore";
+import { useSTTJobStore, selectIsProcessing } from "../../store/sttJobStore";
 import { useSTTSettingsStore } from "../../store/sttSettingsStore";
 import { useNotifyStore } from "../../store/notifyStore";
 import { convertFileSrc } from "@tauri-apps/api/core";
@@ -17,7 +17,7 @@ export const TitleBar: React.FC = () => {
 
   const { videoUrl, setVideo } = useVideoStore();
   const { isPanelOpen, togglePanel, setPanelOpen, model } = useSTTSettingsStore();
-  const { status } = useSTTJobStore();
+  const isProcessing = useSTTJobStore(selectIsProcessing);
   const { show } = useNotifyStore();
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export const TitleBar: React.FC = () => {
       return;
     }
 
-    if (status !== "idle" && status !== "completed" && status !== "error") {
+    if (isProcessing) {
       show("STT is already running", "warning");
       return;
     }

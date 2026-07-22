@@ -10,7 +10,6 @@ pub fn create_builder() -> tauri_specta::Builder<tauri::Wry> {
             language::japanese::get_furigana,
             stt::start_stt_job,
             stt::cancel_stt_job,
-            stt::get_stt_job_state,
             stt::import_stt_results,
             translation::start_translation,
             translation::run_agent_task,

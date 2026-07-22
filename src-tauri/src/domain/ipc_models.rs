@@ -27,15 +27,15 @@ pub enum WorkerCommand {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub struct JobStateData {
+pub struct TaskProgressData {
     pub job_id: String,
-    pub status: String,
+    pub task_type: String, // e.g. "mss", "vad", "stt"
+    pub status: String,    // e.g. "running", "completed", "error"
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub progress: Option<u8>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub language: Option<String>,
+    pub progress: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error_message: Option<String>,
+    // Optional global info
     #[serde(skip_serializing_if = "Option::is_none")]
     pub runtime_device: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -62,7 +62,7 @@ pub struct ErrorData {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "event", content = "data", rename_all = "snake_case")]
 pub enum WorkerEventData {
-    JobState(JobStateData),
+    TaskProgress(TaskProgressData),
     SegmentBatch(SegmentBatchData),
     Error(ErrorData),
 }

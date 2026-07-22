@@ -1,81 +1,100 @@
-import sys
 import logging
 from typing import Optional
-from videoscribe.domain.interfaces import AudioAnalyzer, SpeechRecognizer, ProgressReporter
-from videoscribe.domain.transcription_options import TranscriptionOptions
+from videoscribe.domain.models import TaskType, TaskStatus
+from videoscribe.application.pipeline import PipelineStep, PipelineContext
 from videoscribe.application.segment_refiner import SegmentRefiner
-from videoscribe.domain.cancellation import CancellationToken, CancelledException
-from videoscribe.infrastructure.audio.mss.factory import MSSFactory
-from videoscribe.domain.transcription_options import MSSEngineType
 
 logger = logging.getLogger(__name__)
 
-class TranscriptionJob:
-    def __init__(
-        self,
-        analyzer: AudioAnalyzer,
-        recognizer: SpeechRecognizer,
-        reporter: ProgressReporter
-    ):
-        self._analyzer = analyzer
-        self._recognizer = recognizer
-        self._reporter = reporter
+class MssStep(PipelineStep):
+    @property
+    def task_type(self) -> TaskType:
+        return TaskType.MSS
 
-    def run(self, audio_path: str, options: TranscriptionOptions, cancel_token: Optional[CancellationToken] = None) -> None:
-        try:
-            self._reporter.report_progress("loading_model", 0)
-            self._recognizer.load_model(options)
-            
-            # Step 1: Get duration for progress tracking
-            duration = self._analyzer.get_duration(audio_path)
-            if duration > 0:
-                logger.info(f"Total duration: {duration}s")
+    def execute(self, context: PipelineContext) -> None:
+        if not context.mss_analyzer:
+            logger.info("MSS Engine is disabled or not provided.")
+            return
 
-            # Step 1.5: MSS (Music Source Separation) Pre-processing
-            processed_audio_path = audio_path
-            if options.mss_engine != MSSEngineType.OFF:
-                mss_engine = MSSFactory.create(options)
-                if mss_engine:
-                    logger.info("Starting MSS preprocessing...")
-                    # Update progress state specifically for MSS if desired, or keep as transcribing
-                    self._reporter.report_progress("separating_audio", 0)
-                    mss_result = mss_engine.separate(audio_path, options)
-                    processed_audio_path = mss_result.vocals_path
-                    logger.info(f"MSS preprocessing completed. Vocals: {mss_result.vocals_path}, Instrumental: {mss_result.instrumental_path}")
-                    if hasattr(self._reporter, "report_audio_stems"):
-                        self._reporter.report_audio_stems(mss_result.vocals_path, mss_result.instrumental_path)
+        logger.info("Starting MSS preprocessing...")
+        mss_result = context.mss_analyzer.separate(context.audio_path, context.options)
+        
+        # Save results into context for downstream steps
+        context.vocals_path = mss_result.vocals_path
+        context.instrumental_path = mss_result.instrumental_path
+        
+        # The audio_path used for transcription should now be the vocals
+        context.audio_path = mss_result.vocals_path
+        logger.info(f"MSS preprocessing completed. Vocals: {context.vocals_path}")
+
+
+class VadStep(PipelineStep):
+    @property
+    def task_type(self) -> TaskType:
+        return TaskType.VAD
+
+    def execute(self, context: PipelineContext) -> None:
+        if not context.vad_analyzer:
+            logger.info("External VAD Engine is disabled or not provided.")
+            return
+
+        logger.info("Starting external VAD analysis...")
+        vad_result = context.vad_analyzer.analyze(context.audio_path, context.options)
+        
+        # Save VAD result into context for SttStep
+        context.vad_result = vad_result
+        logger.info("External VAD analysis completed.")
+
+
+class SttStep(PipelineStep):
+    @property
+    def task_type(self) -> TaskType:
+        return TaskType.STT
+
+    def execute(self, context: PipelineContext) -> None:
+        if not context.stt_recognizer:
+            raise RuntimeError("SpeechRecognizer is required for SttStep.")
+
+        logger.info("Loading STT model...")
+        context.stt_recognizer.load_model(context.options)
+        
+        # Get duration for progress tracking (on the current audio path which might be vocals)
+        # Note: audio_path might have been updated by MssStep
+        # We need an AudioAnalyzer here, but for simplicity, we pass it via context or just use decode_audio.
+        # Actually, let's keep the get_duration logic here if we pass AudioAnalyzer, but let's assume we can pass total_duration inside STT or compute it there.
+        # Wait, the previous code had self._analyzer.get_duration(audio_path).
+        # We can add audio_duration to PipelineContext.
+        # Let's just fetch it in STT Engine, but to report progress here, we need it.
+        # We will add audio_duration to PipelineContext in worker.py before running.
+
+        logger.info("Starting speech transcription...")
+        
+        # We inject the vad_result from context into the options or we pass it to the recognizer.
+        # The recognizer's transcribe_file signature doesn't take vad_result directly. 
+        # But wait! If we rewrite FasterWhisperEngine, it can just take vad_result via options or context.
+        # Let's pass the context directly to transcribe_file, or just let transcribe_file take vad_result as a kwarg!
+        
+        segments_iter, info = context.stt_recognizer.transcribe_file(
+            context.audio_path,
+            context.options,
+            context.cancel_token,
+            vad_result=context.vad_result # Passed explicitly!
+        )
+        
+        if info:
+            context.detected_language = info.language
+            context.reporter.report_task_progress(TaskType.STT, TaskStatus.RUNNING, language=info.language)
             
-            self._reporter.report_progress("transcribing", 0)
-            
-            # Step 2: Transcribe the file, yielding segments (use processed_audio_path)
-            segments_iter, info = self._recognizer.transcribe_file(
-                processed_audio_path, 
-                options, 
-                cancel_token
-            )
-            
-            if info:
-                self._reporter.report_language(info.language)
+        refiner = SegmentRefiner(context.options.cue_policy)
+        
+        # We need duration to report percentage. We will use info.duration if available.
+        duration = info.duration if info else 0.0
+        
+        for segment in segments_iter:
+            refined_segments = refiner.process(segment)
+            for domain_segment in refined_segments:
+                context.reporter.report_result(domain_segment)
                 
-            # Step 3: Iterate and report segments uniformly via SegmentRefiner
-            refiner = SegmentRefiner(options.cue_policy)
-            
-            for segment in segments_iter:
-                refined_segments = refiner.process(segment)
-                for domain_segment in refined_segments:
-                    self._reporter.report_result(domain_segment)
-                    
-                # Update progress based on the original segment's end time
-                if duration > 0:
-                    progress_pct = min(100, int((segment.end / duration) * 100))
-                    self._reporter.report_progress("transcribing", progress_pct)
-            
-            self._reporter.report_progress("completed", 100)
-            
-        except CancelledException as e:
-            logger.info("Job was cancelled.")
-            self._reporter.report_progress("cancelled", 0)
-        except Exception as e:
-            logger.exception("Transcription failed")
-            self._reporter.report_error(f"Transcription failed: {str(e)}")
-
+            if duration > 0:
+                progress_pct = min(100, int((segment.end / duration) * 100))
+                context.reporter.report_task_progress(TaskType.STT, TaskStatus.RUNNING, progress_pct)
