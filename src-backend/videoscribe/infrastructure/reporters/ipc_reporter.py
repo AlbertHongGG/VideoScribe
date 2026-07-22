@@ -1,18 +1,26 @@
+import sys
+import json
 import uuid
 from typing import Dict, Any
 
 from videoscribe.domain.interfaces import ProgressReporter
 from videoscribe.domain.models import TranscriptionSegment
-from videoscribe.infrastructure.reporters.ndjson_reporter import NdjsonReporter
+
 
 class IpcReporter(ProgressReporter):
     def __init__(self, job_id: str):
         self.job_id = job_id
         self.ordinal = 0
-        self._ndjson_reporter = NdjsonReporter()
-        
+
     def _write_event(self, event_type: str, data: Dict[str, Any]) -> None:
-        self._ndjson_reporter._write_event(event_type, data)
+        payload = {
+            "version": 1,
+            "event": event_type,
+            "data": data
+        }
+        # NDJSON requires exactly one JSON object per line, followed by a newline
+        sys.stdout.write(json.dumps(payload, ensure_ascii=False) + "\n")
+        sys.stdout.flush()
 
     def report_initial_state(self, device: str, compute_type: str, language: str) -> None:
         self._write_event("job_state", {
@@ -30,7 +38,7 @@ class IpcReporter(ProgressReporter):
             "status": status,
             "progress": progress
         })
-        
+
     def report_result(self, segment: TranscriptionSegment) -> None:
         cue = {
             "id": str(uuid.uuid4()),
@@ -40,7 +48,7 @@ class IpcReporter(ProgressReporter):
             "text": segment.text
         }
         self.ordinal += 1
-        
+
         self._write_event("segment_batch", {
             "job_id": self.job_id,
             "cues": [cue]

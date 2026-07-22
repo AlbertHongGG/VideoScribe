@@ -1,3 +1,3 @@
-from .ndjson_reporter import NdjsonReporter
+from .ipc_reporter import IpcReporter
 
-__all__ = ["NdjsonReporter"]
+__all__ = ["IpcReporter"]
