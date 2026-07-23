@@ -17,12 +17,20 @@ export interface RenderableToken {
   isDictionaryWord?: boolean;
 }
 
+export interface FuriganaChunk {
+  surface: string;
+  reading?: string;
+}
+
 export interface ProcessedSubtitle {
   /** The original STT result */
   original: STTResult;
   
-  /** The processed tokens ready for deterministic rendering */
+  /** The processed tokens ready for deterministic rendering (KTV Layer) */
   tokens: RenderableToken[];
+
+  /** Independent Furigana chunks generated from the full sentence (Furigana Layer) */
+  furigana?: FuriganaChunk[];
 }
 
 /** 

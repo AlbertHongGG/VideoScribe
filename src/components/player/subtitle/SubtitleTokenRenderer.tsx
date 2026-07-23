@@ -108,19 +108,5 @@ export const SubtitleTokenRenderer: React.FC<SubtitleTokenRendererProps> = ({ to
     </span>
   );
 
-  if (context.enableFurigana && token.reading) {
-    return (
-      <ruby className="group/ruby leading-none" style={{ rubyPosition: "over" }}>
-        {innerContent}
-        <rt 
-          className="text-white/90 font-semibold tracking-widest text-center pointer-events-none select-none pb-1" 
-          style={{ fontSize: `${(context.sttFontSize ?? 20) * 0.45}px` }}
-        >
-          {token.reading}
-        </rt>
-      </ruby>
-    );
-  }
-
   return innerContent;
 };
