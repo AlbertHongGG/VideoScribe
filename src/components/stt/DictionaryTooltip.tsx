@@ -108,9 +108,13 @@ export const DictionaryTooltip: React.FC<Props> = ({ text, charIndex = 0, x, y, 
                           </span>
                         ))}
                       </div>
-                      <div className="text-sm text-white/70 leading-relaxed line-clamp-2">
-                        {entry.glossary.join("; ")}
-                      </div>
+                      <ul className="list-disc pl-4 mt-1 space-y-1">
+                        {entry.glossary.slice(0, 3).map((g, i) => (
+                          <li key={i} className="text-sm text-white/80 leading-snug">
+                            {g}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   ))}
                 </div>

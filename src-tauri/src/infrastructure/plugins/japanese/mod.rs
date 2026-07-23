@@ -67,8 +67,8 @@ impl DictionaryLookup for JapanesePlugin {
         let mut results = Vec::new();
         let mut seen_base_forms = std::collections::HashSet::new();
 
-        // Check longest prefix first (Layered approach)
-        for len in (1..=target_len).rev() {
+        // Check shortest prefix first so original_text is concise, then reverse later
+        for len in 1..=target_len {
             let prefix: String = chars[index..index + len].iter().collect();
             
             // Tokenize the prefix. We only care about the FIRST token returned, 
@@ -100,6 +100,9 @@ impl DictionaryLookup for JapanesePlugin {
                 }
             }
         }
+
+        // Reverse so longest matches appear first
+        results.reverse();
 
         Ok(results)
     }

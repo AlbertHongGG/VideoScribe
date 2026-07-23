@@ -289,7 +289,8 @@ export const VideoPlayer: React.FC = () => {
             
             {hoverText && (
               <DictionaryTooltip
-                text={hoverText.text}
+                text={hoverText.fullText || hoverText.text}
+                charIndex={hoverText.charIndex}
                 x={hoverText.x}
                 y={hoverText.y}
                 onMouseEnter={() => {
