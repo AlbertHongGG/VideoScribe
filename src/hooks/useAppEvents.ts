@@ -11,6 +11,16 @@ export const useAppEvents = () => {
     let isMounted = true;
 
     const setupListeners = async () => {
+      try {
+        const initialState = await invoke<ProjectState>("get_app_state");
+        if (initialState) {
+          useSTTJobStore.getState().syncAppState(initialState);
+          useSTTSettingsStore.getState().setTargetLanguage(initialState.target_language);
+        }
+      } catch (e) {
+        console.error("Failed to fetch initial app state:", e);
+      }
+
       const u1 = await listen("setting-changed", (event: any) => {
         const { key, value } = event.payload;
         const store = useSTTSettingsStore.getState() as any;
@@ -52,6 +62,7 @@ export const useAppEvents = () => {
             end: cue.end_ms / 1000,
             text: cue.text,
             translation: null,
+            words: cue.words || null,
           }));
           useSTTJobStore.getState().appendCues(formattedCues);
         }

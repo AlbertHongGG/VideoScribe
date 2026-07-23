@@ -10,11 +10,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { DictionaryTooltip } from "../stt/DictionaryTooltip";
 import { VideoEmptyState } from "./VideoEmptyState";
 import { SubtitleRenderer } from "./subtitle/SubtitleRenderer";
-import { KaraokePlugin } from "./subtitle/plugins/KaraokePlugin";
-import { FuriganaPlugin } from "./subtitle/plugins/FuriganaPlugin";
-import { DictionaryPlugin } from "./subtitle/plugins/DictionaryPlugin";
-import { TranslationPlugin } from "./subtitle/plugins/TranslationPlugin";
-import { SubtitlePluginContext } from "./subtitle/plugin_types";
+import { SubtitleRenderContext } from "./subtitle/SubtitleModels";
 import { STTResult } from "../../types/bindings";
 
 export const VideoPlayer: React.FC = () => {
@@ -103,10 +99,9 @@ export const VideoPlayer: React.FC = () => {
     }
   }, [currentTime, memoizedResults]);
 
-  const pluginContext = useMemo<SubtitlePluginContext | null>(() => {
+  const pluginContext = useMemo<SubtitleRenderContext | null>(() => {
     if (!activeSubtitle) return null;
     return {
-      subtitle: activeSubtitle,
       currentTime,
       language: language || "auto",
       sttFontSize,
@@ -117,19 +112,14 @@ export const VideoPlayer: React.FC = () => {
       enableKaraokeMode,
       hoverText,
       setHoverText,
-      hoverTimeoutRef
+      hoverTimeoutRef,
+      getVideoTime: () => videoRef.current ? videoRef.current.currentTime : currentTime,
+      isPlaying
     };
   }, [
     activeSubtitle, currentTime, language, sttFontSize, translationFontSize, 
-    subtitleSpacing, enableFurigana, enableDictionary, enableKaraokeMode, hoverText
+    subtitleSpacing, enableFurigana, enableDictionary, enableKaraokeMode, hoverText, isPlaying
   ]);
-
-  const plugins = useMemo(() => [
-    KaraokePlugin,
-    FuriganaPlugin,
-    DictionaryPlugin,
-    TranslationPlugin
-  ], []);
 
   const lastSyncTime = useRef(0);
   const scrubTargetTime = useRef<number | null>(null);
@@ -344,7 +334,6 @@ export const VideoPlayer: React.FC = () => {
                         <SubtitleRenderer 
                           subtitle={activeSubtitle}
                           context={pluginContext}
-                          plugins={plugins}
                         />
                       )}
                     </div>

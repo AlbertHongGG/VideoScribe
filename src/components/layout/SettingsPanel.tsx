@@ -1,5 +1,5 @@
 import { useSTTSettingsStore } from "../../store/sttSettingsStore";
-import { useSTTJobStore } from "../../store/sttJobStore";
+
 import { SettingSection } from "../settings/SettingSection";
 import { SettingRow, SettingDivider, SettingGroup } from "../settings/SettingRow";
 import { SettingSelect, SettingToggle, SettingSlider } from "../settings/SettingControls";
@@ -47,9 +47,7 @@ const MSS_MODEL_OPTIONS = [
 
 export const SettingsPanel: React.FC = () => {
   const store = useSTTSettingsStore();
-  const { results } = useSTTJobStore();
-  
-  const hasWordData = results.some(r => r.words && r.words.length > 0);
+
 
   return (
     <div className="w-full h-full p-8 text-white overflow-y-auto custom-scrollbar bg-[#0f0f0f]">
@@ -118,8 +116,8 @@ export const SettingsPanel: React.FC = () => {
               <SettingToggle settingKey="showSubtitles" checked={store.showSubtitles} setter={store.setShowSubtitles} />
             </SettingRow>
             <SettingDivider />
-            <SettingRow label="Karaoke Mode (KTV)" description={hasWordData ? "Highlight words dynamically as they are spoken" : "Not available: No word-level timestamp data found in current subtitles"}>
-              <SettingToggle settingKey="enableKaraokeMode" checked={store.enableKaraokeMode && hasWordData} disabled={!hasWordData} setter={store.setEnableKaraokeMode} />
+            <SettingRow label="Karaoke Mode (KTV)" description="Highlight words dynamically as they are spoken">
+              <SettingToggle settingKey="enableKaraokeMode" checked={store.enableKaraokeMode} setter={store.setEnableKaraokeMode} />
             </SettingRow>
             <SettingDivider />
             <SettingRow label="Japanese Dictionary Hover" description="Hover over Japanese subtitles to see readings and definitions">
