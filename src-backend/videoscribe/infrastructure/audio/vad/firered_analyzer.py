@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Callable
 import numpy as np
 import torch
 
@@ -86,11 +86,16 @@ class FireRedVADAnalyzer(VADAnalyzer):
         )
         return FireRedVad.from_pretrained(str(vad_dir), config=config)
 
-    def analyze(self, audio_path: str, options: TranscriptionOptions) -> Optional[VADResult]:
+    def analyze(self, audio_path: str, options: TranscriptionOptions, progress_callback: Optional[Callable[[float], None]] = None) -> Optional[VADResult]:
+        def report(pct: float):
+            if progress_callback:
+                progress_callback(pct)
+                
         if not HAS_FIREREDVAD:
             logger.error("FireRedVADAnalyzer: fireredvad package is not installed.")
             return None
 
+        report(5.0)
         logger.info(f"FireRedVADAnalyzer: Running FireRedVAD on {audio_path}")
 
         # 1. Decode audio to 16kHz mono int16 PCM array (Required for kaldi-native-fbank)
@@ -109,6 +114,8 @@ class FireRedVADAnalyzer(VADAnalyzer):
         else:
             logger.error("FireRedVADAnalyzer: Neither faster_whisper.audio nor torchaudio is available.")
             return None
+
+        report(30.0)
 
         # 2. Try GPU execution first, fallback to CPU gracefully
         want_gpu = torch.cuda.is_available()
@@ -134,7 +141,9 @@ class FireRedVADAnalyzer(VADAnalyzer):
 
         try:
             # 3. Detect speech segments
+            report(60.0)
             raw_result, _ = model.detect(pcm_int16)
+            report(90.0)
             timestamps: List[Any] = raw_result.get("timestamps", [])
 
             windows = []
@@ -152,6 +161,7 @@ class FireRedVADAnalyzer(VADAnalyzer):
                     )
 
             logger.info(f"FireRedVADAnalyzer [{device_used}]: Generated {len(windows)} speech chunks.")
+            report(100.0)
             return VADResult(windows=windows)
 
         except Exception as exc:

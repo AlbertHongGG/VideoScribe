@@ -1,4 +1,4 @@
-from typing import Protocol, Iterator, Tuple, Optional, Any
+from typing import Protocol, Iterator, Tuple, Optional, Any, Callable
 from .models import TranscriptionSegment, TranscriptionInfo, AudioWindow, Word, VADResult, MSSResult, TaskType, TaskStatus
 from .transcription_options import TranscriptionOptions
 from .cancellation import CancellationToken
@@ -9,7 +9,7 @@ class AudioAnalyzer(Protocol):
         ...
 
 class VADAnalyzer(Protocol):
-    def analyze(self, audio_path: str, options: TranscriptionOptions) -> Optional[VADResult]:
+    def analyze(self, audio_path: str, options: TranscriptionOptions, progress_callback: Optional[Callable[[float], None]] = None) -> Optional[VADResult]:
         """
         Analyze audio and return VAD result.
         If the implementation delegates VAD to the STT engine natively, it should return None.
@@ -17,7 +17,7 @@ class VADAnalyzer(Protocol):
         ...
 
 class MSSAnalyzer(Protocol):
-    def separate(self, audio_path: str, options: TranscriptionOptions) -> MSSResult:
+    def separate(self, audio_path: str, options: TranscriptionOptions, progress_callback: Optional[Callable[[float], None]] = None) -> MSSResult:
         """
         Separate audio source (e.g. vocals from instrumental) and return MSSResult
         containing paths to vocals and instrumental stems.
@@ -25,7 +25,7 @@ class MSSAnalyzer(Protocol):
         ...
 
 class ForcedAlignmentAnalyzer(Protocol):
-    def align(self, audio_path: str, segments: list[TranscriptionSegment], options: TranscriptionOptions) -> list[TranscriptionSegment]:
+    def align(self, audio_path: str, segments: list[TranscriptionSegment], options: TranscriptionOptions, progress_callback: Optional[Callable[[float], None]] = None) -> list[TranscriptionSegment]:
         """
         Perform forced alignment on the audio using the transcribed segments,
         and return the updated segments with corrected timestamps.

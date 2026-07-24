@@ -17,7 +17,15 @@ class MssStep(PipelineStep):
             return
 
         logger.info("Starting MSS preprocessing...")
-        mss_result = context.mss_analyzer.separate(context.audio_path, context.options)
+        
+        def mss_progress_callback(pct: float) -> None:
+            context.reporter.report_task_progress(TaskType.MSS, TaskStatus.RUNNING, pct)
+            
+        mss_result = context.mss_analyzer.separate(
+            context.audio_path, 
+            context.options,
+            progress_callback=mss_progress_callback
+        )
         
         # Save results into context for downstream steps
         context.vocals_path = mss_result.vocals_path
@@ -39,7 +47,14 @@ class VadStep(PipelineStep):
             return
 
         logger.info("Starting external VAD analysis...")
-        vad_result = context.vad_analyzer.analyze(context.audio_path, context.options)
+        def vad_progress_callback(pct: float) -> None:
+            context.reporter.report_task_progress(TaskType.VAD, TaskStatus.RUNNING, pct)
+            
+        vad_result = context.vad_analyzer.analyze(
+            context.audio_path, 
+            context.options,
+            progress_callback=vad_progress_callback
+        )
         
         # Save VAD result into context for SttStep
         context.vad_result = vad_result
@@ -116,8 +131,16 @@ class ForcedAlignmentStep(PipelineStep):
         context.reporter.report_task_progress(TaskType.FORCED_ALIGNMENT, TaskStatus.RUNNING, 0.0)
         
         try:
+            def fa_progress_callback(pct: float) -> None:
+                context.reporter.report_task_progress(TaskType.FORCED_ALIGNMENT, TaskStatus.RUNNING, pct)
+                
             # Align the segments
-            updated_segments = context.fa_analyzer.align(context.audio_path, context.stt_segments, context.options)
+            updated_segments = context.fa_analyzer.align(
+                context.audio_path, 
+                context.stt_segments, 
+                context.options,
+                progress_callback=fa_progress_callback
+            )
             
             context.stt_segments = updated_segments
             

@@ -64,11 +64,16 @@ class SileroVADv6Analyzer(VADAnalyzer):
             logger.error(f"SileroVADv6Analyzer: Failed to load Silero VAD v6 model: {e}")
             raise RuntimeError(f"Silero VAD v6 model loading failed: {e}") from e
 
-    def analyze(self, audio_path: str, options: TranscriptionOptions) -> Optional[VADResult]:
+    def analyze(self, audio_path: str, options: TranscriptionOptions, progress_callback: Optional[Callable[[float], None]] = None) -> Optional[VADResult]:
+        def report(pct: float):
+            if progress_callback:
+                progress_callback(pct)
+                
         if self._model is None or self._get_speech_ts_fn is None:
             logger.error("SileroVADv6Analyzer is not properly initialized.")
             return None
 
+        report(5.0)
         logger.info(f"SileroVADv6Analyzer: Running Silero VAD v6 on {audio_path}")
 
         # Decode audio to 16kHz mono float32 numpy array
@@ -85,6 +90,7 @@ class SileroVADv6Analyzer(VADAnalyzer):
         else:
             raise RuntimeError("Neither faster_whisper.audio nor torchaudio is available for audio decoding.")
 
+        report(30.0)
         waveform_tensor = torch.from_numpy(audio_array).float()
 
         # Optimized parameters for high sensitivity to falsetto, singing, and speech over background music
@@ -100,11 +106,13 @@ class SileroVADv6Analyzer(VADAnalyzer):
         }
 
         try:
+            report(60.0)
             timestamps: List[dict] = self._get_speech_ts_fn(
                 waveform_tensor,
                 self._model,
                 **kwargs,
             )
+            report(90.0)
 
             windows = [
                 AudioWindow(
@@ -117,6 +125,7 @@ class SileroVADv6Analyzer(VADAnalyzer):
             ]
 
             logger.info(f"SileroVADv6Analyzer: Generated {len(windows)} speech chunks.")
+            report(100.0)
             return VADResult(windows=windows)
 
         except Exception as e:

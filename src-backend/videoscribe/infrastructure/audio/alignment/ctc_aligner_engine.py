@@ -1,6 +1,7 @@
 import logging
 import torch
-from typing import List
+import torch
+from typing import List, Callable, Optional
 
 from ctc_forced_aligner import (
     load_audio,
@@ -52,13 +53,20 @@ class CTCAlignerEngine(ForcedAlignmentAnalyzer):
         self.current_model_name = model_name
         logger.info("Alignment model loaded successfully.")
 
-    def align(self, audio_path: str, segments: List[TranscriptionSegment], options: TranscriptionOptions) -> List[TranscriptionSegment]:
+    def align(self, audio_path: str, segments: List[TranscriptionSegment], options: TranscriptionOptions, progress_callback: Optional[Callable[[float], None]] = None) -> List[TranscriptionSegment]:
+        def report(pct: float):
+            if progress_callback:
+                progress_callback(pct)
+
         if not segments:
             logger.info("No segments provided for forced alignment. Returning empty list.")
+            report(100.0)
             return segments
 
+        report(5.0)
         # 1. Load Model
         self._load_model_if_needed(options.fa_model)
+        report(10.0)
 
         # 2. Extract and format text from all STT segments, mapping each token back to its segment
         text_split = []
@@ -104,9 +112,12 @@ class CTCAlignerEngine(ForcedAlignmentAnalyzer):
             tokens_starred.extend(["<star>", token])
             text_starred.extend(["<star>", text_split[i]])
 
+        report(30.0)
+        
         # 3. Load full audio
         logger.info(f"Loading audio waveform for alignment: {audio_path}")
         audio_waveform = load_audio(str(audio_path), self.model.dtype, self.model.device)
+        report(40.0)
 
         # 4. Generate emissions
         logger.info("Generating emissions...")
@@ -115,7 +126,9 @@ class CTCAlignerEngine(ForcedAlignmentAnalyzer):
 
         # 5. Get alignments
         logger.info("Calculating global alignments...")
+        report(80.0)
         aligned_segments, scores, blank_token = get_alignments(emissions, tokens_starred, self.tokenizer)
+        report(90.0)
 
         # 6. Extract spans
         logger.info("Extracting spans...")
@@ -124,6 +137,7 @@ class CTCAlignerEngine(ForcedAlignmentAnalyzer):
         # 7. Postprocess results
         logger.info("Postprocessing results to get precise word timestamps...")
         word_timestamps = postprocess_results(text_starred, spans, stride, scores)
+        report(95.0)
 
         # 8. Map back to original TranscriptionSegments
         logger.info("Mapping global timestamps back to STT segments...")
@@ -156,4 +170,5 @@ class CTCAlignerEngine(ForcedAlignmentAnalyzer):
                 ))
 
         logger.info("Forced alignment completed successfully.")
+        report(100.0)
         return aligned_domain_segments
