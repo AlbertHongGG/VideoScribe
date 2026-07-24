@@ -21,6 +21,7 @@ pub enum TaskType {
     Mss,
     Vad,
     Stt,
+    ForcedAlignment,
     Translation,
 }
 

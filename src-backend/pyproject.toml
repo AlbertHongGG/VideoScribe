@@ -22,6 +22,8 @@ dependencies = [
     "uvicorn",
     "nvidia-cublas-cu12>=12.9.2.10",
     "nvidia-cudnn-cu12>=9.25.0.15",
+    "transformers>=5.14.1",
+    "uroman>=1.3.1.1",
 ]
 
 [tool.uv]

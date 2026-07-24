@@ -14,15 +14,19 @@ export class STTService {
 
     try {
       await invoke("start_stt_job", { 
-        videoPath, 
-        modelSize, 
-        language: settingsStore.language || "auto",
-        vadEngine: settingsStore.vadEngine,
-        mssEngine: settingsStore.mssEngine,
-        mssModel: settingsStore.mssModel,
-        useBatch: settingsStore.useBatch,
-        batchSize: settingsStore.batchSize,
-        enableTranslation: settingsStore.enableTranslation
+        args: {
+          videoPath, 
+          modelSize, 
+          language: settingsStore.language || "auto",
+          vadEngine: settingsStore.vadEngine,
+          mssEngine: settingsStore.mssEngine,
+          mssModel: settingsStore.mssModel,
+          faEngine: settingsStore.faEngine,
+          faModel: settingsStore.faModel,
+          useBatch: settingsStore.useBatch,
+          batchSize: settingsStore.batchSize,
+          enableTranslation: settingsStore.enableTranslation
+        }
       });
       
 

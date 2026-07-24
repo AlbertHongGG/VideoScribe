@@ -24,6 +24,14 @@ class MSSAnalyzer(Protocol):
         """
         ...
 
+class ForcedAlignmentAnalyzer(Protocol):
+    def align(self, audio_path: str, segments: list[TranscriptionSegment], options: TranscriptionOptions) -> list[TranscriptionSegment]:
+        """
+        Perform forced alignment on the audio using the transcribed segments,
+        and return the updated segments with corrected timestamps.
+        """
+        ...
+
 class SpeechRecognizer(Protocol):
     def load_model(self, options: TranscriptionOptions) -> None:
         """Load the STT model using the provided options."""
@@ -40,7 +48,11 @@ class ProgressReporter(Protocol):
         
     def report_result(self, segment: TranscriptionSegment) -> None:
         """Report a newly transcribed segment."""
-        ...
+        pass
+
+    def report_result_replace_all(self, segments: list) -> None:
+        """Replace all currently reported segments with a new list."""
+        pass
         
     def report_error(self, message: str) -> None:
         """Report a global error."""

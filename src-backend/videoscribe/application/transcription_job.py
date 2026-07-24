@@ -93,8 +93,40 @@ class SttStep(PipelineStep):
         for segment in segments_iter:
             refined_segments = refiner.process(segment)
             for domain_segment in refined_segments:
+                context.stt_segments.append(domain_segment)
                 context.reporter.report_result(domain_segment)
                 
             if duration > 0:
                 progress_pct = min(100, int((segment.end / duration) * 100))
                 context.reporter.report_task_progress(TaskType.STT, TaskStatus.RUNNING, progress_pct)
+
+class ForcedAlignmentStep(PipelineStep):
+    @property
+    def task_type(self) -> TaskType:
+        return TaskType.FORCED_ALIGNMENT
+
+    def execute(self, context: PipelineContext) -> None:
+        if not context.fa_analyzer:
+            logger.info("Forced Alignment Engine is disabled or not provided.")
+            return
+
+        logger.info("Starting forced alignment on STT segments...")
+        
+        # We need to notify the frontend that forced alignment is starting
+        context.reporter.report_task_progress(TaskType.FORCED_ALIGNMENT, TaskStatus.RUNNING, 0.0)
+        
+        try:
+            # Align the segments
+            updated_segments = context.fa_analyzer.align(context.audio_path, context.stt_segments, context.options)
+            
+            context.stt_segments = updated_segments
+            
+            # Update the frontend with the newly aligned segments by replacing the STT ones
+            context.reporter.report_result_replace_all(updated_segments)
+            # For now, let's just send a TaskStatus.COMPLETED event with the aligned status.
+            context.reporter.report_task_progress(TaskType.FORCED_ALIGNMENT, TaskStatus.COMPLETED, 100.0)
+            
+        except Exception as e:
+            logger.error(f"Forced alignment failed: {e}")
+            context.reporter.report_task_progress(TaskType.FORCED_ALIGNMENT, TaskStatus.ERROR, error_message=str(e))
+            raise e

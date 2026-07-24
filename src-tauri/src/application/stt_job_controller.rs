@@ -46,6 +46,7 @@ impl SttJobController {
                     "mss" => Some(TaskType::Mss),
                     "vad" => Some(TaskType::Vad),
                     "stt" => Some(TaskType::Stt),
+                    "forced_alignment" => Some(TaskType::ForcedAlignment),
                     _ => None,
                 };
                 
@@ -113,6 +114,24 @@ impl SttJobController {
                 }
                 let _ = app.emit("stt_segment_batch", data);
             }
+            WorkerEventData::SegmentReplaceAll(data) => {
+                if let Some(state) = app.try_state::<crate::infrastructure::state::AppState>() {
+                    if let Ok(mut proj) = state.project.lock() {
+                        proj.results.clear();
+                        for cue in &data.cues {
+                            let stt_result = crate::domain::project::STTResult {
+                                start: cue.start_ms as f64 / 1000.0,
+                                end: cue.end_ms as f64 / 1000.0,
+                                text: cue.text.clone(),
+                                translation: None,
+                                words: cue.words.clone(),
+                            };
+                            proj.add_stt_result(stt_result);
+                        }
+                    }
+                }
+                let _ = app.emit("stt_segment_replace_all", data);
+            }
             WorkerEventData::Error(data) => {
                 if let Some(state) = app.try_state::<crate::infrastructure::state::AppState>() {
                     if let Ok(mut proj) = state.project.lock() {
@@ -172,7 +191,7 @@ impl SttJobController {
         });
     }
 
-    pub fn start_job(&self, video_path: String, model: String, language: String, vad_engine: String, mss_engine: String, mss_model: String, use_batch: bool, batch_size: u32, enable_translation: bool) -> Result<String, String> {
+    pub fn start_job(&self, video_path: String, model: String, language: String, vad_engine: String, mss_engine: String, mss_model: String, fa_engine: String, fa_model: String, use_batch: bool, batch_size: u32, enable_translation: bool) -> Result<String, String> {
         let mut job_lock = self.current_job.lock().unwrap();
         
         if let Some(state) = self.app.try_state::<crate::infrastructure::state::AppState>() {
@@ -189,6 +208,9 @@ impl SttJobController {
                 tasks.push(TaskType::Vad);
             }
             tasks.push(TaskType::Stt);
+            if fa_engine != "off" {
+                tasks.push(TaskType::ForcedAlignment);
+            }
             if enable_translation {
                 tasks.push(TaskType::Translation);
             }
@@ -211,6 +233,8 @@ impl SttJobController {
                 vad_engine,
                 mss_engine,
                 mss_model,
+                fa_engine,
+                fa_model,
                 use_batch,
                 batch_size,
             }

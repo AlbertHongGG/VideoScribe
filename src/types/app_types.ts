@@ -8,6 +8,6 @@ export type STTResult = { start: number, end: number, text: string, translation:
 
 export type TaskStatus = "pending" | "running" | "completed" | "error" | "cancelled";
 
-export type TaskType = "mss" | "vad" | "stt" | "translation";
+export type TaskType = "mss" | "vad" | "stt" | "forced_alignment" | "translation";
 
 export type WordTiming = { text: string, start: number, end: number, probability: number, };

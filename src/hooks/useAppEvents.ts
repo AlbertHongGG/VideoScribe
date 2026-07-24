@@ -69,6 +69,20 @@ export const useAppEvents = () => {
       });
       if (isMounted) unlistenFunctions.push(u4); else u4();
 
+      const u4_replace = await listen("stt_segment_replace_all", (event: any) => {
+        if (event.payload && event.payload.cues) {
+          const formattedCues = event.payload.cues.map((cue: any) => ({
+            start: cue.start_ms / 1000,
+            end: cue.end_ms / 1000,
+            text: cue.text,
+            translation: null,
+            words: cue.words || null,
+          }));
+          useSTTJobStore.getState().setResults(formattedCues);
+        }
+      });
+      if (isMounted) unlistenFunctions.push(u4_replace); else u4_replace();
+
       const u5 = await listen("stt_error", (event: any) => {
         const { message } = event.payload || event;
         import("../store/notifyStore").then(({ useNotifyStore }) => {

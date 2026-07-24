@@ -9,6 +9,8 @@ pub struct StartPayload {
     pub vad_engine: String,
     pub mss_engine: String,
     pub mss_model: String,
+    pub fa_engine: String,
+    pub fa_model: String,
     pub use_batch: bool,
     pub batch_size: u32,
 }
@@ -64,6 +66,7 @@ pub struct ErrorData {
 pub enum WorkerEventData {
     TaskProgress(TaskProgressData),
     SegmentBatch(SegmentBatchData),
+    SegmentReplaceAll(SegmentBatchData),
     Error(ErrorData),
 }
 

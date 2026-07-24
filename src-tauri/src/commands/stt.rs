@@ -5,22 +5,33 @@ use crate::application::stt_job_controller::SttJobController;
 use crate::domain::project::STTResult;
 use crate::infrastructure::state::AppState;
 
+use serde::{Deserialize, Serialize};
+use specta::Type;
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct StartSttJobArgs {
+    pub video_path: String,
+    pub model_size: String,
+    pub language: String,
+    pub vad_engine: String,
+    pub mss_engine: String,
+    pub mss_model: String,
+    pub fa_engine: String,
+    pub fa_model: String,
+    pub use_batch: bool,
+    pub batch_size: u32,
+    pub enable_translation: bool,
+}
+
 #[tauri::command]
 #[specta::specta]
 pub fn start_stt_job(
-    video_path: String,
-    model_size: String,
-    language: String,
-    vad_engine: String,
-    mss_engine: String,
-    mss_model: String,
-    use_batch: bool,
-    batch_size: u32,
-    enable_translation: bool,
+    args: StartSttJobArgs,
     state: State<'_, Arc<SttJobController>>,
 ) -> Result<String, String> {
     let manager = state.inner();
-    manager.start_job(video_path, model_size, language, vad_engine, mss_engine, mss_model, use_batch, batch_size, enable_translation)
+    manager.start_job(args.video_path, args.model_size, args.language, args.vad_engine, args.mss_engine, args.mss_model, args.fa_engine, args.fa_model, args.use_batch, args.batch_size, args.enable_translation)
 }
 
 #[tauri::command]

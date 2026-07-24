@@ -26,15 +26,16 @@ if sys.platform == "win32":
 
 from videoscribe.infrastructure.recognizers.faster_whisper_engine import FasterWhisperEngine
 from videoscribe.application.pipeline import TranscriptionPipeline, PipelineContext
-from videoscribe.application.transcription_job import MssStep, VadStep, SttStep
+from videoscribe.application.transcription_job import MssStep, VadStep, SttStep, ForcedAlignmentStep
 from videoscribe.infrastructure.audio.ffmpeg_analyzer import FFmpegAudioAnalyzer
 from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
 from videoscribe.domain.cancellation import CancellationToken
 from videoscribe.domain.ipc_models import IpcCommand, StartPayload
-from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType, MSSEngineType
+from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType, MSSEngineType, ForcedAlignmentEngineType
 from videoscribe.domain.models import TaskType, TaskStatus
 from videoscribe.infrastructure.audio.mss.factory import MSSFactory
 from videoscribe.infrastructure.audio.vad.factory import VADFactory
+from videoscribe.infrastructure.audio.alignment.factory import ForcedAlignmentFactory
 from videoscribe.domain.prompt_registry import PromptRegistry
 
 logging.basicConfig(
@@ -97,6 +98,7 @@ class CommandRouter:
         
         vad_engine_enum = VADEngineType(payload.vad_engine) if payload.vad_engine in ["off", "native", "silero", "silero_v6", "firered_vad"] else VADEngineType.OFF
         mss_engine_enum = MSSEngineType(payload.mss_engine) if payload.mss_engine in ["off", "audio_separator"] else MSSEngineType.OFF
+        fa_engine_enum = ForcedAlignmentEngineType(payload.fa_engine) if payload.fa_engine in ["off", "ctc_forced_aligner"] else ForcedAlignmentEngineType.OFF
 
         options = TranscriptionOptions(
             model_size=payload.model,
@@ -106,6 +108,8 @@ class CommandRouter:
             vad_engine=vad_engine_enum,
             mss_engine=mss_engine_enum,
             mss_model=payload.mss_model,
+            fa_engine=fa_engine_enum,
+            fa_model=payload.fa_model,
             use_batch=use_batch,
             batch_size=payload.batch_size,
             initial_prompt=PromptRegistry.get_prompt(payload.language)
@@ -121,7 +125,8 @@ class CommandRouter:
             cancel_token=self.current_cancel_token,
             mss_analyzer=MSSFactory.create(options) if mss_engine_enum != MSSEngineType.OFF else None,
             vad_analyzer=VADFactory.create(options) if vad_engine_enum not in [VADEngineType.OFF, VADEngineType.NATIVE] else None,
-            stt_recognizer=self.recognizer
+            stt_recognizer=self.recognizer,
+            fa_analyzer=ForcedAlignmentFactory.create(options) if fa_engine_enum != ForcedAlignmentEngineType.OFF else None
         )
         
         pipeline = TranscriptionPipeline(context)
@@ -135,6 +140,10 @@ class CommandRouter:
             reporter.report_task_progress(TaskType.VAD, TaskStatus.PENDING, 0.0)
             
         pipeline.add_step(SttStep())
+        
+        if fa_engine_enum != ForcedAlignmentEngineType.OFF:
+            pipeline.add_step(ForcedAlignmentStep())
+            reporter.report_task_progress(TaskType.FORCED_ALIGNMENT, TaskStatus.PENDING, 0.0)
         
         try:
             pipeline.execute()

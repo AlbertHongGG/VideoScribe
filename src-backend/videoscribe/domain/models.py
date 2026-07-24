@@ -7,6 +7,7 @@ class TaskType(str, Enum):
     MSS = "mss"
     VAD = "vad"
     STT = "stt"
+    FORCED_ALIGNMENT = "forced_alignment"
     TRANSLATION = "translation"
 
 class TaskStatus(str, Enum):

@@ -6,7 +6,7 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 export const commands = {
 	lookupWord: (text: string) => typedError<LookupResult, string>(__TAURI_INVOKE("lookup_word", { text })),
 	getFurigana: (text: string) => typedError<FuriganaToken[], string>(__TAURI_INVOKE("get_furigana", { text })),
-	startSttJob: (videoPath: string, modelSize: string, language: string, vadEngine: string, mssEngine: string, mssModel: string, useBatch: boolean, batchSize: number, enableTranslation: boolean) => typedError<string, string>(__TAURI_INVOKE("start_stt_job", { videoPath, modelSize, language, vadEngine, mssEngine, mssModel, useBatch, batchSize, enableTranslation })),
+	startSttJob: (args: StartSttJobArgs) => typedError<string, string>(__TAURI_INVOKE("start_stt_job", { args })),
 	cancelSttJob: (jobId: string) => typedError<null, string>(__TAURI_INVOKE("cancel_stt_job", { jobId })),
 	importSttResults: (results: STTResult[]) => typedError<null, string>(__TAURI_INVOKE("import_stt_results", { results })),
 	startTranslation: () => typedError<null, string>(__TAURI_INVOKE("start_translation")),
@@ -62,9 +62,23 @@ export type STTResult = {
 	words: WordTiming[] | null,
 };
 
+export type StartSttJobArgs = {
+	videoPath: string,
+	modelSize: string,
+	language: string,
+	vadEngine: string,
+	mssEngine: string,
+	mssModel: string,
+	faEngine: string,
+	faModel: string,
+	useBatch: boolean,
+	batchSize: number,
+	enableTranslation: boolean,
+};
+
 export type TaskStatus = "pending" | "running" | "completed" | "error" | "cancelled";
 
-export type TaskType = "mss" | "vad" | "stt" | "translation";
+export type TaskType = "mss" | "vad" | "stt" | "forced_alignment" | "translation";
 
 export type WordTiming = {
 	text: string,

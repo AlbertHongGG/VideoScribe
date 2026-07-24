@@ -59,6 +59,31 @@ class IpcReporter(ProgressReporter):
             "cues": [cue]
         })
 
+    def report_result_replace_all(self, segments: list) -> None:
+        cues = []
+        for i, segment in enumerate(segments):
+            words = []
+            if segment.words:
+                for w in segment.words:
+                    words.append({
+                        "text": w.text,
+                        "start": w.start,
+                        "end": w.end,
+                        "probability": w.probability
+                    })
+            cues.append({
+                "id": str(uuid.uuid4()),
+                "ordinal": i,
+                "start_ms": int(segment.start * 1000),
+                "end_ms": int(segment.end * 1000),
+                "text": segment.text,
+                "words": words if words else None
+            })
+        self._write_event("segment_replace_all", {
+            "job_id": self.job_id,
+            "cues": cues
+        })
+
     def report_error(self, message: str) -> None:
         self._write_event("error", {
             "message": message

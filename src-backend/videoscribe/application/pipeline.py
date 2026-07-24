@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from videoscribe.domain.interfaces import ProgressReporter, SpeechRecognizer, VADAnalyzer, MSSAnalyzer
+from videoscribe.domain.interfaces import ProgressReporter, SpeechRecognizer, VADAnalyzer, MSSAnalyzer, ForcedAlignmentAnalyzer
 from videoscribe.domain.transcription_options import TranscriptionOptions
 from videoscribe.domain.cancellation import CancellationToken
 from videoscribe.domain.models import TaskType, TaskStatus
@@ -15,7 +15,8 @@ class PipelineContext:
         cancel_token: CancellationToken,
         mss_analyzer: Optional[MSSAnalyzer] = None,
         vad_analyzer: Optional[VADAnalyzer] = None,
-        stt_recognizer: Optional[SpeechRecognizer] = None
+        stt_recognizer: Optional[SpeechRecognizer] = None,
+        fa_analyzer: Optional[ForcedAlignmentAnalyzer] = None
     ):
         self.audio_path = audio_path
         self.options = options
@@ -24,12 +25,14 @@ class PipelineContext:
         self.mss_analyzer = mss_analyzer
         self.vad_analyzer = vad_analyzer
         self.stt_recognizer = stt_recognizer
+        self.fa_analyzer = fa_analyzer
 
         # Shared state across steps
         self.vocals_path: Optional[str] = None
         self.instrumental_path: Optional[str] = None
         self.detected_language: Optional[str] = None
         self.vad_result: Optional[VADResult] = None
+        self.stt_segments: List[TranscriptionSegment] = []
 
 
 class PipelineStep(ABC):

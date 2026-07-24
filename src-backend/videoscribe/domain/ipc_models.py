@@ -10,6 +10,8 @@ class StartPayload:
     vad_engine: str = "native"
     mss_engine: str = "off"
     mss_model: str = "model_mel_band_roformer_ep_3005_sdr_11.4360.ckpt"
+    fa_engine: str = "off"
+    fa_model: str = "mms-300m"
     use_batch: bool = True
     batch_size: int = 16
 

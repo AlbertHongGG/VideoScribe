@@ -14,6 +14,8 @@ interface STTSettingsStore {
   vadEngine: string;
   mssEngine: string;
   mssModel: string;
+  faEngine: string;
+  faModel: string;
   useBatch: boolean;
   batchSize: number;
   subtitlePositionX: number;
@@ -37,6 +39,8 @@ interface STTSettingsStore {
   setVadEngine: (engine: string) => void;
   setMssEngine: (engine: string) => void;
   setMssModel: (model: string) => void;
+  setFaEngine: (engine: string) => void;
+  setFaModel: (model: string) => void;
   setUseBatch: (use: boolean) => void;
   setBatchSize: (size: number) => void;
   setSubtitlePositionX: (x: number) => void;
@@ -63,6 +67,8 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
       vadEngine: 'off',
       mssEngine: 'off',
       mssModel: 'model_mel_band_roformer_ep_3005_sdr_11.4360.ckpt',
+      faEngine: 'off',
+      faModel: 'mms-300m',
       useBatch: false,
       batchSize: 16,
       subtitlePositionX: 50,
@@ -86,6 +92,8 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
       setVadEngine: (engine) => set({ vadEngine: engine }),
       setMssEngine: (engine) => set({ mssEngine: engine }),
       setMssModel: (model) => set({ mssModel: model }),
+      setFaEngine: (engine) => set({ faEngine: engine }),
+      setFaModel: (model) => set({ faModel: model }),
       setUseBatch: (useBatch) => set({ useBatch }),
       setBatchSize: (batchSize) => set({ batchSize }),
       setSubtitlePositionX: (x) => set({ subtitlePositionX: x }),
@@ -110,6 +118,8 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
         vadEngine: state.vadEngine,
         mssEngine: state.mssEngine,
         mssModel: state.mssModel,
+        faEngine: state.faEngine,
+        faModel: state.faModel,
         useBatch: state.useBatch,
         batchSize: state.batchSize,
         subtitlePositionX: state.subtitlePositionX,

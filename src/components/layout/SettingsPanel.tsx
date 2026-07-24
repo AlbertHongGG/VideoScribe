@@ -28,14 +28,14 @@ const TRANSLATION_LANGUAGES = [
 ];
 
 const VAD_ENGINE_OPTIONS = [
-  { value: "off", label: "Off (No VAD)" },
+  { value: "off", label: "Off" },
   { value: "native", label: "Native (Whisper Built-in)" },
-  { value: "silero_v6", label: "Silero VAD v6 (High Precision)" },
-  { value: "firered_vad", label: "FireRedVAD (Industrial GPU VAD)" },
+  { value: "silero_v6", label: "Silero VAD v6" },
+  { value: "firered_vad", label: "FireRedVAD" },
 ];
 
 const MSS_ENGINE_OPTIONS = [
-  { value: "off", label: "Off (Disabled)" },
+  { value: "off", label: "Off" },
   { value: "audio_separator", label: "Audio-Separator Plugin" }
 ];
 
@@ -43,6 +43,18 @@ const MSS_MODEL_OPTIONS = [
   { value: "model_mel_band_roformer_ep_3005_sdr_11.4360.ckpt", label: "MelBandRoformer (High Quality)" },
   { value: "model_bs_roformer_ep_317_sdr_12.9755.ckpt", label: "BSRoformer" },
   { value: "UVR-MDX-NET-Inst_HQ_3.onnx", label: "MDX-Net (Fast)" }
+];
+
+const FA_ENGINE_OPTIONS = [
+  { value: "off", label: "Off" },
+  { value: "ctc_forced_aligner", label: "CTC Forced Aligner" }
+];
+
+const FA_MODEL_OPTIONS = [
+  { value: "mms-300m", label: "Meta MMS-300M (Balanced)" },
+  { value: "mms-1b-all", label: "Meta MMS-1B (High Quality)" },
+  { value: "wav2vec2-large-xlsr-53-chinese", label: "Wav2Vec2 Chinese" },
+  { value: "wav2vec2-large-960h-lv60k", label: "Wav2Vec2 English" }
 ];
 
 export const SettingsPanel: React.FC = () => {
@@ -53,7 +65,7 @@ export const SettingsPanel: React.FC = () => {
     <div className="w-full h-full p-8 text-white overflow-y-auto custom-scrollbar bg-[#0f0f0f]">
       <div className="max-w-3xl mx-auto pt-4">
         <div className="space-y-8">
-          
+
           <SettingSection title="Speech-to-Text (STT) Engine">
             <SettingRow label="Model Size" layout="grid">
               <SettingSelect settingKey="model" value={store.model} options={MODEL_OPTIONS} setter={store.setModel} />
@@ -64,20 +76,20 @@ export const SettingsPanel: React.FC = () => {
             </SettingRow>
             <SettingDivider />
             <SettingRow label="Voice Activity Detection (VAD)" description="Filter out silence before or during recognition." layout="grid">
-              <SettingSelect 
-                settingKey="vadEngine" 
-                value={store.vadEngine} 
-                options={VAD_ENGINE_OPTIONS} 
-                setter={store.setVadEngine} 
+              <SettingSelect
+                settingKey="vadEngine"
+                value={store.vadEngine}
+                options={VAD_ENGINE_OPTIONS}
+                setter={store.setVadEngine}
               />
             </SettingRow>
             <SettingDivider />
 
             <SettingRow label="Batch Processing" description="Accelerate transcription via parallel chunking.">
-              <SettingToggle 
-                settingKey="useBatch" 
-                checked={store.useBatch} 
-                setter={store.setUseBatch} 
+              <SettingToggle
+                settingKey="useBatch"
+                checked={store.useBatch}
+                setter={store.setUseBatch}
               />
             </SettingRow>
 
@@ -95,7 +107,7 @@ export const SettingsPanel: React.FC = () => {
             <SettingRow label="Audio Separation Engine" description="Separate vocals from background music/instruments before transcription." layout="grid">
               <SettingSelect settingKey="mssEngine" value={store.mssEngine} options={MSS_ENGINE_OPTIONS} setter={store.setMssEngine} />
             </SettingRow>
-            
+
             {store.mssEngine !== 'off' && (
               <>
                 <SettingDivider />
@@ -107,6 +119,21 @@ export const SettingsPanel: React.FC = () => {
                   <SettingSlider settingKey="vocalVolume" label="Vocals Volume" value={store.vocalVolume} min={0} max={100} unit="%" setter={store.setVocalVolume} />
                   <SettingSlider settingKey="backgroundVolume" label="Background Music Volume" value={store.backgroundVolume} min={0} max={100} unit="%" setter={store.setBackgroundVolume} />
                 </SettingGroup>
+              </>
+            )}
+          </SettingSection>
+
+          <SettingSection title="Forced Alignment">
+            <SettingRow label="Alignment Engine" description="Precisely align transcription timestamps with audio." layout="grid">
+              <SettingSelect settingKey="faEngine" value={store.faEngine} options={FA_ENGINE_OPTIONS} setter={store.setFaEngine} />
+            </SettingRow>
+
+            {store.faEngine !== 'off' && (
+              <>
+                <SettingDivider />
+                <SettingRow label="Alignment Model" description="Select the acoustic model for alignment." layout="grid">
+                  <SettingSelect settingKey="faModel" value={store.faModel} options={FA_MODEL_OPTIONS} setter={store.setFaModel} />
+                </SettingRow>
               </>
             )}
           </SettingSection>
@@ -144,7 +171,7 @@ export const SettingsPanel: React.FC = () => {
               <SettingSlider settingKey="subtitlePositionX" label="Horizontal Position (X)" value={store.subtitlePositionX} min={0} max={100} unit="%" setter={store.setSubtitlePositionX} />
               <SettingSlider settingKey="subtitlePositionY" label="Vertical Position (Y)" value={store.subtitlePositionY} min={0} max={100} unit="%" setter={store.setSubtitlePositionY} />
             </SettingGroup>
-            
+
             <SettingGroup title="Typography & Spacing">
               <SettingSlider settingKey="sttFontSize" label="Main Subtitle Size" value={store.sttFontSize} min={12} max={48} unit="px" setter={store.setSttFontSize} />
               <SettingSlider settingKey="translationFontSize" label="Translation Size" value={store.translationFontSize} min={12} max={48} unit="px" setter={store.setTranslationFontSize} />
