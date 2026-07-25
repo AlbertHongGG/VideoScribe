@@ -35,7 +35,8 @@ class AudioSeparatorEngine(MSSAnalyzer):
         separator = Separator(
             output_dir=actual_output_dir,
             output_format=self.output_format,
-            log_level=logging.WARNING
+            log_level=logging.WARNING,
+            use_autocast=True  # Enable FP16/BF16 mixed precision for massive speedup on modern GPUs
         )
         report(10.0)
 

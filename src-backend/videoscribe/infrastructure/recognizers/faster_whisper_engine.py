@@ -87,6 +87,9 @@ class FasterWhisperEngine(SpeechRecognizer):
         if options.language != "auto" and options.language:
             transcribe_kwargs["language"] = options.language
             
+        if options.initial_prompt:
+            transcribe_kwargs["initial_prompt"] = options.initial_prompt
+            
         if self._is_batched:
             logger.info(f"Starting batched transcription with kwargs: {transcribe_kwargs}")
             segments, info = self._pipeline.transcribe(audio_path, **transcribe_kwargs)
