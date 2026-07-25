@@ -1,10 +1,59 @@
 import logging
+import os
+import subprocess
 from typing import Optional
 from videoscribe.domain.models import TaskType, TaskStatus
 from videoscribe.application.pipeline import PipelineStep, PipelineContext
 from videoscribe.application.segment_refiner import SegmentRefiner
+from videoscribe.infrastructure.utils import get_tmp_dir
 
 logger = logging.getLogger(__name__)
+
+class PreprocessingStep(PipelineStep):
+    @property
+    def task_type(self) -> TaskType:
+        return TaskType.PREPROCESSING
+
+    def execute(self, context: PipelineContext) -> None:
+        logger.info("Starting Audio Preprocessing...")
+        context.reporter.report_task_progress(TaskType.PREPROCESSING, TaskStatus.RUNNING, 10.0)
+        
+        # Check if it's already a suitable format (e.g. .wav)
+        ext = os.path.splitext(context.audio_path)[1].lower()
+        if ext == ".wav":
+            logger.info(f"Input is already WAV, skipping ffmpeg conversion: {context.audio_path}")
+            context.reporter.report_task_progress(TaskType.PREPROCESSING, TaskStatus.COMPLETED, 100.0)
+            return
+
+        # Use FFmpeg to stream process the file into a standardized 44.1kHz 16-bit PCM WAV
+        workspace_dir = get_tmp_dir()
+        os.makedirs(workspace_dir, exist_ok=True)
+        
+        # Generate a unique workspace file name
+        base_name = os.path.basename(context.audio_path)
+        name_no_ext = os.path.splitext(base_name)[0]
+        wav_path = os.path.join(workspace_dir, f"{name_no_ext}_workspace.wav")
+        
+        # Only process if we haven't already processed it in the workspace
+        if not os.path.exists(wav_path):
+            logger.info(f"Normalizing audio format via FFmpeg into workspace: {wav_path}")
+            context.reporter.report_task_progress(TaskType.PREPROCESSING, TaskStatus.RUNNING, 50.0)
+            try:
+                # -y: overwrite, -vn: no video, -ac 2: stereo (best for MSS), -ar 44100: 44.1kHz, -c:a pcm_s16le: 16-bit PCM
+                subprocess.run([
+                    "ffmpeg", "-y", "-i", context.audio_path,
+                    "-vn", "-ac", "2", "-ar", "44100", "-c:a", "pcm_s16le", wav_path
+                ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except subprocess.CalledProcessError as e:
+                logger.error(f"FFmpeg preprocessing failed: {e}")
+                raise RuntimeError(f"Failed to preprocess audio file using FFmpeg. Is FFmpeg installed? Error: {e}")
+        else:
+            logger.info(f"Normalized workspace file already exists, skipping conversion: {wav_path}")
+
+        # Override the original file path with the clean workspace WAV file
+        logger.info(f"Audio Preprocessing completed. Pipeline will now use: {wav_path}")
+        context.audio_path = wav_path
+        context.reporter.report_task_progress(TaskType.PREPROCESSING, TaskStatus.COMPLETED, 100.0)
 
 class MssStep(PipelineStep):
     @property

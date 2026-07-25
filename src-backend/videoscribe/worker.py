@@ -26,7 +26,7 @@ if sys.platform == "win32":
 
 from videoscribe.infrastructure.recognizers.faster_whisper_engine import FasterWhisperEngine
 from videoscribe.application.pipeline import TranscriptionPipeline, PipelineContext
-from videoscribe.application.transcription_job import MssStep, VadStep, SttStep, ForcedAlignmentStep
+from videoscribe.application.transcription_job import PreprocessingStep, MssStep, VadStep, SttStep, ForcedAlignmentStep
 from videoscribe.infrastructure.audio.ffmpeg_analyzer import FFmpegAudioAnalyzer
 from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
 from videoscribe.domain.cancellation import CancellationToken
@@ -130,6 +130,10 @@ class CommandRouter:
         )
         
         pipeline = TranscriptionPipeline(context)
+        
+        # Mandatory Preprocessing Step (Extracts audio to clean WAV workspace)
+        pipeline.add_step(PreprocessingStep())
+        reporter.report_task_progress(TaskType.PREPROCESSING, TaskStatus.PENDING, 0.0)
         
         if mss_engine_enum != MSSEngineType.OFF:
             pipeline.add_step(MssStep())

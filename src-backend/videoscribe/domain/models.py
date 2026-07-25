@@ -4,6 +4,7 @@ from typing import List, Optional
 from enum import Enum
 
 class TaskType(str, Enum):
+    PREPROCESSING = "preprocessing"
     MSS = "mss"
     VAD = "vad"
     STT = "stt"
