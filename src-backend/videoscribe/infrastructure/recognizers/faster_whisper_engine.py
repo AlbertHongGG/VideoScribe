@@ -50,20 +50,18 @@ class FasterWhisperEngine(SpeechRecognizer):
 
         # 2. Outer layer: VAD State / Inner layer: Batch State
         if vad_result and not vad_result.is_empty:
-            # Outer: VAD ON
-            vad_result = vad_result.merge_and_pad(padding_sec=2.0, total_duration=total_duration)
+            # Outer: VAD ON (Already perfectly segmented by VADPipelineAnalyzer)
             transcribe_kwargs["vad_filter"] = False
 
             if self._is_batched:
-                # Inner: Batch ON -> Subdivide >30s segments for Batch requirements
+                # Inner: Batch ON
                 transcribe_kwargs["batch_size"] = options.batch_size
-                batched_vad_result = vad_result.split_long_segments(max_chunk_sec=30.0)
-                transcribe_kwargs["clip_timestamps"] = batched_vad_result.to_dict_list()
-                logger.info(f"VAD ON with Batch ON: {len(batched_vad_result.windows)} chunks (<=30s each).")
+                transcribe_kwargs["clip_timestamps"] = vad_result.to_dict_list()
+                logger.info(f"VAD ON with Batch ON: {len(vad_result.segments)} chunks (processed by VAD pipeline).")
             else:
-                # Inner: Batch OFF -> NO 30s splitting! Natural VAD segments.
+                # Inner: Batch OFF
                 transcribe_kwargs["clip_timestamps"] = vad_result.to_flat_list()
-                logger.info(f"VAD ON with Batch OFF: {len(vad_result.windows)} natural VAD segments (no 30s splitting).")
+                logger.info(f"VAD ON with Batch OFF: {len(vad_result.segments)} chunks (processed by VAD pipeline).")
 
         elif options.vad_engine == VADEngineType.NATIVE:
             # Outer: Native VAD
@@ -79,7 +77,7 @@ class FasterWhisperEngine(SpeechRecognizer):
             if self._is_batched:
                 # Inner: Batch ON -> Generate fixed 30s timestamp grid for Batch
                 transcribe_kwargs["batch_size"] = options.batch_size
-                fixed_chunks = VADResult.generate_fixed_chunks(total_duration, chunk_sec=30.0)
+                fixed_chunks = self._generate_fixed_chunks(total_duration, chunk_sec=30.0)
                 transcribe_kwargs["clip_timestamps"] = fixed_chunks
                 logger.info(f"VAD OFF with Batch ON: Generated {len(fixed_chunks)} fixed 30s chunks.")
             else:
@@ -110,3 +108,16 @@ class FasterWhisperEngine(SpeechRecognizer):
                 yield segment
                 
         return segment_generator(), domain_info
+
+    @staticmethod
+    def _generate_fixed_chunks(total_duration: float, chunk_sec: float = 30.0) -> list[dict]:
+        if total_duration <= 0:
+            return [{"start": 0.0, "end": chunk_sec}]
+
+        chunks = []
+        curr = 0.0
+        while curr < total_duration:
+            nxt = min(total_duration, curr + chunk_sec)
+            chunks.append({"start": round(curr, 3), "end": round(nxt, 3)})
+            curr = nxt
+        return chunks

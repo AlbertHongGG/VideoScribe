@@ -28,18 +28,18 @@ try:
 except ImportError:
     HAS_TORCHAUDIO = False
 
-from videoscribe.domain.interfaces import VADAnalyzer
-from videoscribe.domain.models import AudioWindow, VADResult
+from videoscribe.domain.interfaces import IVADEngine
+from videoscribe.domain.models import VADContext, SpeechSegment
 from videoscribe.domain.transcription_options import TranscriptionOptions
 
 logger = logging.getLogger(__name__)
 
 
-class FireRedVADAnalyzer(VADAnalyzer):
+class FireRedEngine(IVADEngine):
     """
-    Voice Activity Detection Analyzer powered by FireRedVAD (XiaoHongShu Industrial VAD).
+    Voice Activity Detection Engine powered by FireRedVAD (XiaoHongShu Industrial VAD).
     Supports GPU PyTorch execution with automatic CPU fallback.
-    Implements the VADAnalyzer domain interface.
+    Implements the IVADEngine domain interface.
     """
 
     def __init__(self, custom_model_dir: Optional[str] = None) -> None:
@@ -48,7 +48,6 @@ class FireRedVADAnalyzer(VADAnalyzer):
         self._model_dir: Optional[Path] = None
 
     def _resolve_model_dir(self) -> Path:
-        """Resolves model directory from custom path or auto-downloads from Hugging Face."""
         if self._model_dir and self._model_dir.exists():
             return self._model_dir
 
@@ -62,7 +61,7 @@ class FireRedVADAnalyzer(VADAnalyzer):
         if not HAS_HF_HUB:
             raise RuntimeError("huggingface_hub is not installed. Unable to download FireRedVAD pretrained model.")
 
-        logger.info("FireRedVADAnalyzer: Resolving pretrained model from Hugging Face (FireRedTeam/FireRedVAD)...")
+        logger.info("FireRedEngine: Resolving pretrained model from Hugging Face (FireRedTeam/FireRedVAD)...")
         repo_root = Path(snapshot_download("FireRedTeam/FireRedVAD"))
         vad_dir = repo_root / "VAD"
         if not vad_dir.exists():
@@ -72,33 +71,27 @@ class FireRedVADAnalyzer(VADAnalyzer):
         return vad_dir
 
     def _init_model(self, use_gpu: bool) -> Any:
-        """Instantiates FireRedVad model with requested GPU setting."""
         if not HAS_FIREREDVAD:
             raise ImportError("fireredvad package is not installed.")
 
         vad_dir = self._resolve_model_dir()
         config = FireRedVadConfig(
             use_gpu=use_gpu,
-            speech_threshold=0.3,  # Sensitive setting for speech/singing
+            speech_threshold=0.3,
             min_speech_frame=3,
-            max_speech_frame=3000,
+            # We don't limit max_speech_frame here so the pipeline can min-cut it cleanly!
+            max_speech_frame=1000000, 
             min_silence_frame=15,
         )
         return FireRedVad.from_pretrained(str(vad_dir), config=config)
 
-    def analyze(self, audio_path: str, options: TranscriptionOptions, progress_callback: Optional[Callable[[float], None]] = None) -> Optional[VADResult]:
-        def report(pct: float):
-            if progress_callback:
-                progress_callback(pct)
-                
+    def predict(self, audio_path: str, options: TranscriptionOptions) -> VADContext:
         if not HAS_FIREREDVAD:
-            logger.error("FireRedVADAnalyzer: fireredvad package is not installed.")
-            return None
+            raise RuntimeError("fireredvad package is not installed.")
 
-        report(5.0)
-        logger.info(f"FireRedVADAnalyzer: Running FireRedVAD on {audio_path}")
+        logger.info(f"FireRedEngine: Running FireRedVAD on {audio_path}")
 
-        # 1. Decode audio to 16kHz mono int16 PCM array (Required for kaldi-native-fbank)
+        # Decode audio to 16kHz mono int16 PCM array
         if HAS_DECODE_AUDIO:
             audio_float = decode_audio(audio_path, sampling_rate=16000)
             pcm_int16 = (np.clip(audio_float, -1.0, 1.0) * 32767.0).astype(np.int16)
@@ -112,58 +105,40 @@ class FireRedVADAnalyzer(VADAnalyzer):
             audio_float = waveform.squeeze().numpy()
             pcm_int16 = (np.clip(audio_float, -1.0, 1.0) * 32767.0).astype(np.int16)
         else:
-            logger.error("FireRedVADAnalyzer: Neither faster_whisper.audio nor torchaudio is available.")
-            return None
+            raise RuntimeError("Neither faster_whisper.audio nor torchaudio is available.")
 
-        report(30.0)
+        audio_duration = len(pcm_int16) / 16000.0
 
-        # 2. Try GPU execution first, fallback to CPU gracefully
         want_gpu = torch.cuda.is_available()
         model = None
-        device_used = "CPU"
 
         if want_gpu:
             try:
-                logger.info("FireRedVADAnalyzer: Initializing FireRedVAD on GPU (CUDA)...")
                 model = self._init_model(use_gpu=True)
-                device_used = "GPU (CUDA)"
             except Exception as exc:
-                logger.warning(f"FireRedVADAnalyzer: GPU initialization failed ({exc}). Falling back to CPU...")
+                logger.warning(f"FireRedEngine: GPU initialization failed ({exc}). Falling back to CPU...")
 
         if model is None:
-            logger.info("FireRedVADAnalyzer: Initializing FireRedVAD on CPU...")
-            try:
-                model = self._init_model(use_gpu=False)
-                device_used = "CPU"
-            except Exception as exc:
-                logger.error(f"FireRedVADAnalyzer: CPU initialization failed: {exc}")
-                return None
+            model = self._init_model(use_gpu=False)
 
-        try:
-            # 3. Detect speech segments
-            report(60.0)
-            raw_result, _ = model.detect(pcm_int16)
-            report(90.0)
-            timestamps: List[Any] = raw_result.get("timestamps", [])
+        # Detect speech segments and probabilities simultaneously
+        raw_result, probs_tensor = model.detect(pcm_int16, do_postprocess=True)
+        timestamps: List[Any] = raw_result.get("timestamps", [])
+        
+        probs = probs_tensor.squeeze().cpu().numpy() if probs_tensor is not None else None
 
-            windows = []
-            for i, item in enumerate(timestamps):
-                if isinstance(item, (list, tuple)) and len(item) >= 2:
-                    start_sec = float(item[0])
-                    end_sec = float(item[1])
-                    windows.append(
-                        AudioWindow(
-                            audio=np.array([]),
-                            start_time=start_sec,
-                            end_time=end_sec,
-                            is_last=(i == len(timestamps) - 1),
-                        )
-                    )
+        segments = []
+        for i, item in enumerate(timestamps):
+            if isinstance(item, (list, tuple)) and len(item) >= 2:
+                start_sec = float(item[0])
+                end_sec = float(item[1])
+                segments.append(SpeechSegment(start_time=start_sec, end_time=end_sec))
 
-            logger.info(f"FireRedVADAnalyzer [{device_used}]: Generated {len(windows)} speech chunks.")
-            report(100.0)
-            return VADResult(windows=windows)
-
-        except Exception as exc:
-            logger.error(f"FireRedVADAnalyzer analysis failed: {exc}")
-            return None
+        logger.info(f"FireRedEngine: Generated {len(segments)} native speech chunks.")
+        
+        return VADContext(
+            segments=segments,
+            frame_probabilities=probs,
+            sample_rate=16000,
+            audio_duration=audio_duration
+        )

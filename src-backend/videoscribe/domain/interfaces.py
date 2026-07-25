@@ -1,5 +1,5 @@
 from typing import Protocol, Iterator, Tuple, Optional, Any, Callable
-from .models import TranscriptionSegment, TranscriptionInfo, AudioWindow, Word, VADResult, MSSResult, TaskType, TaskStatus
+from .models import TranscriptionSegment, TranscriptionInfo, SpeechSegment, Word, VADResult, VADContext, MSSResult, TaskType, TaskStatus
 from .transcription_options import TranscriptionOptions
 from .cancellation import CancellationToken
 
@@ -8,11 +8,24 @@ class AudioAnalyzer(Protocol):
         """Get the total duration of the audio in seconds."""
         ...
 
+class IVADEngine(Protocol):
+    def predict(self, audio_path: str, options: TranscriptionOptions) -> VADContext:
+        """
+        Run the VAD neural network and return VADContext (containing frame_probabilities or initial segments).
+        """
+        ...
+
+class IVADProcessor(Protocol):
+    def process(self, context: VADContext) -> VADContext:
+        """
+        Process the VADContext in the pipeline (e.g. merge, min-cut).
+        """
+        ...
+
 class VADAnalyzer(Protocol):
     def analyze(self, audio_path: str, options: TranscriptionOptions, progress_callback: Optional[Callable[[float], None]] = None) -> Optional[VADResult]:
         """
-        Analyze audio and return VAD result.
-        If the implementation delegates VAD to the STT engine natively, it should return None.
+        Facade for the VAD Pipeline.
         """
         ...
 

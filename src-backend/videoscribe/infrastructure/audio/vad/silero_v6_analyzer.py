@@ -15,8 +15,8 @@ try:
 except ImportError:
     HAS_SILERO_VAD_PKG = False
 
-from videoscribe.domain.interfaces import VADAnalyzer
-from videoscribe.domain.models import AudioWindow, VADResult
+from videoscribe.domain.interfaces import IVADEngine
+from videoscribe.domain.models import VADContext, SpeechSegment
 from videoscribe.domain.transcription_options import TranscriptionOptions
 
 try:
@@ -28,10 +28,10 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class SileroVADv6Analyzer(VADAnalyzer):
+class SileroEngine(IVADEngine):
     """
-    Voice Activity Detection Analyzer powered by Silero VAD v6.
-    Implements the VADAnalyzer domain interface.
+    Voice Activity Detection Engine powered by Silero VAD v6.
+    Implements the IVADEngine domain interface.
     """
 
     def __init__(self, use_onnx: bool = False) -> None:
@@ -43,12 +43,12 @@ class SileroVADv6Analyzer(VADAnalyzer):
     def _init_model(self) -> None:
         """Initializes Silero VAD v6 model via silero-vad package or torch.hub fallback."""
         if HAS_SILERO_VAD_PKG:
-            logger.info("SileroVADv6Analyzer: Loading model via silero_vad package...")
+            logger.info("SileroEngine: Loading model via silero_vad package...")
             self._model = silero_pkg_load(onnx=self.use_onnx)
             self._get_speech_ts_fn = silero_pkg_get_speech_ts
             return
 
-        logger.info("SileroVADv6Analyzer: silero_vad package not found, falling back to torch.hub...")
+        logger.info("SileroEngine: silero_vad package not found, falling back to torch.hub...")
         try:
             model, utils = torch.hub.load(
                 repo_or_dir="snakers4/silero-vad",
@@ -61,20 +61,14 @@ class SileroVADv6Analyzer(VADAnalyzer):
             self._model = model
             self._get_speech_ts_fn = get_speech_ts_fn
         except Exception as e:
-            logger.error(f"SileroVADv6Analyzer: Failed to load Silero VAD v6 model: {e}")
+            logger.error(f"SileroEngine: Failed to load Silero VAD v6 model: {e}")
             raise RuntimeError(f"Silero VAD v6 model loading failed: {e}") from e
 
-    def analyze(self, audio_path: str, options: TranscriptionOptions, progress_callback: Optional[Callable[[float], None]] = None) -> Optional[VADResult]:
-        def report(pct: float):
-            if progress_callback:
-                progress_callback(pct)
-                
+    def predict(self, audio_path: str, options: TranscriptionOptions) -> VADContext:
         if self._model is None or self._get_speech_ts_fn is None:
-            logger.error("SileroVADv6Analyzer is not properly initialized.")
-            return None
+            raise RuntimeError("SileroEngine is not properly initialized.")
 
-        report(5.0)
-        logger.info(f"SileroVADv6Analyzer: Running Silero VAD v6 on {audio_path}")
+        logger.info(f"SileroEngine: Running Silero VAD v6 on {audio_path}")
 
         # Decode audio to 16kHz mono float32 numpy array
         if HAS_DECODE_AUDIO:
@@ -90,44 +84,44 @@ class SileroVADv6Analyzer(VADAnalyzer):
         else:
             raise RuntimeError("Neither faster_whisper.audio nor torchaudio is available for audio decoding.")
 
-        report(30.0)
         waveform_tensor = torch.from_numpy(audio_array).float()
+        audio_duration = len(audio_array) / 16000.0
 
-        # Optimized parameters for high sensitivity to falsetto, singing, and speech over background music
-        max_speech_s = float(options.batch_size) if options.use_batch else 30.0
+        # Get Probabilities (the raw tensor)
+        with torch.no_grad():
+            if hasattr(self._model, 'audio_forward'):
+                probs_tensor = self._model.audio_forward(waveform_tensor, 16000)
+            else:
+                probs_tensor = self._model(waveform_tensor, 16000)
+            probs = probs_tensor.squeeze().cpu().numpy()
+
+        # Get Segments using native post-processing
+        # We do NOT apply max_speech_duration_s here, we let the pipeline's MinCutProcessor handle it beautifully!
         kwargs = {
-            "threshold": 0.5,               # Lowered from 0.5 to capture falsetto, singing & speech mixed with background music
-            "min_speech_duration_ms": 250,  # Lowered from 250ms to capture short vocal cues and sung notes
-            "max_speech_duration_s": max_speech_s,
-            "min_silence_duration_ms": 500, # Increased from 160ms to prevent splitting mid-sentence breath/singing pauses
+            "threshold": 0.5,
+            "min_speech_duration_ms": 250,
+            "min_silence_duration_ms": 500,
             "speech_pad_ms": 30,
             "return_seconds": True,
             "sampling_rate": 16000,
         }
 
-        try:
-            report(60.0)
-            timestamps: List[dict] = self._get_speech_ts_fn(
-                waveform_tensor,
-                self._model,
-                **kwargs,
-            )
-            report(90.0)
+        timestamps: List[dict] = self._get_speech_ts_fn(
+            waveform_tensor,
+            self._model,
+            **kwargs,
+        )
 
-            windows = [
-                AudioWindow(
-                    audio=np.array([]),
-                    start_time=float(ts["start"]),
-                    end_time=float(ts["end"]),
-                    is_last=(i == len(timestamps) - 1),
-                )
-                for i, ts in enumerate(timestamps)
-            ]
+        segments = [
+            SpeechSegment(start_time=float(ts["start"]), end_time=float(ts["end"]))
+            for ts in timestamps
+        ]
 
-            logger.info(f"SileroVADv6Analyzer: Generated {len(windows)} speech chunks.")
-            report(100.0)
-            return VADResult(windows=windows)
+        logger.info(f"SileroEngine: Generated {len(segments)} initial native segments.")
 
-        except Exception as e:
-            logger.error(f"SileroVADv6Analyzer analysis failed: {e}")
-            return None
+        return VADContext(
+            segments=segments,
+            frame_probabilities=probs,
+            sample_rate=16000,
+            audio_duration=audio_duration
+        )
