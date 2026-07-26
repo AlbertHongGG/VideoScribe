@@ -3,8 +3,11 @@ use std::env;
 
 #[derive(Debug, Clone)]
 pub struct AppConfig {
-    pub ai_provider: String,
-    pub ai_model: String,
+    pub translator_ai_provider: String,
+    pub translator_ai_model: String,
+    
+    pub segmenter_ai_provider: String,
+    pub segmenter_ai_model: String,
     
     // Backend Server
 
@@ -29,8 +32,11 @@ impl AppConfig {
         }
 
         Self {
-            ai_provider: env::var("AI_PROVIDER").unwrap_or_else(|_| "GEMINIFLOW".to_string()),
-            ai_model: env::var("AI_MODEL").unwrap_or_else(|_| "gemini-3.5-flash".to_string()),
+            translator_ai_provider: env::var("TRANSLATOR_AI_PROVIDER").unwrap_or_else(|_| "GEMINIFLOW".to_string()),
+            translator_ai_model: env::var("TRANSLATOR_AI_MODEL").unwrap_or_else(|_| "gemini-3.5-flash".to_string()),
+            
+            segmenter_ai_provider: env::var("SEGMENTER_AI_PROVIDER").unwrap_or_else(|_| "GEMINIFLOW".to_string()),
+            segmenter_ai_model: env::var("SEGMENTER_AI_MODEL").unwrap_or_else(|_| "gemini-3.5-flash".to_string()),
             
             ollama_base_url: env::var("OLLAMA_BASE_URL").ok(),
             

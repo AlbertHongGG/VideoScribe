@@ -64,14 +64,27 @@ impl SttJobController {
                                 "completed" => {
                                     proj.complete_task(tt.clone());
                                     
-                                    // If STT completed, check if we need to start translation automatically
+                                    // STT completed, check pipeline flow
                                     if tt == TaskType::Stt {
+                                        let needs_segmentation = proj.tasks.iter().any(|t| t.task_type == TaskType::Segmentation && t.status == TaskStatus::Pending);
                                         let needs_translation = proj.tasks.iter().any(|t| t.task_type == TaskType::Translation && t.status == TaskStatus::Pending);
-                                        if needs_translation {
+                                        
+                                        if needs_segmentation {
+                                            let dispatcher = Arc::new(crate::infrastructure::tauri_events::TauriEventDispatcher::new(app.clone()));
+                                            let segmenter_provider = state.segmenter_provider.clone();
+                                            let translator_provider = state.translator_provider.clone();
+                                            let project_mutex = state.project.clone();
+                                            tauri::async_runtime::spawn(async move {
+                                                if let Err(e) = crate::application::segmentation_coordinator::SegmentationCoordinator::start_segmentation(
+                                                    project_mutex, segmenter_provider, translator_provider, dispatcher
+                                                ) {
+                                                    eprintln!("Failed to auto-start segmentation: {}", e);
+                                                }
+                                            });
+                                        } else if needs_translation {
                                             let dispatcher = Arc::new(crate::infrastructure::tauri_events::TauriEventDispatcher::new(app.clone()));
                                             let provider = state.translator_provider.clone();
                                             let project_mutex = state.project.clone();
-                                            
                                             tauri::async_runtime::spawn(async move {
                                                 if let Err(e) = crate::application::translation_coordinator::TranslationCoordinator::start_translation(
                                                     project_mutex, provider, dispatcher
@@ -191,7 +204,7 @@ impl SttJobController {
         });
     }
 
-    pub fn start_job(&self, video_path: String, model: String, language: String, vad_engine: String, mss_engine: String, mss_model: String, fa_engine: String, fa_model: String, use_batch: bool, batch_size: u32, enable_translation: bool) -> Result<String, String> {
+    pub fn start_job(&self, video_path: String, model: String, language: String, vad_engine: String, mss_engine: String, mss_model: String, fa_engine: String, fa_model: String, use_batch: bool, batch_size: u32, enable_segmentation: bool, enable_translation: bool) -> Result<String, String> {
         let mut job_lock = self.current_job.lock().unwrap();
         
         if let Some(state) = self.app.try_state::<crate::infrastructure::state::AppState>() {
@@ -210,6 +223,9 @@ impl SttJobController {
             tasks.push(TaskType::Stt);
             if fa_engine != "off" {
                 tasks.push(TaskType::ForcedAlignment);
+            }
+            if enable_segmentation {
+                tasks.push(TaskType::Segmentation);
             }
             if enable_translation {
                 tasks.push(TaskType::Translation);

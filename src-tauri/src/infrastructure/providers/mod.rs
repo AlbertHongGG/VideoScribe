@@ -33,8 +33,10 @@ pub struct ProviderFactory;
 
 impl ProviderFactory {
     pub fn create_provider(agent_type: &crate::domain::agent::AgentType, config: &AppConfig) -> Result<Box<dyn AIProvider>, ProviderError> {
-        let provider_type = &config.ai_provider;
-        let model = &config.ai_model;
+        let (provider_type, model) = match agent_type {
+            crate::domain::agent::AgentType::TranslatorAgent => (&config.translator_ai_provider, &config.translator_ai_model),
+            crate::domain::agent::AgentType::SegmenterAgent => (&config.segmenter_ai_provider, &config.segmenter_ai_model),
+        };
 
         match provider_type.to_lowercase().as_str() {
             "geminiflow" => {

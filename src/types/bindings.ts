@@ -10,12 +10,13 @@ export const commands = {
 	cancelSttJob: (jobId: string) => typedError<null, string>(__TAURI_INVOKE("cancel_stt_job", { jobId })),
 	importSttResults: (results: STTResult[]) => typedError<null, string>(__TAURI_INVOKE("import_stt_results", { results })),
 	startTranslation: () => typedError<null, string>(__TAURI_INVOKE("start_translation")),
+	startSegmentation: () => typedError<null, string>(__TAURI_INVOKE("start_segmentation")),
 	runAgentTask: (agentType: AgentType, payloadJson: string) => typedError<string, string>(__TAURI_INVOKE("run_agent_task", { agentType, payloadJson })),
 	getAppState: () => typedError<ProjectState, string>(__TAURI_INVOKE("get_app_state")),
 };
 
 /* Types */
-export type AgentType = "TranslatorAgent";
+export type AgentType = "TranslatorAgent" | "SegmenterAgent";
 
 export type DictionaryEntry = {
 	id: string,
@@ -73,12 +74,13 @@ export type StartSttJobArgs = {
 	faModel: string,
 	useBatch: boolean,
 	batchSize: number,
+	enableSegmentation: boolean,
 	enableTranslation: boolean,
 };
 
 export type TaskStatus = "pending" | "running" | "completed" | "error" | "cancelled";
 
-export type TaskType = "mss" | "vad" | "stt" | "forced_alignment" | "translation";
+export type TaskType = "mss" | "vad" | "stt" | "forced_alignment" | "translation" | "segmentation";
 
 export type WordTiming = {
 	text: string,

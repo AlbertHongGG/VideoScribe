@@ -4,6 +4,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 pub mod translator_agent;
+pub mod segmenter_agent;
 
 #[async_trait]
 pub trait Agent: Send + Sync {
@@ -21,6 +22,7 @@ impl AgentFactory {
         use crate::domain::agent::AgentType;
         match agent_type {
             AgentType::TranslatorAgent => Ok(Box::new(translator_agent::TranslatorAgent::new(provider))),
+            AgentType::SegmenterAgent => Ok(Box::new(segmenter_agent::SegmenterAgent::new(provider))),
         }
     }
 }

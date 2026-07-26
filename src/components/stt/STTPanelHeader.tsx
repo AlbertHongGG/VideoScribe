@@ -1,5 +1,5 @@
 import React from "react";
-import { Download, Upload, Languages } from "lucide-react";
+import { Download, Upload, Languages, Wand2 } from "lucide-react";
 import { Tooltip } from "../ui/Tooltip";
 import { SubtitleIOService } from "../../services/subtitleIOService";
 import { useSTTJobStore, selectIsProcessing, selectCanTranslate } from "../../store/sttJobStore";
@@ -18,7 +18,20 @@ export const STTPanelHeader: React.FC = () => {
       {!isProcessing && (
         <div className="flex items-center gap-3">
           {canTranslate && (
-            <Tooltip content="Translate Subtitles" position="bottom">
+            <>
+              <Tooltip content="AI Semantic Segmentation" position="bottom">
+                <button 
+                  onClick={() => {
+                    import("../../services/segmentationService").then(({ SegmentationService }) => {
+                      SegmentationService.startSegmentation();
+                    });
+                  }}
+                  className="text-gray-400 hover:text-[#facc15] transition-colors p-1"
+                >
+                  <Wand2 size={16} />
+                </button>
+              </Tooltip>
+              <Tooltip content="Translate Subtitles" position="bottom">
               <button 
                 onClick={() => {
                   import("../../services/translationService").then(({ TranslationService }) => {
@@ -30,6 +43,7 @@ export const STTPanelHeader: React.FC = () => {
                 <Languages size={16} />
               </button>
             </Tooltip>
+            </>
           )}
           <Tooltip content="Import Subtitles" position="bottom">
             <button 

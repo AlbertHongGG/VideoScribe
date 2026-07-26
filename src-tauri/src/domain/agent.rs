@@ -8,13 +8,14 @@ use specta::Type;
 #[ts(export, export_to = "../../src/types/agent_types.ts")]
 pub enum AgentType {
     TranslatorAgent,
-    // Add other agents here as needed
+    SegmenterAgent,
 }
 
 impl AgentType {
     pub fn as_str(&self) -> &'static str {
         match self {
             AgentType::TranslatorAgent => "translator_agent",
+            AgentType::SegmenterAgent => "segmenter_agent",
         }
     }
 }
@@ -25,6 +26,7 @@ impl FromStr for AgentType {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "translator_agent" => Ok(AgentType::TranslatorAgent),
+            "segmenter_agent" => Ok(AgentType::SegmenterAgent),
             _ => Err(format!("Unknown agent type: '{}'", s)),
         }
     }

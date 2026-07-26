@@ -4,6 +4,6 @@ export type AgentResponse = { status: AgentStatus, thought: string | null, toolN
 
 export type AgentStatus = "TOOL_CALL" | "REQUIRE_USER_ACTION" | "SUCCESS" | "DEAD_END" | "BRANCHING";
 
-export type AgentType = "TranslatorAgent";
+export type AgentType = "TranslatorAgent" | "SegmenterAgent";
 
 export type Message = { role: string, content: string, };

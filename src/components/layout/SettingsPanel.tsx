@@ -157,6 +157,10 @@ export const SettingsPanel: React.FC = () => {
           </SettingSection>
 
           <SettingSection title="Dual Subtitle Translation">
+            <SettingRow label="Enable AI Segmentation" description="Automatically re-segment and combine sentences using local LLM">
+              <SettingToggle settingKey="enableSegmentation" checked={store.enableSegmentation} setter={store.setEnableSegmentation} />
+            </SettingRow>
+            <SettingDivider />
             <SettingRow label="Enable Translation" description="Automatically translate generated subtitles using local LLM">
               <SettingToggle settingKey="enableTranslation" checked={store.enableTranslation} setter={store.setEnableTranslation} />
             </SettingRow>

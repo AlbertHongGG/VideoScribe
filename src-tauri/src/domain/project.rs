@@ -23,6 +23,7 @@ pub enum TaskType {
     Stt,
     ForcedAlignment,
     Translation,
+    Segmentation,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, TS, Type, PartialEq)]

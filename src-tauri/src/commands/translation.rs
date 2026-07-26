@@ -16,6 +16,7 @@ pub async fn run_agent_task(
 ) -> Result<String, String> {
     let provider = match agent_type {
         AgentType::TranslatorAgent => state.translator_provider.clone(),
+        AgentType::SegmenterAgent => state.segmenter_provider.clone(),
     };
     
     let payload: Value = serde_json::from_str(&payload_json).map_err(|e| e.to_string())?;

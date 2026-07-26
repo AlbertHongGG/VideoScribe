@@ -21,6 +21,7 @@ pub struct StartSttJobArgs {
     pub fa_model: String,
     pub use_batch: bool,
     pub batch_size: u32,
+    pub enable_segmentation: bool,
     pub enable_translation: bool,
 }
 
@@ -31,7 +32,7 @@ pub fn start_stt_job(
     state: State<'_, Arc<SttJobController>>,
 ) -> Result<String, String> {
     let manager = state.inner();
-    manager.start_job(args.video_path, args.model_size, args.language, args.vad_engine, args.mss_engine, args.mss_model, args.fa_engine, args.fa_model, args.use_batch, args.batch_size, args.enable_translation)
+    manager.start_job(args.video_path, args.model_size, args.language, args.vad_engine, args.mss_engine, args.mss_model, args.fa_engine, args.fa_model, args.use_batch, args.batch_size, args.enable_segmentation, args.enable_translation)
 }
 
 #[tauri::command]

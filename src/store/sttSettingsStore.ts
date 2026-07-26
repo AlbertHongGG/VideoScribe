@@ -8,6 +8,7 @@ interface STTSettingsStore {
   showSubtitles: boolean;
   enableDictionary: boolean;
   enableFurigana: boolean;
+  enableSegmentation: boolean;
   enableTranslation: boolean;
   enableKaraokeMode: boolean;
   targetLanguage: string;
@@ -33,6 +34,7 @@ interface STTSettingsStore {
   setShowSubtitles: (show: boolean) => void;
   setEnableDictionary: (enable: boolean) => void;
   setEnableFurigana: (enable: boolean) => void;
+  setEnableSegmentation: (enable: boolean) => void;
   setEnableTranslation: (enable: boolean) => void;
   setEnableKaraokeMode: (enable: boolean) => void;
   setTargetLanguage: (lang: string) => void;
@@ -61,6 +63,7 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
       showSubtitles: true,
       enableDictionary: false,
       enableFurigana: false,
+      enableSegmentation: false,
       enableTranslation: false,
       enableKaraokeMode: false,
       targetLanguage: 'zh-TW',
@@ -86,6 +89,7 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
       setShowSubtitles: (showSubtitles) => set({ showSubtitles }),
       setEnableDictionary: (enable) => set({ enableDictionary: enable }),
       setEnableFurigana: (enable) => set({ enableFurigana: enable }),
+      setEnableSegmentation: (enable) => set({ enableSegmentation: enable }),
       setEnableTranslation: (enable) => set({ enableTranslation: enable }),
       setEnableKaraokeMode: (enable) => set({ enableKaraokeMode: enable }),
       setTargetLanguage: (lang) => set({ targetLanguage: lang }),
@@ -112,6 +116,7 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
         showSubtitles: state.showSubtitles,
         enableDictionary: state.enableDictionary,
         enableFurigana: state.enableFurigana,
+        enableSegmentation: state.enableSegmentation,
         enableTranslation: state.enableTranslation,
         enableKaraokeMode: state.enableKaraokeMode,
         targetLanguage: state.targetLanguage,
