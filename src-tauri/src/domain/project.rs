@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use specta::Type;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use crate::domain::stt_job::WordTiming;
 
@@ -80,6 +82,8 @@ pub struct ProjectState {
     pub fa_model: Option<String>,
     pub use_batch: bool,
     pub batch_size: i32,
+    #[serde(skip)]
+    pub cancel_token: Arc<AtomicBool>,
 }
 
 impl Default for ProjectState {
@@ -100,6 +104,7 @@ impl Default for ProjectState {
             fa_model: None,
             use_batch: false,
             batch_size: 1,
+            cancel_token: Arc::new(AtomicBool::new(false)),
         }
     }
 }
@@ -142,6 +147,7 @@ impl ProjectState {
             error_message: None,
         }).collect();
         self.tasks.sort_by_key(|t| t.task_type.order_index());
+        self.cancel_token.store(false, Ordering::SeqCst);
     }
     
     pub fn set_task_pending(&mut self, task_type: TaskType) {
@@ -218,6 +224,7 @@ impl ProjectState {
                 t.status = TaskStatus::Cancelled;
             }
         }
+        self.cancel_token.store(true, Ordering::SeqCst);
     }
 
     pub fn is_pipeline_running(&self) -> bool {

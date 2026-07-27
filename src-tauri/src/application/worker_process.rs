@@ -31,7 +31,16 @@ impl WorkerProcess {
         {
             let mut child_guard = self.child_process.lock().unwrap();
             if let Some(mut child) = child_guard.take() {
-                let _ = child.kill();
+                #[cfg(target_os = "windows")]
+                {
+                    let _ = std::process::Command::new("taskkill")
+                        .args(&["/F", "/T", "/PID", &child.id().to_string()])
+                        .output();
+                }
+                #[cfg(not(target_os = "windows"))]
+                {
+                    let _ = child.kill();
+                }
                 let _ = child.wait();
             }
             *self.stdin.lock().unwrap() = None;

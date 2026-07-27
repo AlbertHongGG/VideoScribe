@@ -1,7 +1,7 @@
 from typing import Dict, Any, Optional, List
 import torch
 from videoscribe.infrastructure.handlers.base import BaseHandler
-from videoscribe.domain.cancellation import CancellationToken
+from videoscribe.domain.cancellation import CancellationToken, CancelledException
 from videoscribe.domain.ipc_models import SttPayload
 from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
 from videoscribe.domain.models import TaskType, TaskStatus, VADResult, SpeechSegment
@@ -69,6 +69,8 @@ class SttHandler(BaseHandler):
                 reporter.report_task_progress(TaskType.STT, TaskStatus.COMPLETED, 100.0, language=info.language)
             else:
                 reporter.report_task_progress(TaskType.STT, TaskStatus.COMPLETED, 100.0)
+        except CancelledException as e:
+            reporter.report_task_progress(TaskType.STT, TaskStatus.CANCELLED)
         except Exception as e:
             reporter.report_error(str(e))
             reporter.report_task_progress(TaskType.STT, TaskStatus.ERROR, error_message=str(e))

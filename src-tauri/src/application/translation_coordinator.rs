@@ -3,6 +3,7 @@ use crate::infrastructure::agents::AgentFactory;
 use crate::domain::project::{ProjectState, TaskType};
 use crate::infrastructure::providers::AIProvider;
 use crate::domain::events::EventDispatcher;
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use serde_json::{json, Value};
 
@@ -27,6 +28,7 @@ impl TranslationCoordinator {
         
         let target_language = project.get_target_language().to_string();
         let results_clone = project.get_results_clone();
+        let cancel_token = project.cancel_token.clone();
         
         // We drop the lock here because the translation process will take a long time
         // and we want to be able to update progress along the way.
@@ -45,6 +47,11 @@ impl TranslationCoordinator {
             let mut all_translated_results = results_clone.clone();
 
             for (i, chunk) in chunks.iter().enumerate() {
+                if cancel_token.load(Ordering::SeqCst) {
+                    eprintln!("Translation cancelled by token");
+                    break;
+                }
+
                 let agent = match AgentFactory::create_agent(&AgentType::TranslatorAgent, provider.clone()) {
                     Ok(a) => a,
                     Err(e) => {

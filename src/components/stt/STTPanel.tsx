@@ -46,7 +46,8 @@ export const STTPanel: React.FC = () => {
 
   const isProcessing = tasks.some(t => t.status === "running" || t.status === "pending");
   const hasError = tasks.some(t => t.status === "error");
-  const isEmpty = tasks.length === 0 && results.length === 0;
+  const allTasksDead = tasks.length > 0 && tasks.every(t => t.status === "error" || t.status === "cancelled" || t.status === "outdated");
+  const isEmpty = (tasks.length === 0 || allTasksDead) && results.length === 0;
 
   const renderContent = () => {
     if (hasError) {

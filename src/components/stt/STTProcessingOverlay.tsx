@@ -1,7 +1,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PipelineTask } from "../../types/bindings";
-import { CheckCircle, CircleDashed, Loader2, XCircle } from "lucide-react";
+import { PipelineTask, commands } from "../../types/bindings";
+import { CheckCircle, CircleDashed, Loader2, XCircle, StopCircle } from "lucide-react";
 import { ThinkingOrb } from "thinking-orbs";
 
 interface Props {
@@ -130,6 +130,22 @@ export const STTProcessingOverlay: React.FC<Props> = ({ tasks }) => {
             })}
           </AnimatePresence>
         </div>
+
+        {/* Cancel Button */}
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="mt-8 flex justify-center"
+        >
+          <button
+            onClick={() => commands.cancelPipeline()}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-white/5 hover:bg-red-500/10 border border-white/5 hover:border-red-500/20 text-white/50 hover:text-red-400 transition-all duration-300"
+          >
+            <StopCircle size={18} />
+            <span className="text-sm font-medium">Cancel Process</span>
+          </button>
+        </motion.div>
       </div>
     </div>
   );

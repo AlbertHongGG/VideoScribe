@@ -86,10 +86,16 @@ pub fn trigger_pipeline(
 #[tauri::command]
 #[specta::specta]
 pub fn cancel_pipeline(
-    job_id: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
     client: State<'_, Arc<PythonWorkerClient>>
 ) -> Result<(), String> {
-    client.cancel_job(job_id)
+    if let Ok(mut proj) = state.project.lock() {
+        proj.cancel_pipeline();
+    }
+    let _ = client.cancel_job("".to_string());
+    let _ = app.emit("app-state-changed", Value::Null);
+    Ok(())
 }
 
 #[tauri::command]
