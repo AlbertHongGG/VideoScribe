@@ -1,8 +1,9 @@
 import React from "react";
 import { useSTTJobStore } from "../../store/sttJobStore";
+import { invoke } from "@tauri-apps/api/core";
 
 export const STTErrorState: React.FC = () => {
-  const { tasks, reset } = useSTTJobStore();
+  const { tasks } = useSTTJobStore();
   const errorTask = tasks.find(t => t.status === "error");
   const errorMessage = errorTask?.error_message || "An unknown error occurred during STT processing.";
 
@@ -17,7 +18,9 @@ export const STTErrorState: React.FC = () => {
       </p>
       
       <button 
-        onClick={() => reset()}
+        onClick={() => {
+          invoke("dismiss_pipeline_error").catch(console.error);
+        }}
         className="px-8 py-2.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors border border-white/10 text-xs font-bold tracking-widest text-white uppercase"
       >
         Dismiss
