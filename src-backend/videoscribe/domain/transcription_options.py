@@ -36,5 +36,4 @@ class TranscriptionOptions:
     mss_model: str = "model_mel_band_roformer_ep_3005_sdr_11.4360.ckpt"
     fa_engine: ForcedAlignmentEngineType = ForcedAlignmentEngineType.OFF
     fa_model: str = "mms-300m"
-    initial_prompt: Optional[str] = None
     cue_policy: CuePolicy = field(default_factory=CuePolicy)

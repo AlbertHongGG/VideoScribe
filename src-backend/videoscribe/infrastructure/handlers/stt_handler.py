@@ -6,7 +6,6 @@ from videoscribe.domain.ipc_models import SttPayload
 from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
 from videoscribe.domain.models import TaskType, TaskStatus, VADResult, SpeechSegment
 from videoscribe.domain.transcription_options import TranscriptionOptions
-from videoscribe.domain.prompt_registry import PromptRegistry
 from videoscribe.infrastructure.recognizers.faster_whisper_engine import FasterWhisperEngine
 
 class SttHandler(BaseHandler):
@@ -34,8 +33,7 @@ class SttHandler(BaseHandler):
                 compute_type=compute_type,
                 language=payload.language,
                 use_batch=payload.use_batch and is_gpu,
-                batch_size=payload.batch_size,
-                initial_prompt=PromptRegistry.get_prompt(payload.language)
+                batch_size=payload.batch_size
             )
             
             vad_result_obj = None
