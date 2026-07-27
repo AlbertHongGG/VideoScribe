@@ -9,18 +9,19 @@ use serde_json::{json, Value};
 pub struct TranslationCoordinator;
 
 impl TranslationCoordinator {
-    pub fn start_translation(
+    pub fn start_translation<F>(
         project_mutex: Arc<Mutex<ProjectState>>,
         provider: Arc<dyn AIProvider>,
         chunk_size: usize,
-        dispatcher: Arc<dyn EventDispatcher>
-    ) -> Result<(), String> {
+        dispatcher: Arc<dyn EventDispatcher>,
+        on_complete: F,
+    ) -> Result<(), String>
+    where F: FnOnce() + Send + 'static {
         let mut project = project_mutex.lock().map_err(|e| e.to_string())?;
         if project.is_results_empty() {
             return Err("No STT results to translate".into());
         }
         
-        project.ensure_task_exists(TaskType::Translation);
         project.update_task_progress(TaskType::Translation, 0.0);
         let _ = dispatcher.emit("app-state-changed", Value::Null);
         
@@ -90,6 +91,9 @@ impl TranslationCoordinator {
                         }
                         let _ = dispatcher.emit("error", json!({"message": format!("Translation failed: {}", e)}));
                         let _ = dispatcher.emit("app-state-changed", Value::Null);
+                        
+                        // Advance pipeline even on failure to process cancellation if needed
+                        on_complete();
                         return; // Abort the async loop entirely!
                     }
                 }
@@ -115,6 +119,8 @@ impl TranslationCoordinator {
                 proj.complete_task(TaskType::Translation);
             }
             let _ = dispatcher.emit("app-state-changed", Value::Null);
+            
+            on_complete();
         });
         
         Ok(())

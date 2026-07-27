@@ -6,7 +6,7 @@ export type ProjectState = { video_path: string | null, tasks: Array<PipelineTas
 
 export type STTResult = { start: number, end: number, text: string, translation: string | null, words: Array<WordTiming> | null, };
 
-export type TaskStatus = "pending" | "running" | "completed" | "error" | "cancelled";
+export type TaskStatus = "pending" | "running" | "completed" | "error" | "cancelled" | "outdated";
 
 export type TaskType = "mss" | "vad" | "stt" | "forced_alignment" | "translation" | "segmentation";
 

@@ -1,10 +1,10 @@
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, State, Emitter};
 use serde_json::Value;
 use std::sync::Arc;
 use crate::infrastructure::state::AppState;
 use crate::infrastructure::agents::AgentFactory;
 use crate::infrastructure::tauri_events::TauriEventDispatcher;
-use crate::application::translation_coordinator::TranslationCoordinator;
+use tauri::Manager;
 use crate::domain::agent::AgentType;
 
 #[tauri::command]
@@ -29,11 +29,15 @@ pub async fn run_agent_task(
 #[tauri::command]
 #[specta::specta]
 pub fn start_translation(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    let dispatcher = Arc::new(TauriEventDispatcher::new(app));
-    TranslationCoordinator::start_translation(
-        state.project.clone(),
-        state.translator_provider.clone(),
-        state.config.translator_batch_size,
-        dispatcher
-    )
+    if let Ok(mut proj) = state.project.lock() {
+        if proj.is_pipeline_running() {
+            return Err("A pipeline job is already running".to_string());
+        }
+        proj.set_task_pending(crate::domain::project::TaskType::Translation);
+    }
+    
+    let _ = app.emit("app-state-changed", Value::Null);
+    
+    crate::application::pipeline_engine::PipelineEngine::advance_pipeline(app);
+    Ok(())
 }

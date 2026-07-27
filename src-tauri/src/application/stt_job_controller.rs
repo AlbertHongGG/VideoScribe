@@ -64,38 +64,9 @@ impl SttJobController {
                                 "completed" => {
                                     proj.complete_task(tt.clone());
                                     
-                                    // STT completed, check pipeline flow
+                                    // STT completed, advance pipeline
                                     if tt == TaskType::Stt {
-                                        let needs_segmentation = proj.tasks.iter().any(|t| t.task_type == TaskType::Segmentation && t.status == TaskStatus::Pending);
-                                        let needs_translation = proj.tasks.iter().any(|t| t.task_type == TaskType::Translation && t.status == TaskStatus::Pending);
-                                        
-                                        if needs_segmentation {
-                                            let dispatcher = Arc::new(crate::infrastructure::tauri_events::TauriEventDispatcher::new(app.clone()));
-                                            let segmenter_provider = state.segmenter_provider.clone();
-                                            let translator_provider = state.translator_provider.clone();
-                                            let segmenter_chunk = state.config.segmenter_batch_size;
-                                            let translator_chunk = state.config.translator_batch_size;
-                                            let project_mutex = state.project.clone();
-                                            tauri::async_runtime::spawn(async move {
-                                                if let Err(e) = crate::application::segmentation_coordinator::SegmentationCoordinator::start_segmentation(
-                                                    project_mutex, segmenter_provider, translator_provider, segmenter_chunk, translator_chunk, dispatcher
-                                                ) {
-                                                    eprintln!("Failed to auto-start segmentation: {}", e);
-                                                }
-                                            });
-                                        } else if needs_translation {
-                                            let dispatcher = Arc::new(crate::infrastructure::tauri_events::TauriEventDispatcher::new(app.clone()));
-                                            let provider = state.translator_provider.clone();
-                                            let translator_chunk = state.config.translator_batch_size;
-                                            let project_mutex = state.project.clone();
-                                            tauri::async_runtime::spawn(async move {
-                                                if let Err(e) = crate::application::translation_coordinator::TranslationCoordinator::start_translation(
-                                                    project_mutex, provider, translator_chunk, dispatcher
-                                                ) {
-                                                    eprintln!("Failed to auto-start translation: {}", e);
-                                                }
-                                            });
-                                        }
+                                        crate::application::pipeline_engine::PipelineEngine::advance_pipeline(app.clone());
                                     }
                                 },
                                 "error" | "failed" => proj.fail_task(tt, data.error_message.clone().unwrap_or_else(|| "Unknown error".to_string())),
@@ -238,6 +209,8 @@ impl SttJobController {
             // Don't emit state change immediately if we emit later, but good practice
             let _ = self.app.emit("app-state-changed", Value::Null);
         }
+        
+        crate::application::pipeline_engine::PipelineEngine::advance_pipeline(self.app.clone());
 
         let new_job = SttJobContext::new();
         let job_id = new_job.job_id.clone();

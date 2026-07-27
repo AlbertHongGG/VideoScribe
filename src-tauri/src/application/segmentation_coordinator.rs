@@ -10,20 +10,19 @@ use serde_json::{json, Value};
 pub struct SegmentationCoordinator;
 
 impl SegmentationCoordinator {
-    pub fn start_segmentation(
+    pub fn start_segmentation<F>(
         project_mutex: Arc<Mutex<ProjectState>>,
         segmenter_provider: Arc<dyn AIProvider>,
-        translator_provider: Arc<dyn AIProvider>,
         segmenter_chunk_size: usize,
-        translator_chunk_size: usize,
-        dispatcher: Arc<dyn EventDispatcher>
-    ) -> Result<(), String> {
+        dispatcher: Arc<dyn EventDispatcher>,
+        on_complete: F,
+    ) -> Result<(), String> 
+    where F: FnOnce() + Send + 'static {
         let mut project = project_mutex.lock().map_err(|e| e.to_string())?;
         if project.is_results_empty() {
             return Err("No STT results to segment".into());
         }
         
-        project.ensure_task_exists(TaskType::Segmentation);
         project.update_task_progress(TaskType::Segmentation, 0.0);
         let _ = dispatcher.emit("app-state-changed", Value::Null);
         
@@ -106,6 +105,9 @@ impl SegmentationCoordinator {
                         }
                         let _ = dispatcher.emit("error", json!({"message": format!("Segmentation failed: {}", e)}));
                         let _ = dispatcher.emit("app-state-changed", Value::Null);
+                        
+                        // Call on_complete even on failure to process cancellation if needed
+                        on_complete();
                         return;
                     }
                 }
@@ -127,22 +129,10 @@ impl SegmentationCoordinator {
             if let Ok(mut proj) = project_mutex.lock() {
                 proj.results = final_results;
                 proj.complete_task(TaskType::Segmentation);
-                
-                let needs_translation = proj.tasks.iter().any(|t| t.task_type == TaskType::Translation && t.status == TaskStatus::Pending);
-                if needs_translation {
-                    let dispatcher_clone = dispatcher.clone();
-                    let provider_clone = translator_provider.clone();
-                    let project_mutex_clone = project_mutex.clone();
-                    tauri::async_runtime::spawn(async move {
-                        if let Err(e) = crate::application::translation_coordinator::TranslationCoordinator::start_translation(
-                            project_mutex_clone, provider_clone, translator_chunk_size, dispatcher_clone
-                        ) {
-                            eprintln!("Failed to auto-start translation after segmentation: {}", e);
-                        }
-                    });
-                }
             }
             let _ = dispatcher.emit("app-state-changed", Value::Null);
+            
+            on_complete();
         });
         
         Ok(())

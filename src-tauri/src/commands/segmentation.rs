@@ -1,20 +1,20 @@
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, State, Manager, Emitter};
 use std::sync::Arc;
 use crate::infrastructure::state::AppState;
-use crate::infrastructure::tauri_events::TauriEventDispatcher;
-use crate::application::segmentation_coordinator::SegmentationCoordinator;
+use serde_json::Value;
 
 #[tauri::command]
 #[specta::specta]
 pub fn start_segmentation(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    let dispatcher = Arc::new(TauriEventDispatcher::new(app));
-    // Reusing translator_provider since segmenter is an LLM agent too, or a specific one if configured
-    SegmentationCoordinator::start_segmentation(
-        state.project.clone(),
-        state.segmenter_provider.clone(),
-        state.translator_provider.clone(),
-        state.config.segmenter_batch_size,
-        state.config.translator_batch_size,
-        dispatcher
-    )
+    if let Ok(mut proj) = state.project.lock() {
+        if proj.is_pipeline_running() {
+            return Err("A pipeline job is already running".to_string());
+        }
+        proj.set_task_pending(crate::domain::project::TaskType::Segmentation);
+    }
+    
+    let _ = app.emit("app-state-changed", Value::Null);
+    
+    crate::application::pipeline_engine::PipelineEngine::advance_pipeline(app);
+    Ok(())
 }

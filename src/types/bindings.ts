@@ -78,7 +78,7 @@ export type StartSttJobArgs = {
 	enableTranslation: boolean,
 };
 
-export type TaskStatus = "pending" | "running" | "completed" | "error" | "cancelled";
+export type TaskStatus = "pending" | "running" | "completed" | "error" | "cancelled" | "outdated";
 
 export type TaskType = "mss" | "vad" | "stt" | "forced_alignment" | "translation" | "segmentation";
 

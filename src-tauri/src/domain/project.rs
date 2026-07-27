@@ -26,6 +26,19 @@ pub enum TaskType {
     Segmentation,
 }
 
+impl TaskType {
+    pub fn order_index(&self) -> usize {
+        match self {
+            TaskType::Mss => 0,
+            TaskType::Vad => 1,
+            TaskType::Stt => 2,
+            TaskType::ForcedAlignment => 3,
+            TaskType::Segmentation => 4,
+            TaskType::Translation => 5,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, TS, Type, PartialEq)]
 #[ts(export, export_to = "../../src/types/app_types.ts")]
 #[serde(rename_all = "snake_case")]
@@ -35,6 +48,7 @@ pub enum TaskStatus {
     Completed,
     Error,
     Cancelled,
+    Outdated,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, TS, Type)]
@@ -107,19 +121,37 @@ impl ProjectState {
             progress: 0.0,
             error_message: None,
         }).collect();
+        self.tasks.sort_by_key(|t| t.task_type.order_index());
     }
     
-    pub fn ensure_task_exists(&mut self, task_type: TaskType) {
+    pub fn set_task_pending(&mut self, task_type: TaskType) {
         if !self.tasks.iter().any(|t| t.task_type == task_type) {
             self.tasks.push(PipelineTask {
-                task_type,
+                task_type: task_type.clone(),
                 status: TaskStatus::Pending,
                 progress: 0.0,
                 error_message: None,
             });
+        } else {
+            if let Some(t) = self.get_task_mut(&task_type) {
+                t.status = TaskStatus::Pending;
+                t.progress = 0.0;
+                t.error_message = None;
+            }
+        }
+        
+        self.tasks.sort_by_key(|t| t.task_type.order_index());
+        
+        let triggered_index = task_type.order_index();
+        for t in self.tasks.iter_mut() {
+            if t.task_type.order_index() > triggered_index {
+                if t.status == TaskStatus::Completed || t.status == TaskStatus::Error || t.status == TaskStatus::Cancelled {
+                    t.status = TaskStatus::Outdated;
+                }
+            }
         }
     }
-
+    
     pub fn get_task_mut(&mut self, task_type: &TaskType) -> Option<&mut PipelineTask> {
         self.tasks.iter_mut().find(|t| t.task_type == *task_type)
     }
