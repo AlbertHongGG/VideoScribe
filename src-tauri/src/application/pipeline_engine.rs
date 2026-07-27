@@ -35,10 +35,25 @@ impl PipelineEngine {
 
         if let Some(next_task) = next_task {
             match next_task {
+                TaskType::Preprocess => {
+                    if let Some(client) = app.try_state::<Arc<PythonWorkerClient>>() {
+                        let video_path = project_clone.video_path.clone().unwrap_or_default();
+                        let workspace_dir = std::path::Path::new(&video_path)
+                            .parent()
+                            .map(|p| p.to_string_lossy().to_string())
+                            .unwrap_or_default();
+                            
+                        let payload = crate::domain::ipc_models::PreprocessPayload {
+                            video_path,
+                            workspace_dir,
+                        };
+                        let _ = client.send_run_preprocess(uuid::Uuid::new_v4().to_string(), payload);
+                    }
+                }
                 TaskType::Mss => {
                     if let Some(client) = app.try_state::<Arc<PythonWorkerClient>>() {
                         let payload = MssPayload {
-                            audio_path: project_clone.video_path.clone().unwrap_or_default(),
+                            audio_path: project_clone.extracted_audio_path.clone().or(project_clone.video_path.clone()).unwrap_or_default(),
                             mss_engine: project_clone.mss_engine.clone().unwrap_or_default(),
                             mss_model: project_clone.mss_model.clone().unwrap_or_default(),
                         };
@@ -48,7 +63,7 @@ impl PipelineEngine {
                 TaskType::Vad => {
                     if let Some(client) = app.try_state::<Arc<PythonWorkerClient>>() {
                         let payload = VadPayload {
-                            audio_path: project_clone.vocals_audio_path.clone().or(project_clone.video_path.clone()).unwrap_or_default(),
+                            audio_path: project_clone.vocals_audio_path.clone().or(project_clone.extracted_audio_path.clone()).or(project_clone.video_path.clone()).unwrap_or_default(),
                             vad_engine: project_clone.vad_engine.clone().unwrap_or_default(),
                         };
                         let _ = client.send_run_vad(uuid::Uuid::new_v4().to_string(), payload);
@@ -57,7 +72,7 @@ impl PipelineEngine {
                 TaskType::Stt => {
                     if let Some(client) = app.try_state::<Arc<PythonWorkerClient>>() {
                         let payload = SttPayload {
-                            audio_path: project_clone.vocals_audio_path.clone().or(project_clone.video_path.clone()).unwrap_or_default(),
+                            audio_path: project_clone.vocals_audio_path.clone().or(project_clone.extracted_audio_path.clone()).or(project_clone.video_path.clone()).unwrap_or_default(),
                             model: project_clone.stt_model_size.clone().unwrap_or_default(),
                             language: project_clone.target_language.clone(),
                             use_batch: project_clone.use_batch,
@@ -70,7 +85,7 @@ impl PipelineEngine {
                 TaskType::ForcedAlignment => {
                     if let Some(client) = app.try_state::<Arc<PythonWorkerClient>>() {
                         let payload = FaPayload {
-                            audio_path: project_clone.vocals_audio_path.clone().or(project_clone.video_path.clone()).unwrap_or_default(),
+                            audio_path: project_clone.vocals_audio_path.clone().or(project_clone.extracted_audio_path.clone()).or(project_clone.video_path.clone()).unwrap_or_default(),
                             fa_engine: project_clone.fa_engine.clone().unwrap_or_default(),
                             fa_model: project_clone.fa_model.clone().unwrap_or_default(),
                             transcripts: project_clone.results.clone(),

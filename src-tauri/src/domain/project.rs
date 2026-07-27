@@ -18,6 +18,7 @@ pub struct STTResult {
 #[ts(export, export_to = "../../src/types/app_types.ts")]
 #[serde(rename_all = "snake_case")]
 pub enum TaskType {
+    Preprocess,
     Mss,
     Vad,
     Stt,
@@ -29,12 +30,13 @@ pub enum TaskType {
 impl TaskType {
     pub fn order_index(&self) -> usize {
         match self {
-            TaskType::Mss => 0,
-            TaskType::Vad => 1,
-            TaskType::Stt => 2,
-            TaskType::ForcedAlignment => 3,
-            TaskType::Segmentation => 4,
-            TaskType::Translation => 5,
+            TaskType::Preprocess => 0,
+            TaskType::Mss => 1,
+            TaskType::Vad => 2,
+            TaskType::Stt => 3,
+            TaskType::ForcedAlignment => 4,
+            TaskType::Segmentation => 5,
+            TaskType::Translation => 6,
         }
     }
 }
@@ -64,6 +66,7 @@ pub struct PipelineTask {
 #[ts(export, export_to = "../../src/types/app_types.ts")]
 pub struct ProjectState {
     pub video_path: Option<String>,
+    pub extracted_audio_path: Option<String>,
     pub tasks: Vec<PipelineTask>,
     pub results: Vec<STTResult>,
     pub target_language: String,
@@ -83,6 +86,7 @@ impl Default for ProjectState {
     fn default() -> Self {
         Self {
             video_path: None,
+            extracted_audio_path: None,
             tasks: Vec::new(),
             results: Vec::new(),
             target_language: "zh-TW".to_string(),

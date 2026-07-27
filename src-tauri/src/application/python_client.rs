@@ -45,6 +45,7 @@ impl PythonWorkerClient {
         match &event.data {
             WorkerEventData::TaskProgress(data) => {
                 let task_type: Option<TaskType> = match data.task_type.as_str() {
+                    "preprocess" => Some(TaskType::Preprocess),
                     "mss" => Some(TaskType::Mss),
                     "vad" => Some(TaskType::Vad),
                     "stt" => Some(TaskType::Stt),
@@ -64,6 +65,11 @@ impl PythonWorkerClient {
                         if let Some(tt) = task_type {
                             match data.status.as_str() {
                                 "completed" => {
+                                    if tt == TaskType::Preprocess {
+                                        if let Some(ref path) = data.vocals_path {
+                                            proj.extracted_audio_path = Some(path.clone());
+                                        }
+                                    }
                                     proj.complete_task(tt.clone());
                                     
                                     // Trigger pipeline engine to execute next step!

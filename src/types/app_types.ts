@@ -2,12 +2,12 @@
 
 export type PipelineTask = { task_type: TaskType, status: TaskStatus, progress: number, error_message: string | null, };
 
-export type ProjectState = { video_path: string | null, tasks: Array<PipelineTask>, results: Array<STTResult>, target_language: string, vocals_audio_path: string | null, background_audio_path: string | null, stt_model_size: string | null, vad_engine: string | null, mss_engine: string | null, mss_model: string | null, fa_engine: string | null, fa_model: string | null, use_batch: boolean, batch_size: number, };
+export type ProjectState = { video_path: string | null, extracted_audio_path: string | null, tasks: Array<PipelineTask>, results: Array<STTResult>, target_language: string, vocals_audio_path: string | null, background_audio_path: string | null, stt_model_size: string | null, vad_engine: string | null, mss_engine: string | null, mss_model: string | null, fa_engine: string | null, fa_model: string | null, use_batch: boolean, batch_size: number, };
 
 export type STTResult = { start: number, end: number, text: string, translation: string | null, words: Array<WordTiming> | null, };
 
 export type TaskStatus = "pending" | "running" | "completed" | "error" | "cancelled" | "outdated";
 
-export type TaskType = "mss" | "vad" | "stt" | "forced_alignment" | "translation" | "segmentation";
+export type TaskType = "preprocess" | "mss" | "vad" | "stt" | "forced_alignment" | "translation" | "segmentation";
 
 export type WordTiming = { text: string, start: number, end: number, probability: number, };

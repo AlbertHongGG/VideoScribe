@@ -22,8 +22,7 @@ if sys.platform == "win32":
 
 from videoscribe.domain.cancellation import CancellationToken
 from videoscribe.domain.ipc_models import IpcCommand
-from videoscribe.infrastructure.handlers import MssHandler, VadHandler, SttHandler, FaHandler
-from videoscribe.infrastructure.audio.ffmpeg_analyzer import FFmpegAudioAnalyzer
+from videoscribe.infrastructure.handlers import MssHandler, VadHandler, SttHandler, FaHandler, PreprocessHandler
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,6 +36,7 @@ class CommandRouter:
     def __init__(self):
         # Instantiate handlers once to allow caching (e.g., SttHandler caches Whisper model)
         self.handlers = {
+            "run_preprocess": PreprocessHandler(),
             "run_mss": MssHandler(),
             "run_vad": VadHandler(),
             "run_stt": SttHandler(),
@@ -57,21 +57,6 @@ class CommandRouter:
             
         job_id = cmd.job_id or "unknown"
         payload = cmd.payload or {}
-        
-        # Audio Preprocessing Interceptor
-        audio_path = payload.get("audio_path")
-        if audio_path and str(audio_path).lower().endswith(('.mp4', '.mov', '.mkv', '.avi', '.webm')):
-            workspace_dir = os.path.dirname(audio_path)
-            wav_path = os.path.join(workspace_dir, "extracted_audio.wav")
-            if not os.path.exists(wav_path):
-                logger.info(f"Extracting audio from video: {audio_path}")
-                try:
-                    wav_path = FFmpegAudioAnalyzer().extract_audio(audio_path, workspace_dir)
-                except Exception as e:
-                    logger.error(f"Failed to extract audio: {e}")
-                    # In case of failure, we'll just let it pass through and the handler will deal with it (or crash)
-            payload["audio_path"] = wav_path
-            
         self.current_cancel_token = CancellationToken()
         
         try:

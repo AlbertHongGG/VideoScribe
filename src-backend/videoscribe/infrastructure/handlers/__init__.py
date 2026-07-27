@@ -3,6 +3,7 @@ from .mss_handler import MssHandler
 from .vad_handler import VadHandler
 from .stt_handler import SttHandler
 from .fa_handler import FaHandler
+from .preprocess_handler import PreprocessHandler
 
 __all__ = [
     "BaseHandler",
@@ -10,4 +11,5 @@ __all__ = [
     "VadHandler",
     "SttHandler",
     "FaHandler",
+    "PreprocessHandler",
 ]

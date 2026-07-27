@@ -40,6 +40,18 @@ pub fn trigger_pipeline(
         }
         
         let mut tasks = Vec::new();
+        
+        // Explicit Audio Extraction Step for videos
+        let ext = std::path::Path::new(&args.video_path)
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        
+        if ["mp4", "mov", "mkv", "avi", "webm"].contains(&ext.as_str()) {
+            tasks.push(TaskType::Preprocess);
+        }
+        
         if args.mss_engine != "off" { tasks.push(TaskType::Mss); }
         if args.vad_engine != "off" { tasks.push(TaskType::Vad); }
         tasks.push(TaskType::Stt);
