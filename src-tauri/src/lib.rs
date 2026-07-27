@@ -22,8 +22,8 @@ pub fn run() {
                 }
             }
             
-            let stt_manager = application::stt_job_controller::SttJobController::new(app.handle().clone());
-            app.manage(stt_manager);
+            let python_client = application::python_client::PythonWorkerClient::new(app.handle().clone());
+            app.manage(python_client);
             Ok(())
         })
         .plugin(tauri_plugin_shell::init())

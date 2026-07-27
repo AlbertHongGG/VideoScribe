@@ -2,25 +2,64 @@ use serde::{Deserialize, Serialize};
 use crate::domain::stt_job::SttCue;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StartPayload {
+pub struct PreprocessPayload {
     pub video_path: String,
-    pub model: String,
-    pub language: String,
-    pub vad_engine: String,
+    pub workspace_dir: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MssPayload {
+    pub audio_path: String,
     pub mss_engine: String,
     pub mss_model: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VadPayload {
+    pub audio_path: String,
+    pub vad_engine: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SttPayload {
+    pub audio_path: String,
+    pub model: String,
+    pub language: String,
+    pub use_batch: bool,
+    pub batch_size: i32,
+    pub vad_segments: Option<Vec<crate::domain::stt_job::SttCue>>, // Optional depending on if we pass via file or IPC
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FaPayload {
+    pub audio_path: String,
     pub fa_engine: String,
     pub fa_model: String,
-    pub use_batch: bool,
-    pub batch_size: u32,
+    pub transcripts: Vec<crate::domain::project::STTResult>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "action", rename_all = "snake_case")]
 pub enum WorkerCommand {
-    Start {
+    RunPreprocess {
         job_id: String,
-        payload: StartPayload,
+        payload: PreprocessPayload,
+    },
+    RunMss {
+        job_id: String,
+        payload: MssPayload,
+    },
+    RunVad {
+        job_id: String,
+        payload: VadPayload,
+    },
+    RunStt {
+        job_id: String,
+        payload: SttPayload,
+    },
+    RunFa {
+        job_id: String,
+        payload: FaPayload,
     },
     Cancel {
         job_id: String,

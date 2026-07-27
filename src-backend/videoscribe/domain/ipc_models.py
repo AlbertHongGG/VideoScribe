@@ -3,17 +3,36 @@ from typing import Optional, Dict, Any, List
 from videoscribe.domain.models import TaskType, TaskStatus
 
 @dataclass
-class StartPayload:
+class PreprocessPayload:
     video_path: str
-    model: str = "medium"
-    language: str = "auto"
-    vad_engine: str = "native"
-    mss_engine: str = "off"
-    mss_model: str = "model_mel_band_roformer_ep_3005_sdr_11.4360.ckpt"
-    fa_engine: str = "off"
-    fa_model: str = "mms-300m"
-    use_batch: bool = True
-    batch_size: int = 16
+    workspace_dir: str
+
+@dataclass
+class MssPayload:
+    audio_path: str
+    mss_engine: str
+    mss_model: str
+
+@dataclass
+class VadPayload:
+    audio_path: str
+    vad_engine: str
+
+@dataclass
+class SttPayload:
+    audio_path: str
+    model: str
+    language: str
+    use_batch: bool
+    batch_size: int
+    vad_segments: Optional[List[Dict[str, Any]]] = None
+
+@dataclass
+class FaPayload:
+    audio_path: str
+    fa_engine: str
+    fa_model: str
+    transcripts: List[Dict[str, Any]]
 
 @dataclass
 class IpcCommand:

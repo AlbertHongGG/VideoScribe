@@ -23,3 +23,22 @@ class FFmpegAudioAnalyzer(AudioAnalyzer):
             return float(result.stdout.strip())
         except ValueError:
             return 0.0
+
+    def extract_audio(self, video_path: str, output_dir: str) -> str:
+        import os
+        os.makedirs(output_dir, exist_ok=True)
+        out_path = os.path.join(output_dir, "extracted_audio.wav")
+        command = [
+            "ffmpeg", "-y",
+            "-i", video_path,
+            "-vn",
+            "-acodec", "pcm_s16le",
+            "-ar", "16000",
+            "-ac", "1",
+            out_path
+        ]
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
+        if result.returncode != 0:
+            logger.error(f"Failed to extract audio: {result.stderr}")
+            raise RuntimeError(f"FFmpeg audio extraction failed: {result.stderr}")
+        return out_path

@@ -5,15 +5,12 @@ import logging
 import threading
 import queue
 from typing import Dict, Any, Optional
-import torch
 
 # Force UTF-8 for IPC communication on Windows
 if sys.platform == "win32":
     sys.stdin.reconfigure(encoding="utf-8")
     sys.stdout.reconfigure(encoding="utf-8")
     
-    # Add CUDA 12 DLL paths for ctranslate2 (used by faster-whisper)
-    # PyTorch cu130 does not provide CUDA 12 DLLs, so we must add the ones from nvidia-*-cu12
     import site
     import glob
     for site_pkg in site.getsitepackages():
@@ -21,44 +18,71 @@ if sys.platform == "win32":
         for bin_dir in nvidia_bins:
             if os.path.exists(bin_dir):
                 os.add_dll_directory(bin_dir)
-                # Also append to PATH because ctranslate2's C++ core might use standard LoadLibrary
                 os.environ["PATH"] = bin_dir + os.pathsep + os.environ.get("PATH", "")
 
-from videoscribe.infrastructure.recognizers.faster_whisper_engine import FasterWhisperEngine
-from videoscribe.application.pipeline import TranscriptionPipeline, PipelineContext
-from videoscribe.application.transcription_job import PreprocessingStep, MssStep, VadStep, SttStep, ForcedAlignmentStep
-from videoscribe.infrastructure.audio.ffmpeg_analyzer import FFmpegAudioAnalyzer
-from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
 from videoscribe.domain.cancellation import CancellationToken
-from videoscribe.domain.ipc_models import IpcCommand, StartPayload
-from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType, MSSEngineType, ForcedAlignmentEngineType
-from videoscribe.domain.models import TaskType, TaskStatus
-from videoscribe.infrastructure.audio.mss.factory import MSSFactory
-from videoscribe.infrastructure.audio.vad.factory import VADFactory
-from videoscribe.infrastructure.audio.alignment.factory import ForcedAlignmentFactory
-from videoscribe.domain.prompt_registry import PromptRegistry
+from videoscribe.domain.ipc_models import IpcCommand
+from videoscribe.infrastructure.handlers import MssHandler, VadHandler, SttHandler, FaHandler
+from videoscribe.infrastructure.audio.ffmpeg_analyzer import FFmpegAudioAnalyzer
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(name)s - %(message)s',
-    handlers=[logging.StreamHandler(sys.stderr)] # Log to stderr, stdout is reserved for NDJSON
+    handlers=[logging.StreamHandler(sys.stderr)]
 )
 
 logger = logging.getLogger("worker")
 
 class CommandRouter:
     def __init__(self):
-        self.analyzer = FFmpegAudioAnalyzer()
-        self.recognizer = FasterWhisperEngine()
+        # Instantiate handlers once to allow caching (e.g., SttHandler caches Whisper model)
+        self.handlers = {
+            "run_mss": MssHandler(),
+            "run_vad": VadHandler(),
+            "run_stt": SttHandler(),
+            "run_fa": FaHandler(),
+        }
         self.current_cancel_token: Optional[CancellationToken] = None
+        self.vad_segments_cache = None
 
     def route(self, cmd: IpcCommand):
-        if cmd.action == "start":
-            self.handle_start(cmd.job_id or "unknown", cmd.payload or {})
-        elif cmd.action == "cancel":
+        if cmd.action == "cancel":
             self.handle_cancel()
-        else:
+            return
+            
+        handler = self.handlers.get(cmd.action)
+        if not handler:
             logger.warning(f"Unknown command action: {cmd.action}")
+            return
+            
+        job_id = cmd.job_id or "unknown"
+        payload = cmd.payload or {}
+        
+        # Audio Preprocessing Interceptor
+        audio_path = payload.get("audio_path")
+        if audio_path and str(audio_path).lower().endswith(('.mp4', '.mov', '.mkv', '.avi', '.webm')):
+            workspace_dir = os.path.dirname(audio_path)
+            wav_path = os.path.join(workspace_dir, "extracted_audio.wav")
+            if not os.path.exists(wav_path):
+                logger.info(f"Extracting audio from video: {audio_path}")
+                try:
+                    wav_path = FFmpegAudioAnalyzer().extract_audio(audio_path, workspace_dir)
+                except Exception as e:
+                    logger.error(f"Failed to extract audio: {e}")
+                    # In case of failure, we'll just let it pass through and the handler will deal with it (or crash)
+            payload["audio_path"] = wav_path
+            
+        self.current_cancel_token = CancellationToken()
+        
+        try:
+            if cmd.action == "run_stt":
+                handler.handle(job_id, payload, self.current_cancel_token, self.vad_segments_cache)
+            elif cmd.action == "run_vad":
+                self.vad_segments_cache = handler.handle(job_id, payload, self.current_cancel_token)
+            else:
+                handler.handle(job_id, payload, self.current_cancel_token)
+        finally:
+            self.current_cancel_token = None
 
     def handle_cancel(self):
         if self.current_cancel_token:
@@ -67,94 +91,6 @@ class CommandRouter:
         else:
             logger.info("No active job to cancel.")
 
-    def handle_start(self, job_id: str, payload_data: Dict[str, Any]):
-        try:
-            payload = StartPayload(**payload_data)
-        except TypeError as e:
-            reporter = IpcReporter(job_id)
-            reporter.report_error(f"Invalid payload: {e}")
-            return
-            
-        reporter = IpcReporter(job_id)
-        
-        if not payload.video_path:
-            reporter.report_error("video_path is required")
-            return
-
-        # Orchestrator Decisions: Auto-detect optimal device and compute_type
-        is_gpu = torch.cuda.is_available()
-        device = "cuda" if is_gpu else "cpu"
-        
-        # FasterWhisper CPU recommends int8. GPU must use float16 for large-v3 accuracy.
-        # int8_float16 severely degrades large-v3 performance causing dropped words/sentences.
-        compute_type = "float16" if is_gpu else "int8"
-        
-        # Orchestrator Decisions: Batching
-        use_batch = payload.use_batch and is_gpu
-        
-        # Initial pending state for STT is no longer necessary as pipeline sends RUNNING automatically.
-        # But we can send pending for all requested tasks before starting to populate UI properly!
-        reporter.report_task_progress(TaskType.STT, TaskStatus.PENDING, 0.0, runtime_device=device, runtime_compute_type=compute_type, language=payload.language)
-        
-        vad_engine_enum = VADEngineType(payload.vad_engine) if payload.vad_engine in ["off", "native", "silero", "silero_v6", "firered_vad"] else VADEngineType.OFF
-        mss_engine_enum = MSSEngineType(payload.mss_engine) if payload.mss_engine in ["off", "audio_separator"] else MSSEngineType.OFF
-        fa_engine_enum = ForcedAlignmentEngineType(payload.fa_engine) if payload.fa_engine in ["off", "ctc_forced_aligner"] else ForcedAlignmentEngineType.OFF
-
-        options = TranscriptionOptions(
-            model_size=payload.model,
-            device=device,
-            compute_type=compute_type,
-            language=payload.language,
-            vad_engine=vad_engine_enum,
-            mss_engine=mss_engine_enum,
-            mss_model=payload.mss_model,
-            fa_engine=fa_engine_enum,
-            fa_model=payload.fa_model,
-            use_batch=use_batch,
-            batch_size=payload.batch_size,
-            initial_prompt=PromptRegistry.get_prompt(payload.language)
-        )
-        
-        self.current_cancel_token = CancellationToken()
-        
-        # Construct Pipeline
-        context = PipelineContext(
-            audio_path=payload.video_path,
-            options=options,
-            reporter=reporter,
-            cancel_token=self.current_cancel_token,
-            mss_analyzer=MSSFactory.create(options) if mss_engine_enum != MSSEngineType.OFF else None,
-            vad_analyzer=VADFactory.create(options) if vad_engine_enum not in [VADEngineType.OFF, VADEngineType.NATIVE] else None,
-            stt_recognizer=self.recognizer,
-            fa_analyzer=ForcedAlignmentFactory.create(options) if fa_engine_enum != ForcedAlignmentEngineType.OFF else None
-        )
-        
-        pipeline = TranscriptionPipeline(context)
-        
-        # Mandatory Preprocessing Step (Extracts audio to clean WAV workspace)
-        pipeline.add_step(PreprocessingStep())
-        reporter.report_task_progress(TaskType.PREPROCESSING, TaskStatus.PENDING, 0.0)
-        
-        if mss_engine_enum != MSSEngineType.OFF:
-            pipeline.add_step(MssStep())
-            reporter.report_task_progress(TaskType.MSS, TaskStatus.PENDING, 0.0)
-            
-        if vad_engine_enum not in [VADEngineType.OFF, VADEngineType.NATIVE]:
-            pipeline.add_step(VadStep())
-            reporter.report_task_progress(TaskType.VAD, TaskStatus.PENDING, 0.0)
-            
-        pipeline.add_step(SttStep())
-        
-        if fa_engine_enum != ForcedAlignmentEngineType.OFF:
-            pipeline.add_step(ForcedAlignmentStep())
-            reporter.report_task_progress(TaskType.FORCED_ALIGNMENT, TaskStatus.PENDING, 0.0)
-        
-        try:
-            pipeline.execute()
-        except Exception as e:
-            reporter.report_error(str(e))
-        finally:
-            self.current_cancel_token = None
 
 class SttDaemon:
     def __init__(self):
@@ -172,7 +108,6 @@ class SttDaemon:
                 cmd = IpcCommand.from_dict(data)
                 
                 if cmd.action == "cancel":
-                    # Fast-path for cancel: process immediately in listener thread
                     logger.info("Cancel command received in listener thread.")
                     self.router.handle_cancel()
                 else:

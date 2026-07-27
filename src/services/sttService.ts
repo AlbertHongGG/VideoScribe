@@ -13,7 +13,7 @@ export class STTService {
     notifyStore.show("Starting Speech-to-Text process...", "info");
 
     try {
-      await invoke("start_stt_job", { 
+      await invoke("trigger_pipeline", { 
         args: {
           videoPath, 
           modelSize, 

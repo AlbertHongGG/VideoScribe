@@ -1,0 +1,89 @@
+use tauri::{AppHandle, State, Manager, Emitter};
+use std::sync::Arc;
+use serde_json::Value;
+
+use crate::application::python_client::PythonWorkerClient;
+use crate::domain::project::{STTResult, TaskType};
+use crate::infrastructure::state::AppState;
+use crate::application::pipeline_engine::PipelineEngine;
+
+use serde::{Deserialize, Serialize};
+use specta::Type;
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct PipelineConfig {
+    pub video_path: String,
+    pub model_size: String,
+    pub language: String,
+    pub vad_engine: String,
+    pub mss_engine: String,
+    pub mss_model: String,
+    pub fa_engine: String,
+    pub fa_model: String,
+    pub use_batch: bool,
+    pub batch_size: i32,
+    pub enable_segmentation: bool,
+    pub enable_translation: bool,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn trigger_pipeline(
+    args: PipelineConfig,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    if let Ok(mut proj) = state.project.lock() {
+        if proj.is_pipeline_running() {
+            return Err("A job is already running".to_string());
+        }
+        
+        let mut tasks = Vec::new();
+        if args.mss_engine != "off" { tasks.push(TaskType::Mss); }
+        if args.vad_engine != "off" { tasks.push(TaskType::Vad); }
+        tasks.push(TaskType::Stt);
+        if args.fa_engine != "off" { tasks.push(TaskType::ForcedAlignment); }
+        if args.enable_segmentation { tasks.push(TaskType::Segmentation); }
+        if args.enable_translation { tasks.push(TaskType::Translation); }
+        
+        proj.init_pipeline(tasks);
+        
+        // Save args to project state so pipeline engine can use them
+        proj.target_language = args.language.clone();
+        proj.video_path = Some(args.video_path.clone());
+        proj.stt_model_size = Some(args.model_size.clone());
+        proj.vad_engine = Some(args.vad_engine.clone());
+        proj.mss_engine = Some(args.mss_engine.clone());
+        proj.mss_model = Some(args.mss_model.clone());
+        proj.fa_engine = Some(args.fa_engine.clone());
+        proj.fa_model = Some(args.fa_model.clone());
+        proj.use_batch = args.use_batch;
+        proj.batch_size = args.batch_size;
+    }
+    
+    let _ = app.emit("app-state-changed", Value::Null);
+    
+    PipelineEngine::advance_pipeline(app);
+
+    // Job ID is now generated internally by pipeline, return dummy or actual
+    Ok(uuid::Uuid::new_v4().to_string())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn cancel_pipeline(
+    job_id: String,
+    client: State<'_, Arc<PythonWorkerClient>>
+) -> Result<(), String> {
+    client.cancel_job(job_id)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn import_pipeline_results(results: Vec<STTResult>, state: State<'_, AppState>) -> Result<(), String> {
+    if let Ok(mut project) = state.project.lock() {
+        project.import_results(results);
+    }
+    Ok(())
+}

@@ -3,48 +3,87 @@ use tauri::{AppHandle, Manager};
 use crate::domain::project::{TaskStatus, TaskType};
 use crate::infrastructure::state::AppState;
 use crate::infrastructure::tauri_events::TauriEventDispatcher;
+use crate::application::python_client::PythonWorkerClient;
+use crate::domain::ipc_models::{MssPayload, VadPayload, SttPayload, FaPayload};
 
 pub struct PipelineEngine;
 
 impl PipelineEngine {
     pub fn advance_pipeline(app: AppHandle) {
-        if let Some(state) = app.try_state::<AppState>() {
-            let project = match state.project.lock() {
-                Ok(p) => p,
-                Err(e) => {
-                    eprintln!("PipelineEngine: Failed to lock project state: {}", e);
-                    return;
-                }
-            };
-            
-            // Check if any task is running. If so, we must wait.
-            if project.tasks.iter().any(|t| t.status == TaskStatus::Running) {
-                return;
-            }
-            
-            // Find the next pending task based on fixed order
-            if let Some(next_task) = project.tasks.iter().find(|t| t.status == TaskStatus::Pending).map(|t| t.task_type.clone()) {
-                // If it's a python task, we must group contiguous pending python tasks
-                match next_task {
-                    TaskType::Mss | TaskType::Vad | TaskType::Stt | TaskType::ForcedAlignment => {
-                        // The python worker naturally processes all of these as a batch if requested.
-                        // For manual pipeline advance, the SttJobController's `start_job` currently handles python dispatch.
-                        // However, `advance_pipeline` is strictly for Rust-level orchestration (Segmentation/Translation).
-                        // If the user manually triggered Stt, `start_job` sets them to Pending and dispatches Python.
-                        // When Python emits events, SttJobController handles it.
-                        // When STT finishes, SttJobController calls `advance_pipeline()`.
-                        // Therefore, if the next pending task is a python task, it means Python is already handling it
-                        // or will handle it via SttJobController. PipelineEngine just waits.
+        let (next_task, project_clone) = {
+            if let Some(state) = app.try_state::<AppState>() {
+                let project = match state.project.lock() {
+                    Ok(p) => p,
+                    Err(e) => {
+                        eprintln!("PipelineEngine: Failed to lock project state: {}", e);
                         return;
                     }
-                    TaskType::Segmentation => {
+                };
+                
+                if project.tasks.iter().any(|t| t.status == TaskStatus::Running) {
+                    return;
+                }
+                
+                (
+                    project.tasks.iter().find(|t| t.status == TaskStatus::Pending).map(|t| t.task_type.clone()),
+                    project.clone()
+                )
+            } else {
+                return;
+            }
+        };
+
+        if let Some(next_task) = next_task {
+            match next_task {
+                TaskType::Mss => {
+                    if let Some(client) = app.try_state::<Arc<PythonWorkerClient>>() {
+                        let payload = MssPayload {
+                            audio_path: project_clone.video_path.clone().unwrap_or_default(),
+                            mss_engine: project_clone.mss_engine.clone().unwrap_or_default(),
+                            mss_model: project_clone.mss_model.clone().unwrap_or_default(),
+                        };
+                        let _ = client.send_run_mss(uuid::Uuid::new_v4().to_string(), payload);
+                    }
+                }
+                TaskType::Vad => {
+                    if let Some(client) = app.try_state::<Arc<PythonWorkerClient>>() {
+                        let payload = VadPayload {
+                            audio_path: project_clone.vocals_audio_path.clone().or(project_clone.video_path.clone()).unwrap_or_default(),
+                            vad_engine: project_clone.vad_engine.clone().unwrap_or_default(),
+                        };
+                        let _ = client.send_run_vad(uuid::Uuid::new_v4().to_string(), payload);
+                    }
+                }
+                TaskType::Stt => {
+                    if let Some(client) = app.try_state::<Arc<PythonWorkerClient>>() {
+                        let payload = SttPayload {
+                            audio_path: project_clone.vocals_audio_path.clone().or(project_clone.video_path.clone()).unwrap_or_default(),
+                            model: project_clone.stt_model_size.clone().unwrap_or_default(),
+                            language: project_clone.target_language.clone(),
+                            use_batch: project_clone.use_batch,
+                            batch_size: project_clone.batch_size,
+                            vad_segments: None, // Optional: Let python side load it if we save to disk, or we could pass it here if needed
+                        };
+                        let _ = client.send_run_stt(uuid::Uuid::new_v4().to_string(), payload);
+                    }
+                }
+                TaskType::ForcedAlignment => {
+                    if let Some(client) = app.try_state::<Arc<PythonWorkerClient>>() {
+                        let payload = FaPayload {
+                            audio_path: project_clone.vocals_audio_path.clone().or(project_clone.video_path.clone()).unwrap_or_default(),
+                            fa_engine: project_clone.fa_engine.clone().unwrap_or_default(),
+                            fa_model: project_clone.fa_model.clone().unwrap_or_default(),
+                            transcripts: project_clone.results.clone(),
+                        };
+                        let _ = client.send_run_fa(uuid::Uuid::new_v4().to_string(), payload);
+                    }
+                }
+                TaskType::Segmentation => {
+                    if let Some(state) = app.try_state::<AppState>() {
                         let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
                         let segmenter_provider = state.segmenter_provider.clone();
                         let segmenter_chunk = state.config.segmenter_batch_size;
                         let project_mutex = state.project.clone();
-                        
-                        // Drop lock before spawning
-                        drop(project);
                         
                         tauri::async_runtime::spawn(async move {
                             let app_clone = app.clone();
@@ -57,14 +96,13 @@ impl PipelineEngine {
                             }
                         });
                     }
-                    TaskType::Translation => {
+                }
+                TaskType::Translation => {
+                    if let Some(state) = app.try_state::<AppState>() {
                         let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
                         let provider = state.translator_provider.clone();
                         let translator_chunk = state.config.translator_batch_size;
                         let project_mutex = state.project.clone();
-                        
-                        // Drop lock before spawning
-                        drop(project);
                         
                         tauri::async_runtime::spawn(async move {
                             let app_clone = app.clone();

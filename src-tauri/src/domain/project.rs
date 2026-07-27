@@ -69,6 +69,14 @@ pub struct ProjectState {
     pub target_language: String,
     pub vocals_audio_path: Option<String>,
     pub background_audio_path: Option<String>,
+    pub stt_model_size: Option<String>,
+    pub vad_engine: Option<String>,
+    pub mss_engine: Option<String>,
+    pub mss_model: Option<String>,
+    pub fa_engine: Option<String>,
+    pub fa_model: Option<String>,
+    pub use_batch: bool,
+    pub batch_size: i32,
 }
 
 impl Default for ProjectState {
@@ -80,6 +88,14 @@ impl Default for ProjectState {
             target_language: "zh-TW".to_string(),
             vocals_audio_path: None,
             background_audio_path: None,
+            stt_model_size: None,
+            vad_engine: None,
+            mss_engine: None,
+            mss_model: None,
+            fa_engine: None,
+            fa_model: None,
+            use_batch: false,
+            batch_size: 1,
         }
     }
 }

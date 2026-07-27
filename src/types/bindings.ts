@@ -4,14 +4,14 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 
 /** Commands */
 export const commands = {
-	lookupWord: (text: string) => typedError<LookupResult, string>(__TAURI_INVOKE("lookup_word", { text })),
+	lookupWord: (text: string, index: number) => typedError<LookupResult[], string>(__TAURI_INVOKE("lookup_word", { text, index })),
 	getFurigana: (text: string) => typedError<FuriganaToken[], string>(__TAURI_INVOKE("get_furigana", { text })),
-	startSttJob: (args: StartSttJobArgs) => typedError<string, string>(__TAURI_INVOKE("start_stt_job", { args })),
-	cancelSttJob: (jobId: string) => typedError<null, string>(__TAURI_INVOKE("cancel_stt_job", { jobId })),
-	importSttResults: (results: STTResult[]) => typedError<null, string>(__TAURI_INVOKE("import_stt_results", { results })),
+	triggerPipeline: (args: PipelineConfig) => typedError<string, string>(__TAURI_INVOKE("trigger_pipeline", { args })),
+	cancelPipeline: (jobId: string) => typedError<null, string>(__TAURI_INVOKE("cancel_pipeline", { jobId })),
+	importPipelineResults: (results: STTResult[]) => typedError<null, string>(__TAURI_INVOKE("import_pipeline_results", { results })),
 	startTranslation: () => typedError<null, string>(__TAURI_INVOKE("start_translation")),
-	startSegmentation: () => typedError<null, string>(__TAURI_INVOKE("start_segmentation")),
 	runAgentTask: (agentType: AgentType, payloadJson: string) => typedError<string, string>(__TAURI_INVOKE("run_agent_task", { agentType, payloadJson })),
+	startSegmentation: () => typedError<null, string>(__TAURI_INVOKE("start_segmentation")),
 	getAppState: () => typedError<ProjectState, string>(__TAURI_INVOKE("get_app_state")),
 };
 
@@ -39,6 +39,21 @@ export type LookupResult = {
 	entries: DictionaryEntry[],
 };
 
+export type PipelineConfig = {
+	videoPath: string,
+	modelSize: string,
+	language: string,
+	vadEngine: string,
+	mssEngine: string,
+	mssModel: string,
+	faEngine: string,
+	faModel: string,
+	useBatch: boolean,
+	batchSize: number,
+	enableSegmentation: boolean,
+	enableTranslation: boolean,
+};
+
 export type PipelineTask = {
 	task_type: TaskType,
 	status: TaskStatus,
@@ -53,6 +68,14 @@ export type ProjectState = {
 	target_language: string,
 	vocals_audio_path: string | null,
 	background_audio_path: string | null,
+	stt_model_size: string | null,
+	vad_engine: string | null,
+	mss_engine: string | null,
+	mss_model: string | null,
+	fa_engine: string | null,
+	fa_model: string | null,
+	use_batch: boolean,
+	batch_size: number,
 };
 
 export type STTResult = {
@@ -61,21 +84,6 @@ export type STTResult = {
 	text: string,
 	translation: string | null,
 	words: WordTiming[] | null,
-};
-
-export type StartSttJobArgs = {
-	videoPath: string,
-	modelSize: string,
-	language: string,
-	vadEngine: string,
-	mssEngine: string,
-	mssModel: string,
-	faEngine: string,
-	faModel: string,
-	useBatch: boolean,
-	batchSize: number,
-	enableSegmentation: boolean,
-	enableTranslation: boolean,
 };
 
 export type TaskStatus = "pending" | "running" | "completed" | "error" | "cancelled" | "outdated";
