@@ -2,8 +2,8 @@ import os
 from typing import Dict, Any, Optional
 
 from videoscribe.domain.cancellation import CancellationToken
-from videoscribe.domain.project import TaskType, TaskStatus
-from videoscribe.infrastructure.handlers.base_handler import BaseHandler
+from videoscribe.domain.models import TaskType, TaskStatus
+from videoscribe.infrastructure.handlers.base import BaseHandler
 from videoscribe.infrastructure.audio.ffmpeg_analyzer import FFmpegAudioAnalyzer
 from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
 

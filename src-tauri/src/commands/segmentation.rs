@@ -1,5 +1,4 @@
-use tauri::{AppHandle, State, Manager, Emitter};
-use std::sync::Arc;
+use tauri::{AppHandle, State, Emitter};
 use crate::infrastructure::state::AppState;
 use serde_json::Value;
 

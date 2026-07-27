@@ -1,6 +1,6 @@
 use crate::domain::agent::AgentType;
 use crate::infrastructure::agents::AgentFactory;
-use crate::domain::project::{ProjectState, TaskType, STTResult, TaskStatus};
+use crate::domain::project::{ProjectState, TaskType, STTResult};
 use crate::infrastructure::providers::AIProvider;
 use crate::domain::events::EventDispatcher;
 use crate::domain::alignment::WordAligner;

@@ -1,10 +1,6 @@
 use tauri::{AppHandle, State, Emitter};
 use serde_json::Value;
-use std::sync::Arc;
 use crate::infrastructure::state::AppState;
-use crate::infrastructure::agents::AgentFactory;
-use crate::infrastructure::tauri_events::TauriEventDispatcher;
-use tauri::Manager;
 
 #[tauri::command]
 #[specta::specta]
