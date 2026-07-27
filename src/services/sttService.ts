@@ -24,7 +24,8 @@ export class STTService {
           useBatch: settingsStore.useBatch,
           batchSize: settingsStore.batchSize,
           enableSegmentation: settingsStore.enableSegmentation,
-          enableTranslation: settingsStore.enableTranslation
+          enableTranslation: settingsStore.enableTranslation,
+          targetLanguage: settingsStore.targetLanguage
         }
       });
       

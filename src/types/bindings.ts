@@ -9,7 +9,8 @@ export const commands = {
 	triggerPipeline: (args: PipelineConfig) => typedError<string, string>(__TAURI_INVOKE("trigger_pipeline", { args })),
 	cancelPipeline: (jobId: string) => typedError<null, string>(__TAURI_INVOKE("cancel_pipeline", { jobId })),
 	importPipelineResults: (results: STTResult[]) => typedError<null, string>(__TAURI_INVOKE("import_pipeline_results", { results })),
-	startTranslation: () => typedError<null, string>(__TAURI_INVOKE("start_translation")),
+	dismissPipelineError: () => typedError<null, string>(__TAURI_INVOKE("dismiss_pipeline_error")),
+	startTranslation: (targetLanguage: string) => typedError<null, string>(__TAURI_INVOKE("start_translation", { targetLanguage })),
 	runAgentTask: (agentType: AgentType, payloadJson: string) => typedError<string, string>(__TAURI_INVOKE("run_agent_task", { agentType, payloadJson })),
 	startSegmentation: () => typedError<null, string>(__TAURI_INVOKE("start_segmentation")),
 	getAppState: () => typedError<ProjectState, string>(__TAURI_INVOKE("get_app_state")),
@@ -52,6 +53,7 @@ export type PipelineConfig = {
 	batchSize: number,
 	enableSegmentation: boolean,
 	enableTranslation: boolean,
+	targetLanguage: string,
 };
 
 export type PipelineTask = {

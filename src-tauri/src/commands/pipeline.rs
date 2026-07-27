@@ -25,6 +25,7 @@ pub struct PipelineConfig {
     pub batch_size: i32,
     pub enable_segmentation: bool,
     pub enable_translation: bool,
+    pub target_language: String,
 }
 
 #[tauri::command]
@@ -62,7 +63,7 @@ pub fn trigger_pipeline(
         proj.init_pipeline(tasks);
         
         // Save args to project state so pipeline engine can use them
-        proj.target_language = args.language.clone();
+        proj.target_language = args.target_language.clone();
         proj.video_path = Some(args.video_path.clone());
         proj.stt_model_size = Some(args.model_size.clone());
         proj.vad_engine = Some(args.vad_engine.clone());
