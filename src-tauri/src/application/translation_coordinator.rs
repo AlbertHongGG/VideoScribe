@@ -12,6 +12,7 @@ impl TranslationCoordinator {
     pub fn start_translation(
         project_mutex: Arc<Mutex<ProjectState>>,
         provider: Arc<dyn AIProvider>,
+        chunk_size: usize,
         dispatcher: Arc<dyn EventDispatcher>
     ) -> Result<(), String> {
         let mut project = project_mutex.lock().map_err(|e| e.to_string())?;
@@ -31,7 +32,6 @@ impl TranslationCoordinator {
         drop(project);
         
         tauri::async_runtime::spawn(async move {
-            let chunk_size = 15;
             let mut chunks = Vec::new();
             for chunk in results_clone.chunks(chunk_size) {
                 chunks.push(chunk.to_vec());

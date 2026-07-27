@@ -33,6 +33,7 @@ pub fn start_translation(app: AppHandle, state: State<'_, AppState>) -> Result<(
     TranslationCoordinator::start_translation(
         state.project.clone(),
         state.translator_provider.clone(),
+        state.config.translator_batch_size,
         dispatcher
     )
 }

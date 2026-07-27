@@ -13,6 +13,8 @@ pub fn start_segmentation(app: AppHandle, state: State<'_, AppState>) -> Result<
         state.project.clone(),
         state.segmenter_provider.clone(),
         state.translator_provider.clone(),
+        state.config.segmenter_batch_size,
+        state.config.translator_batch_size,
         dispatcher
     )
 }

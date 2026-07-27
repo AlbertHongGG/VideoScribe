@@ -14,6 +14,8 @@ impl SegmentationCoordinator {
         project_mutex: Arc<Mutex<ProjectState>>,
         segmenter_provider: Arc<dyn AIProvider>,
         translator_provider: Arc<dyn AIProvider>,
+        segmenter_chunk_size: usize,
+        translator_chunk_size: usize,
         dispatcher: Arc<dyn EventDispatcher>
     ) -> Result<(), String> {
         let mut project = project_mutex.lock().map_err(|e| e.to_string())?;
@@ -31,9 +33,8 @@ impl SegmentationCoordinator {
         drop(project);
         
         tauri::async_runtime::spawn(async move {
-            let chunk_size = 40; // Process 40 STTResults at a time
             let mut chunks = Vec::new();
-            for chunk in results_clone.chunks(chunk_size) {
+            for chunk in results_clone.chunks(segmenter_chunk_size) {
                 chunks.push(chunk.to_vec());
             }
             
@@ -134,7 +135,7 @@ impl SegmentationCoordinator {
                     let project_mutex_clone = project_mutex.clone();
                     tauri::async_runtime::spawn(async move {
                         if let Err(e) = crate::application::translation_coordinator::TranslationCoordinator::start_translation(
-                            project_mutex_clone, provider_clone, dispatcher_clone
+                            project_mutex_clone, provider_clone, translator_chunk_size, dispatcher_clone
                         ) {
                             eprintln!("Failed to auto-start translation after segmentation: {}", e);
                         }
