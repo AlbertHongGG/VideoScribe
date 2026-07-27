@@ -25,9 +25,9 @@ class CuePolicy:
 @dataclass
 class TranscriptionOptions:
     """Configuration options for the STT engine and workflow."""
-    model_size: str
-    device: str
-    compute_type: str
+    model_size: str = "tiny"
+    device: str = "cpu"
+    compute_type: str = "float32"
     language: str = "auto"
     use_batch: bool = False
     batch_size: int = 16

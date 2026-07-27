@@ -4,7 +4,7 @@ from videoscribe.infrastructure.handlers.base import BaseHandler
 from videoscribe.domain.cancellation import CancellationToken
 from videoscribe.domain.ipc_models import SttPayload
 from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
-from videoscribe.domain.models import TaskType, TaskStatus
+from videoscribe.domain.models import TaskType, TaskStatus, VADResult, SpeechSegment
 from videoscribe.domain.transcription_options import TranscriptionOptions
 from videoscribe.domain.prompt_registry import PromptRegistry
 from videoscribe.infrastructure.recognizers.faster_whisper_engine import FasterWhisperEngine
@@ -38,18 +38,39 @@ class SttHandler(BaseHandler):
                 initial_prompt=PromptRegistry.get_prompt(payload.language)
             )
             
-            segments_to_use = payload.vad_segments or cached_vad_segments
+            vad_result_obj = None
+            if payload.vad_segments:
+                vad_result_obj = VADResult(segments=[SpeechSegment(start_time=s["start"], end_time=s["end"]) for s in payload.vad_segments])
+            elif cached_vad_segments:
+                if isinstance(cached_vad_segments, VADResult):
+                    vad_result_obj = cached_vad_segments
+                elif isinstance(cached_vad_segments, list):
+                    vad_result_obj = VADResult(segments=[SpeechSegment(start_time=s["start"], end_time=s["end"]) for s in cached_vad_segments])
             
-            results = self.recognizer.transcribe(
+            self.recognizer.load_model(options)
+            
+            results, info = self.recognizer.transcribe_file(
                 payload.audio_path,
                 options,
-                reporter,
                 cancel_token,
-                segments_to_use
+                vad_result_obj
             )
             
-            reporter.report_segment_replace_all([c.to_dict() for c in results])
-            reporter.report_task_progress(TaskType.STT, TaskStatus.COMPLETED, 100.0)
+            final_results = []
+            for segment in results:
+                final_results.append(segment)
+                # Streaming update: replace all reported cues with the updated list
+                reporter.report_result_replace_all(final_results)
+                
+                # Streaming progress: estimate based on segment.end vs total duration
+                if info and info.duration > 0:
+                    pct = min((segment.end / info.duration) * 100.0, 99.0)
+                    reporter.report_task_progress(TaskType.STT, TaskStatus.RUNNING, pct)
+                    
+            if info:
+                reporter.report_task_progress(TaskType.STT, TaskStatus.COMPLETED, 100.0, language=info.language)
+            else:
+                reporter.report_task_progress(TaskType.STT, TaskStatus.COMPLETED, 100.0)
         except Exception as e:
             reporter.report_error(str(e))
             reporter.report_task_progress(TaskType.STT, TaskStatus.ERROR, error_message=str(e))

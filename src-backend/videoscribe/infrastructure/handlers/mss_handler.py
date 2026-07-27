@@ -29,9 +29,10 @@ class MssHandler(BaseHandler):
             options = TranscriptionOptions(mss_engine=mss_engine_enum, mss_model=payload.mss_model, device="cuda" if torch.cuda.is_available() else "cpu")
             mss_analyzer = MSSFactory.create(options)
             if mss_analyzer:
-                workspace_dir = os.path.dirname(payload.audio_path)
-                vocals_path, instrumental_path = mss_analyzer.separate(payload.audio_path, workspace_dir, reporter, cancel_token)
-                reporter.report_task_progress(TaskType.MSS, TaskStatus.COMPLETED, 100.0, vocals_path=vocals_path, instrumental_path=instrumental_path)
+                def progress_callback(pct: float):
+                    reporter.report_task_progress(TaskType.MSS, TaskStatus.RUNNING, pct)
+                result = mss_analyzer.separate(payload.audio_path, options, progress_callback)
+                reporter.report_task_progress(TaskType.MSS, TaskStatus.COMPLETED, 100.0, vocals_path=result.vocals_path, instrumental_path=result.instrumental_path)
             else:
                 reporter.report_task_progress(TaskType.MSS, TaskStatus.COMPLETED, 100.0)
         except Exception as e:

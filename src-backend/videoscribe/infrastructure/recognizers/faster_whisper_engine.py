@@ -2,7 +2,7 @@ import logging
 from typing import Iterator, Tuple, Optional, Any
 from faster_whisper import WhisperModel, BatchedInferencePipeline
 from faster_whisper.audio import decode_audio
-from videoscribe.domain.models import Word, TranscriptionInfo, VADResult
+from videoscribe.domain.models import Word, TranscriptionInfo, VADResult, TranscriptionSegment
 from videoscribe.domain.interfaces import SpeechRecognizer
 from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType
 from videoscribe.domain.cancellation import CancellationToken, CancelledException
@@ -15,8 +15,20 @@ class FasterWhisperEngine(SpeechRecognizer):
         self._model = None
         self._pipeline = None
         self._is_batched = False
+        self._current_model_size = None
+        self._current_device = None
+        self._current_compute_type = None
+        self._current_use_batch = None
         
     def load_model(self, options: TranscriptionOptions) -> None:
+        if (self._model is not None and 
+            self._current_model_size == options.model_size and 
+            self._current_device == options.device and 
+            self._current_compute_type == options.compute_type and
+            self._current_use_batch == options.use_batch):
+            logger.info("Model configuration unchanged, skipping reload.")
+            return
+            
         logger.info(f"Loading WhisperModel: {options.model_size} on {options.device} ({options.compute_type})")
         self._model = WhisperModel(options.model_size, device=options.device, compute_type=options.compute_type)
         
@@ -28,6 +40,11 @@ class FasterWhisperEngine(SpeechRecognizer):
             logger.info("Using standard inference.")
             self._is_batched = False
             self._pipeline = None
+            
+        self._current_model_size = options.model_size
+        self._current_device = options.device
+        self._current_compute_type = options.compute_type
+        self._current_use_batch = options.use_batch
             
     def transcribe_file(self, audio_path: str, options: TranscriptionOptions, cancel_token: Optional[CancellationToken] = None, vad_result: Optional[VADResult] = None) -> Tuple[Iterator[Any], Optional[TranscriptionInfo]]:
         if not self._model:
@@ -108,7 +125,23 @@ class FasterWhisperEngine(SpeechRecognizer):
                 if cancel_token and cancel_token.is_cancelled:
                     logger.info("Transcription cancelled by token.")
                     raise CancelledException("Transcription cancelled by user")
-                yield segment
+                domain_words = []
+                if segment.words:
+                    for w in segment.words:
+                        domain_words.append(Word(
+                            text=w.word,
+                            start=w.start,
+                            end=w.end,
+                            probability=w.probability
+                        ))
+                
+                domain_segment = TranscriptionSegment(
+                    start=segment.start,
+                    end=segment.end,
+                    text=segment.text,
+                    words=domain_words
+                )
+                yield domain_segment
                 
         return segment_generator(), domain_info
 

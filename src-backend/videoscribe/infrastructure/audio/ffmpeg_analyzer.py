@@ -14,7 +14,7 @@ class FFmpegAudioAnalyzer(AudioAnalyzer):
             audio_path
         ]
         
-        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
+        result = subprocess.run(command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
         if result.returncode != 0:
             logger.error(f"Failed to get duration: {result.stderr}")
             return 0.0
@@ -37,7 +37,7 @@ class FFmpegAudioAnalyzer(AudioAnalyzer):
             "-ac", "1",
             out_path
         ]
-        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
+        result = subprocess.run(command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
         if result.returncode != 0:
             logger.error(f"Failed to extract audio: {result.stderr}")
             raise RuntimeError(f"FFmpeg audio extraction failed: {result.stderr}")

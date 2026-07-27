@@ -53,6 +53,8 @@ impl PythonWorkerClient {
                     _ => None,
                 };
                 
+                let mut should_advance_pipeline = false;
+                
                 if let Some(state) = app.try_state::<crate::infrastructure::state::AppState>() {
                     if let Ok(mut proj) = state.project.lock() {
                         if let Some(ref v) = data.vocals_path {
@@ -71,14 +73,11 @@ impl PythonWorkerClient {
                                         }
                                     }
                                     proj.complete_task(tt.clone());
-                                    
-                                    // Trigger pipeline engine to execute next step!
-                                    crate::application::pipeline_engine::PipelineEngine::advance_pipeline(app.clone());
+                                    should_advance_pipeline = true;
                                 },
                                 "error" | "failed" => {
                                     proj.fail_task(tt, data.error_message.clone().unwrap_or_else(|| "Unknown error".to_string()));
-                                    // Advance pipeline even on error so it stops gracefully
-                                    crate::application::pipeline_engine::PipelineEngine::advance_pipeline(app.clone());
+                                    should_advance_pipeline = true;
                                 },
                                 "cancelled" => {
                                     *is_cancelling.lock().unwrap() = false;
@@ -95,6 +94,10 @@ impl PythonWorkerClient {
                         }
                     }
                     let _ = app.emit("app-state-changed", Value::Null);
+                }
+                
+                if should_advance_pipeline {
+                    crate::application::pipeline_engine::PipelineEngine::advance_pipeline(app.clone());
                 }
             }
             WorkerEventData::SegmentBatch(data) => {

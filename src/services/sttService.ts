@@ -8,8 +8,6 @@ export class STTService {
     const notifyStore = useNotifyStore.getState();
     const settingsStore = useSTTSettingsStore.getState();
 
-    // Optimistically update frontend state while backend boots
-    useSTTJobStore.getState().reset();
     notifyStore.show("Starting Speech-to-Text process...", "info");
 
     try {
@@ -31,6 +29,8 @@ export class STTService {
       });
       
 
+      // Reset frontend state only after successful trigger
+      useSTTJobStore.getState().reset();
       
     } catch (e: any) {
       console.error(e);
