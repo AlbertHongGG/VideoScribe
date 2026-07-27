@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "../types/bindings";
 import { useSTTJobStore } from "../store/sttJobStore";
 import { useSTTSettingsStore } from "../store/sttSettingsStore";
 import { useNotifyStore } from "../store/notifyStore";
@@ -11,23 +11,23 @@ export class STTService {
     notifyStore.show("Starting Speech-to-Text process...", "info");
 
     try {
-      await invoke("trigger_pipeline", { 
-        args: {
-          videoPath, 
-          modelSize, 
-          language: settingsStore.language || "auto",
-          vadEngine: settingsStore.vadEngine,
-          mssEngine: settingsStore.mssEngine,
-          mssModel: settingsStore.mssModel,
-          faEngine: settingsStore.faEngine,
-          faModel: settingsStore.faModel,
-          useBatch: settingsStore.useBatch,
-          batchSize: settingsStore.batchSize,
-          enableSegmentation: settingsStore.enableSegmentation,
-          enableTranslation: settingsStore.enableTranslation,
-          targetLanguage: settingsStore.targetLanguage
-        }
+      const triggerRes = await commands.triggerPipeline({
+        videoPath, 
+        modelSize, 
+        language: settingsStore.language || "auto",
+        vadEngine: settingsStore.vadEngine,
+        mssEngine: settingsStore.mssEngine,
+        mssModel: settingsStore.mssModel,
+        faEngine: settingsStore.faEngine,
+        faModel: settingsStore.faModel,
+        useBatch: settingsStore.useBatch,
+        batchSize: settingsStore.batchSize,
+        enableSegmentation: settingsStore.enableSegmentation,
+        enableTranslation: settingsStore.enableTranslation,
+        targetLanguage: settingsStore.targetLanguage
       });
+      
+      if (triggerRes.status === "error") throw new Error(triggerRes.error);
       
 
       // Reset frontend state only after successful trigger

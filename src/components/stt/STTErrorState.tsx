@@ -1,6 +1,6 @@
 import React from "react";
 import { useSTTJobStore } from "../../store/sttJobStore";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "../../types/bindings";
 
 export const STTErrorState: React.FC = () => {
   const { tasks } = useSTTJobStore();
@@ -19,7 +19,7 @@ export const STTErrorState: React.FC = () => {
       
       <button 
         onClick={() => {
-          invoke("dismiss_pipeline_error").catch(console.error);
+          commands.dismissPipelineError().catch(console.error);
         }}
         className="px-8 py-2.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors border border-white/10 text-xs font-bold tracking-widest text-white uppercase"
       >

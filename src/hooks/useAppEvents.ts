@@ -1,9 +1,8 @@
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { invoke } from "@tauri-apps/api/core";
 import { useSTTSettingsStore } from "../store/sttSettingsStore";
 import { useSTTJobStore } from "../store/sttJobStore";
-import { ProjectState } from "../types/bindings";
+import { commands } from "../types/bindings";
 
 export const useAppEvents = () => {
   useEffect(() => {
@@ -12,10 +11,10 @@ export const useAppEvents = () => {
 
     const setupListeners = async () => {
       try {
-        const initialState = await invoke<ProjectState>("get_app_state");
-        if (initialState) {
-          useSTTJobStore.getState().syncAppState(initialState);
-          useSTTSettingsStore.getState().setTargetLanguage(initialState.target_language);
+        const initialState = await commands.getAppState();
+        if (initialState.status === "ok") {
+          useSTTJobStore.getState().syncAppState(initialState.data);
+          useSTTSettingsStore.getState().setTargetLanguage(initialState.data.target_language);
         }
       } catch (e) {
         console.error("Failed to fetch initial app state:", e);
@@ -34,8 +33,9 @@ export const useAppEvents = () => {
       const u2 = await listen("app-state-changed", async () => {
         try {
           const prevState = useSTTJobStore.getState().tasks;
-          const state = await invoke<ProjectState>("get_app_state");
-          if (state) {
+          const stateRes = await commands.getAppState();
+          if (stateRes.status === "ok") {
+            const state = stateRes.data;
             useSTTJobStore.getState().syncAppState(state);
             useSTTSettingsStore.getState().setTargetLanguage(state.target_language);
             

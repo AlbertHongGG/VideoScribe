@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "../../types/bindings";
 import { LookupResult } from "../../types/bindings";
 
 interface Props {
@@ -22,9 +22,9 @@ export const DictionaryTooltip: React.FC<Props> = ({ text, charIndex = 0, x, y, 
     const lookup = async () => {
       setLoading(true);
       try {
-        const res = await invoke<LookupResult[]>("lookup_word", { text, index: charIndex });
-        if (active) {
-          setResults(res);
+        const res = await commands.lookupWord(text, charIndex);
+        if (active && res.status === "ok") {
+          setResults(res.data);
         }
       } catch (e) {
         console.error("Dictionary lookup failed:", e);

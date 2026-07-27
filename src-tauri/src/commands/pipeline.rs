@@ -94,10 +94,11 @@ pub fn cancel_pipeline(
 
 #[tauri::command]
 #[specta::specta]
-pub fn import_pipeline_results(results: Vec<STTResult>, state: State<'_, AppState>) -> Result<(), String> {
+pub fn import_pipeline_results(app: AppHandle, results: Vec<STTResult>, state: State<'_, AppState>) -> Result<(), String> {
     if let Ok(mut project) = state.project.lock() {
         project.import_results(results);
     }
+    let _ = app.emit("app-state-changed", Value::Null);
     Ok(())
 }
 

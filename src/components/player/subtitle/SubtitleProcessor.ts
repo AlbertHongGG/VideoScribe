@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "../../../types/bindings";
 import { STTResult, WordTiming } from "../../../types/bindings";
 import { RenderableToken, ProcessedSubtitle, SubtitleRenderContext, FuriganaChunk } from "./SubtitleModels";
 
@@ -33,11 +33,13 @@ export class SubtitleProcessor {
     if (isJapanese && (context.enableFurigana || context.enableDictionary)) {
       try {
         // Fetch reading based on the COMPLETE sentence context for 100% accuracy
-        const fRes = await invoke<{surface: string, reading?: string}[]>("get_furigana", { text: subtitle.text });
-        furigana = fRes.map(f => ({
-          surface: f.surface,
-          reading: f.reading
-        }));
+        const fRes = await commands.getFurigana(subtitle.text);
+        if (fRes.status === "ok") {
+          furigana = fRes.data.map((f: any) => ({
+            surface: f.surface,
+            reading: f.reading
+          }));
+        }
       } catch (e) {
         console.error("Failed to fetch Furigana:", e);
       }
