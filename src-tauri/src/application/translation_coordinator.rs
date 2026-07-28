@@ -45,10 +45,12 @@ impl TranslationCoordinator {
             let session_id = uuid::Uuid::new_v4().to_string();
             
             let mut all_translated_results = results_clone.clone();
+            let mut was_cancelled = false;
 
             for (i, chunk) in chunks.iter().enumerate() {
                 if cancel_token.load(Ordering::SeqCst) {
                     eprintln!("Translation cancelled by token");
+                    was_cancelled = true;
                     break;
                 }
 
@@ -121,11 +123,13 @@ impl TranslationCoordinator {
                 let _ = dispatcher.emit("app-state-changed", Value::Null);
             }
             
-            if let Ok(mut proj) = project_mutex.lock() {
-                proj.results = all_translated_results;
-                proj.complete_task(TaskType::Translation);
+            if !was_cancelled {
+                if let Ok(mut proj) = project_mutex.lock() {
+                    proj.results = all_translated_results;
+                    proj.complete_task(TaskType::Translation);
+                }
+                let _ = dispatcher.emit("app-state-changed", Value::Null);
             }
-            let _ = dispatcher.emit("app-state-changed", Value::Null);
             
             on_complete();
         });

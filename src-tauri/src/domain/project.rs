@@ -153,6 +153,7 @@ impl ProjectState {
     }
     
     pub fn set_task_pending(&mut self, task_type: TaskType) {
+        self.cancel_token.store(false, Ordering::SeqCst);
         if !self.tasks.iter().any(|t| t.task_type == task_type) {
             self.tasks.push(PipelineTask {
                 task_type: task_type.clone(),

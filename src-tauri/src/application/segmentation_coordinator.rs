@@ -43,10 +43,12 @@ impl SegmentationCoordinator {
             let session_id = uuid::Uuid::new_v4().to_string();
             
             let mut final_results: Vec<STTResult> = Vec::new();
+            let mut was_cancelled = false;
 
             for (i, chunk) in chunks.iter().enumerate() {
                 if cancel_token.load(Ordering::SeqCst) {
                     eprintln!("Segmentation cancelled by token");
+                    was_cancelled = true;
                     break;
                 }
 
@@ -133,11 +135,13 @@ impl SegmentationCoordinator {
                 let _ = dispatcher.emit("app-state-changed", Value::Null);
             }
             
-            if let Ok(mut proj) = project_mutex.lock() {
-                proj.results = final_results;
-                proj.complete_task(TaskType::Segmentation);
+            if !was_cancelled {
+                if let Ok(mut proj) = project_mutex.lock() {
+                    proj.results = final_results;
+                    proj.complete_task(TaskType::Segmentation);
+                }
+                let _ = dispatcher.emit("app-state-changed", Value::Null);
             }
-            let _ = dispatcher.emit("app-state-changed", Value::Null);
             
             on_complete();
         });
