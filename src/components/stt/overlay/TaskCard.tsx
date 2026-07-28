@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle, CircleDashed, Loader2, XCircle, StopCircle, Search } from "lucide-react";
 import { PipelineTask } from "../../../types/bindings";
@@ -8,10 +8,10 @@ interface Props {
   task: PipelineTask;
   index: number;
   firstIncompleteIndex: number;
-  onViewErrorDetails: (task: PipelineTask) => void;
 }
 
-export const TaskCard: React.FC<Props> = ({ task, index, firstIncompleteIndex, onViewErrorDetails }) => {
+export const TaskCard: React.FC<Props> = ({ task, index, firstIncompleteIndex }) => {
+  const [isErrorExpanded, setIsErrorExpanded] = useState(true);
   const isCompleted = task.status === "completed";
   const isTaskError = task.status === "error";
   const isTaskCancelled = task.status === "cancelled" || task.status === "outdated";
@@ -81,8 +81,12 @@ export const TaskCard: React.FC<Props> = ({ task, index, firstIncompleteIndex, o
                <motion.button
                  initial={{ opacity: 0, scale: 0.8 }}
                  animate={{ opacity: 1, scale: 1 }}
-                 onClick={() => onViewErrorDetails(task)}
-                 className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors"
+                 onClick={() => setIsErrorExpanded(!isErrorExpanded)}
+                 className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
+                   isErrorExpanded 
+                     ? "bg-red-500/20 text-red-300" 
+                     : "bg-red-500/10 hover:bg-red-500/20 text-red-400"
+                 }`}
                >
                  <Search size={14} />
                </motion.button>
@@ -106,6 +110,21 @@ export const TaskCard: React.FC<Props> = ({ task, index, firstIncompleteIndex, o
                 animate={{ width: `${task.progress || 0}%` }}
                 transition={{ type: "spring", stiffness: 40, damping: 15 }}
               />
+            </div>
+          </motion.div>
+        )}
+        
+        {isTaskError && task.error_message && isErrorExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0, marginTop: 0 }}
+            animate={{ height: "auto", opacity: 1, marginTop: 12 }}
+            exit={{ height: 0, opacity: 0, marginTop: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-3 bg-black/30 rounded-lg border border-red-500/10">
+              <div className="font-mono text-[11px] text-red-300/80 whitespace-pre-wrap break-words leading-relaxed selection:bg-red-500/30 max-h-60 overflow-y-auto custom-scrollbar">
+                {task.error_message}
+              </div>
             </div>
           </motion.div>
         )}

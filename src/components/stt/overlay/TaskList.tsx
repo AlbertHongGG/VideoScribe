@@ -5,10 +5,9 @@ import { TaskCard } from "./TaskCard";
 
 interface Props {
   tasks: PipelineTask[];
-  onViewErrorDetails: (task: PipelineTask) => void;
 }
 
-export const TaskList: React.FC<Props> = ({ tasks, onViewErrorDetails }) => {
+export const TaskList: React.FC<Props> = ({ tasks }) => {
   const firstIncompleteIndex = tasks.findIndex(
     t => t.status !== "completed" && t.status !== "error" && t.status !== "cancelled" && t.status !== "outdated"
   );
@@ -22,7 +21,6 @@ export const TaskList: React.FC<Props> = ({ tasks, onViewErrorDetails }) => {
             task={task} 
             index={index}
             firstIncompleteIndex={firstIncompleteIndex}
-            onViewErrorDetails={onViewErrorDetails} 
           />
         ))}
       </AnimatePresence>
