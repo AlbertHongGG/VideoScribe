@@ -10,8 +10,9 @@ export const PipelineStatusOverlay: React.FC = () => {
   if (!isOverlayVisible) return null;
 
   return (
-    <div className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-md z-10 flex flex-col items-center justify-center p-8 overflow-y-auto custom-scrollbar">
-      <div className="w-full max-w-sm py-12 relative">
+    <div className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-md z-10 overflow-y-auto custom-scrollbar">
+      <div className="min-h-full flex flex-col items-center justify-center p-8">
+        <div className="w-full max-w-sm py-8 relative">
         <AnimatePresence mode="wait">
           <motion.div
             key="task-list"
@@ -26,6 +27,7 @@ export const PipelineStatusOverlay: React.FC = () => {
             <OverlayFooter tasks={pipelineTasks} />
           </motion.div>
         </AnimatePresence>
+        </div>
       </div>
     </div>
   );
