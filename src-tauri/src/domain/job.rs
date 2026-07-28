@@ -21,6 +21,8 @@ pub struct Job {
     pub tasks: Vec<PipelineTask>,
     pub status: JobStatus,
     pub error_message: Option<String>,
+    #[serde(default)]
+    pub is_dismissed: bool,
 }
 
 impl Job {
@@ -30,6 +32,7 @@ impl Job {
             tasks,
             status: JobStatus::Pending,
             error_message: None,
+            is_dismissed: false,
         }
     }
 }

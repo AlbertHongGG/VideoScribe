@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use specta::Type;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+
 
 use crate::domain::stt_job::WordTiming;
 

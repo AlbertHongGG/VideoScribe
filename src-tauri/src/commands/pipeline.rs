@@ -35,7 +35,12 @@ pub fn trigger_pipeline(
     args: PipelineConfig,
     app: AppHandle,
     state: State<'_, AppState>,
+    client: State<'_, Arc<PythonWorkerClient>>,
 ) -> Result<String, String> {
+    if client.is_cancelling() {
+        return Err("Worker is currently cancelling a previous task. Please wait.".to_string());
+    }
+
     if state.job_manager.is_running() {
         return Err("A job is already running".to_string());
     }
@@ -62,7 +67,7 @@ pub fn trigger_pipeline(
         if args.enable_translation { tasks.push(TaskType::Translation); }
         
         let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
-        let job_id = state.job_manager.add_tasks(tasks, dispatcher)?;
+        let _job_id = state.job_manager.start_new_job(tasks, dispatcher)?;
         
         // Save args to project state so pipeline engine can use them
         proj.target_language = args.target_language.clone();

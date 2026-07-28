@@ -17,18 +17,21 @@ pub struct PythonWorkerClient {
     app: AppHandle,
     cancel_time: Arc<Mutex<Option<Instant>>>,
     is_cancelling: Arc<Mutex<bool>>,
+    is_worker_busy: Arc<Mutex<bool>>,
 }
 
 impl PythonWorkerClient {
     pub fn new(app: AppHandle) -> Arc<Self> {
         let cancel_time = Arc::new(Mutex::new(None));
         let is_cancelling = Arc::new(Mutex::new(false));
+        let is_worker_busy = Arc::new(Mutex::new(false));
         
         let app_clone = app.clone();
         let is_cancelling_clone = is_cancelling.clone();
+        let is_worker_busy_clone = is_worker_busy.clone();
         
         let process = WorkerProcess::new(Arc::new(move |event| {
-            Self::handle_event(&event, &app_clone, &is_cancelling_clone);
+            Self::handle_event(&event, &app_clone, &is_cancelling_clone, &is_worker_busy_clone);
         }));
 
         let client = Arc::new(Self {
@@ -36,13 +39,14 @@ impl PythonWorkerClient {
             app,
             cancel_time,
             is_cancelling,
+            is_worker_busy,
         });
 
         client.spawn_watchdog();
         client
     }
 
-    fn handle_event(event: &WorkerEvent, app: &AppHandle, is_cancelling: &Arc<Mutex<bool>>) {
+    fn handle_event(event: &WorkerEvent, app: &AppHandle, is_cancelling: &Arc<Mutex<bool>>, is_worker_busy: &Arc<Mutex<bool>>) {
         match &event.data {
             WorkerEventData::TaskProgress(data) => {
                 let task_type: Option<TaskType> = match data.task_type.as_str() {
@@ -78,14 +82,17 @@ impl PythonWorkerClient {
                     if let Some(tt) = task_type {
                         match data.status.as_str() {
                             "completed" => {
+                                *is_worker_busy.lock().unwrap() = false;
                                 state.job_manager.complete_task(tt.clone(), dispatcher.clone());
                                 should_advance_pipeline = true;
                             },
                             "error" | "failed" => {
+                                *is_worker_busy.lock().unwrap() = false;
                                 state.job_manager.fail_job(data.error_message.clone().unwrap_or_else(|| "Unknown error".to_string()), dispatcher.clone());
                                 should_advance_pipeline = true;
                             },
                             "cancelled" => {
+                                *is_worker_busy.lock().unwrap() = false;
                                 *is_cancelling.lock().unwrap() = false;
                                 state.job_manager.cancel_job(dispatcher.clone());
                             },
@@ -142,6 +149,7 @@ impl PythonWorkerClient {
                 let _ = app.emit("app-state-changed", Value::Null);
             }
             WorkerEventData::Error(data) => {
+                *is_worker_busy.lock().unwrap() = false;
                 if let Some(state) = app.try_state::<crate::infrastructure::state::AppState>() {
                     let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
                     state.job_manager.fail_job(data.message.clone(), dispatcher.clone());
@@ -155,7 +163,8 @@ impl PythonWorkerClient {
         let process_clone = self.process.clone();
         let cancel_time_clone = self.cancel_time.clone();
         let is_cancelling_clone = self.is_cancelling.clone();
-        let app_clone = self.app.clone();
+        let is_worker_busy_clone = self.is_worker_busy.clone();
+        let _app_clone = self.app.clone();
         
         thread::spawn(move || {
             loop {
@@ -176,58 +185,79 @@ impl PythonWorkerClient {
                     process_clone.restart_worker();
                     *cancel_time_clone.lock().unwrap() = None;
                     *is_cancelling_clone.lock().unwrap() = false;
-                    
-                    if let Some(state) = app_clone.try_state::<crate::infrastructure::state::AppState>() {
-                        let dispatcher = Arc::new(TauriEventDispatcher::new(app_clone.clone()));
-                        state.job_manager.cancel_job(dispatcher.clone());
-                    }
+                    *is_worker_busy_clone.lock().unwrap() = false;
                 }
             }
         });
     }
 
     pub fn send_run_preprocess(&self, job_id: String, payload: PreprocessPayload) -> Result<(), String> {
+        if *self.is_cancelling.lock().unwrap() {
+            return Err("Worker is currently cancelling a previous task. Please wait.".to_string());
+        }
+        *self.is_worker_busy.lock().unwrap() = true;
         let command = WorkerCommand::RunPreprocess { job_id, payload };
         self.process.send_command(&command)?;
         Ok(())
     }
 
     pub fn send_run_mss(&self, job_id: String, payload: MssPayload) -> Result<(), String> {
+        if *self.is_cancelling.lock().unwrap() {
+            return Err("Worker is currently cancelling a previous task. Please wait.".to_string());
+        }
+        *self.is_worker_busy.lock().unwrap() = true;
         let command = WorkerCommand::RunMss { job_id, payload };
         self.process.send_command(&command)?;
         Ok(())
     }
 
     pub fn send_run_vad(&self, job_id: String, payload: VadPayload) -> Result<(), String> {
+        if *self.is_cancelling.lock().unwrap() {
+            return Err("Worker is currently cancelling a previous task. Please wait.".to_string());
+        }
+        *self.is_worker_busy.lock().unwrap() = true;
         let command = WorkerCommand::RunVad { job_id, payload };
         self.process.send_command(&command)?;
         Ok(())
     }
 
     pub fn send_run_stt(&self, job_id: String, payload: SttPayload) -> Result<(), String> {
+        if *self.is_cancelling.lock().unwrap() {
+            return Err("Worker is currently cancelling a previous task. Please wait.".to_string());
+        }
+        *self.is_worker_busy.lock().unwrap() = true;
         let command = WorkerCommand::RunStt { job_id, payload };
         self.process.send_command(&command)?;
         Ok(())
     }
 
     pub fn send_run_fa(&self, job_id: String, payload: FaPayload) -> Result<(), String> {
+        if *self.is_cancelling.lock().unwrap() {
+            return Err("Worker is currently cancelling a previous task. Please wait.".to_string());
+        }
+        *self.is_worker_busy.lock().unwrap() = true;
         let command = WorkerCommand::RunFa { job_id, payload };
         self.process.send_command(&command)?;
         Ok(())
     }
 
     pub fn cancel_job(&self, job_id: String) -> Result<(), String> {
-        *self.is_cancelling.lock().unwrap() = true;
-        
         if let Some(state) = self.app.try_state::<crate::infrastructure::state::AppState>() {
             let dispatcher = Arc::new(TauriEventDispatcher::new(self.app.clone()));
             state.job_manager.cancel_job(dispatcher.clone());
         }
         
-        let command = WorkerCommand::Cancel { job_id };
-        self.process.send_command(&command)?;
+        if *self.is_worker_busy.lock().unwrap() {
+            *self.is_cancelling.lock().unwrap() = true;
+            let command = WorkerCommand::Cancel { job_id };
+            let _ = self.process.send_command(&command);
+            *self.cancel_time.lock().unwrap() = Some(Instant::now());
+        }
         
-        *self.cancel_time.lock().unwrap() = Some(Instant::now());
         Ok(())
+    }
+
+    pub fn is_cancelling(&self) -> bool {
+        *self.is_cancelling.lock().unwrap()
     }
 }

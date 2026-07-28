@@ -12,6 +12,7 @@ pub struct WorkerProcess {
     stdin: Mutex<Option<ChildStdin>>,
     child_process: Mutex<Option<Child>>,
     on_event: EventCallback,
+    intentional_kill: Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl WorkerProcess {
@@ -20,6 +21,7 @@ impl WorkerProcess {
             stdin: Mutex::new(None),
             child_process: Mutex::new(None),
             on_event,
+            intentional_kill: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         });
         
         process.spawn_worker();
@@ -28,6 +30,7 @@ impl WorkerProcess {
 
     pub fn restart_worker(&self) {
         println!("Restarting worker process...");
+        self.intentional_kill.store(true, std::sync::atomic::Ordering::SeqCst);
         {
             let mut child_guard = self.child_process.lock().unwrap();
             if let Some(mut child) = child_guard.take() {
@@ -92,6 +95,7 @@ impl WorkerProcess {
                 *self.stdin.lock().unwrap() = Some(stdin);
                 
                 let on_event = self.on_event.clone();
+                let intentional_kill = self.intentional_kill.clone();
                 
                 thread::spawn(move || {
                     let reader = BufReader::new(stdout);
@@ -104,14 +108,19 @@ impl WorkerProcess {
                         }
                     }
                     println!("Python worker stdout closed. Worker process exited.");
-                    // Synthesize an internal error event
-                    use crate::domain::ipc_models::{WorkerEventData, ErrorData};
-                    on_event(WorkerEvent {
-                        version: 1,
-                        data: WorkerEventData::Error(ErrorData {
-                            message: "Worker process died unexpectedly".to_string()
-                        })
-                    });
+                    if !intentional_kill.load(std::sync::atomic::Ordering::SeqCst) {
+                        // Synthesize an internal error event
+                        use crate::domain::ipc_models::{WorkerEventData, ErrorData};
+                        on_event(WorkerEvent {
+                            version: 1,
+                            data: WorkerEventData::Error(ErrorData {
+                                message: "Worker process died unexpectedly".to_string()
+                            })
+                        });
+                    } else {
+                        // Reset the flag for the next process
+                        intentional_kill.store(false, std::sync::atomic::Ordering::SeqCst);
+                    }
                 });
 
                 *self.child_process.lock().unwrap() = Some(child);

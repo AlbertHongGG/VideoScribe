@@ -5,9 +5,8 @@ use crate::infrastructure::providers::AIProvider;
 use crate::domain::events::EventDispatcher;
 use crate::domain::alignment::WordAligner;
 use crate::application::job_manager::JobManager;
-use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
-use serde_json::{json, Value};
+use serde_json::json;
 
 pub struct SegmentationCoordinator;
 

@@ -4,7 +4,7 @@ use crate::domain::project::{ProjectState, TaskType};
 use crate::infrastructure::providers::AIProvider;
 use crate::domain::events::EventDispatcher;
 use crate::application::job_manager::JobManager;
-use std::sync::atomic::Ordering;
+
 use std::sync::{Arc, Mutex};
 use serde_json::{json, Value};
 

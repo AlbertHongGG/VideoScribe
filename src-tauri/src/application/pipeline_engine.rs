@@ -42,8 +42,10 @@ impl PipelineEngine {
                             workspace_dir,
                         };
                         let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
-                        job_manager_clone.update_task_progress(TaskType::Preprocess, 0.0, dispatcher);
-                        let _ = client.send_run_preprocess(uuid::Uuid::new_v4().to_string(), payload);
+                        job_manager_clone.update_task_progress(TaskType::Preprocess, 0.0, dispatcher.clone());
+                        if let Err(e) = client.send_run_preprocess(uuid::Uuid::new_v4().to_string(), payload) {
+                            job_manager_clone.fail_job(e, dispatcher);
+                        }
                     }
                 }
                 TaskType::Mss => {
@@ -54,8 +56,10 @@ impl PipelineEngine {
                             mss_model: project_clone.mss_model.clone().unwrap_or_default(),
                         };
                         let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
-                        job_manager_clone.update_task_progress(TaskType::Mss, 0.0, dispatcher);
-                        let _ = client.send_run_mss(uuid::Uuid::new_v4().to_string(), payload);
+                        job_manager_clone.update_task_progress(TaskType::Mss, 0.0, dispatcher.clone());
+                        if let Err(e) = client.send_run_mss(uuid::Uuid::new_v4().to_string(), payload) {
+                            job_manager_clone.fail_job(e, dispatcher);
+                        }
                     }
                 }
                 TaskType::Vad => {
@@ -65,8 +69,10 @@ impl PipelineEngine {
                             vad_engine: project_clone.vad_engine.clone().unwrap_or_default(),
                         };
                         let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
-                        job_manager_clone.update_task_progress(TaskType::Vad, 0.0, dispatcher);
-                        let _ = client.send_run_vad(uuid::Uuid::new_v4().to_string(), payload);
+                        job_manager_clone.update_task_progress(TaskType::Vad, 0.0, dispatcher.clone());
+                        if let Err(e) = client.send_run_vad(uuid::Uuid::new_v4().to_string(), payload) {
+                            job_manager_clone.fail_job(e, dispatcher);
+                        }
                     }
                 }
                 TaskType::Stt => {
@@ -80,8 +86,10 @@ impl PipelineEngine {
                             vad_segments: None,
                         };
                         let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
-                        job_manager_clone.update_task_progress(TaskType::Stt, 0.0, dispatcher);
-                        let _ = client.send_run_stt(uuid::Uuid::new_v4().to_string(), payload);
+                        job_manager_clone.update_task_progress(TaskType::Stt, 0.0, dispatcher.clone());
+                        if let Err(e) = client.send_run_stt(uuid::Uuid::new_v4().to_string(), payload) {
+                            job_manager_clone.fail_job(e, dispatcher);
+                        }
                     }
                 }
                 TaskType::ForcedAlignment => {
@@ -93,8 +101,10 @@ impl PipelineEngine {
                             transcripts: project_clone.results.clone(),
                         };
                         let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
-                        job_manager_clone.update_task_progress(TaskType::ForcedAlignment, 0.0, dispatcher);
-                        let _ = client.send_run_fa(uuid::Uuid::new_v4().to_string(), payload);
+                        job_manager_clone.update_task_progress(TaskType::ForcedAlignment, 0.0, dispatcher.clone());
+                        if let Err(e) = client.send_run_fa(uuid::Uuid::new_v4().to_string(), payload) {
+                            job_manager_clone.fail_job(e, dispatcher);
+                        }
                     }
                 }
                 TaskType::Segmentation => {

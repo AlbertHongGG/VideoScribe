@@ -1,5 +1,4 @@
-use tauri::{AppHandle, State, Emitter};
-use serde_json::Value;
+use tauri::{AppHandle, State};
 use crate::infrastructure::state::AppState;
 
 #[tauri::command]

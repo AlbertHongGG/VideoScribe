@@ -74,6 +74,6 @@ export const selectHasError = (state: ActiveJobStore) => {
 };
 
 export const selectIsOverlayVisible = (state: ActiveJobStore) => {
-  return state.currentJob !== null;
+  return state.currentJob !== null && !state.currentJob.is_dismissed;
 };
 

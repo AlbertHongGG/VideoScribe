@@ -15,6 +15,7 @@ export const commands = {
 	tasks: PipelineTask[],
 	status: JobStatus,
 	error_message: string | null,
+	is_dismissed?: boolean,
 } | null, string>(__TAURI_INVOKE("get_current_job")),
 	startTranslation: (targetLanguage: string) => typedError<null, string>(__TAURI_INVOKE("start_translation", { targetLanguage })),
 	runAgentTask: (agentType: AgentType, payloadJson: string) => typedError<string, string>(__TAURI_INVOKE("run_agent_task", { agentType, payloadJson })),
@@ -43,6 +44,7 @@ export type Job = {
 	tasks: PipelineTask[],
 	status: JobStatus,
 	error_message: string | null,
+	is_dismissed?: boolean,
 };
 
 export type JobStatus = "pending" | "running" | "completed" | "error" | "cancelled";

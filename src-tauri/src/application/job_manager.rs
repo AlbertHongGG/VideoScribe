@@ -40,9 +40,11 @@ impl JobManager {
         // Always reset the cancel token when adding new tasks
         self.cancel_token.store(false, Ordering::SeqCst);
 
-        let mut current = job_lock.take();
+        let current = job_lock.take();
         
         if let Some(mut job) = current {
+            // Revive job from dismissed state
+            job.is_dismissed = false;
             // Re-activate job if it was in a terminal state
             if job.status == JobStatus::Completed || job.status == JobStatus::Error || job.status == JobStatus::Cancelled {
                 job.status = JobStatus::Pending;
@@ -94,6 +96,28 @@ impl JobManager {
             let _ = dispatcher.emit("job-state-changed", Value::Null);
             return Ok(id);
         }
+    }
+
+    pub fn start_new_job(&self, task_types: Vec<TaskType>, dispatcher: Arc<dyn EventDispatcher>) -> Result<String, String> {
+        let mut job_lock = self.current_job.lock().map_err(|e| e.to_string())?;
+        
+        self.cancel_token.store(false, Ordering::SeqCst);
+
+        let mut pipeline_tasks: Vec<PipelineTask> = task_types.into_iter().map(|task_type| PipelineTask {
+            task_type,
+            status: TaskStatus::Pending,
+            progress: 0.0,
+            error_message: None,
+        }).collect();
+        
+        pipeline_tasks.sort_by_key(|t| t.task_type.order_index());
+
+        let new_job = Job::new(pipeline_tasks);
+        let id = new_job.id.clone();
+        *job_lock = Some(new_job);
+        
+        let _ = dispatcher.emit("job-state-changed", Value::Null);
+        Ok(id)
     }
 
     pub fn get_next_pending_task(&self) -> Option<TaskType> {
@@ -174,9 +198,9 @@ impl JobManager {
 
     pub fn dismiss_job(&self, dispatcher: Arc<dyn EventDispatcher>) {
         let mut job_lock = self.current_job.lock().unwrap();
-        if let Some(job) = job_lock.as_ref() {
+        if let Some(job) = job_lock.as_mut() {
             if job.status == JobStatus::Completed || job.status == JobStatus::Error || job.status == JobStatus::Cancelled {
-                *job_lock = None;
+                job.is_dismissed = true;
             }
         }
         let _ = dispatcher.emit("job-state-changed", Value::Null);
