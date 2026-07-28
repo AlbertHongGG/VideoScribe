@@ -219,10 +219,6 @@ impl ProjectState {
             }
         }
     }
-    
-    pub fn dismiss_pipeline_status(&mut self) {
-        self.tasks.clear();
-    }
 
     pub fn cancel_pipeline(&mut self) {
         for t in self.tasks.iter_mut() {

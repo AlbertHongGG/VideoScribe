@@ -9,6 +9,8 @@ export class STTService {
     const settingsStore = useSTTSettingsStore.getState();
 
     notifyStore.show("Starting Speech-to-Text process...", "info");
+    
+    useSTTJobStore.getState().setOverlayVisible(true);
 
     try {
       const triggerRes = await commands.triggerPipeline({

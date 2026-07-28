@@ -8,11 +8,10 @@ import { OverlayFooter } from "./overlay/OverlayFooter";
 import { ErrorDetailsView } from "./overlay/ErrorDetailsView";
 
 export const PipelineStatusOverlay: React.FC = () => {
-  const { tasks: pipelineTasks } = useSTTJobStore();
+  const { tasks: pipelineTasks, isOverlayVisible } = useSTTJobStore();
   const [selectedErrorTask, setSelectedErrorTask] = useState<PipelineTask | null>(null);
 
-  const isPipelineActive = pipelineTasks.length > 0;
-  if (!isPipelineActive) return null;
+  if (!isOverlayVisible) return null;
 
   return (
     <div className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-md z-10 flex flex-col items-center justify-center p-8 overflow-y-auto custom-scrollbar">

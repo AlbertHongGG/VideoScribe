@@ -109,12 +109,3 @@ pub fn import_pipeline_results(app: AppHandle, results: Vec<STTResult>, state: S
     Ok(())
 }
 
-#[tauri::command]
-#[specta::specta]
-pub fn dismiss_pipeline_status(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    if let Ok(mut proj) = state.project.lock() {
-        proj.dismiss_pipeline_status();
-    }
-    let _ = app.emit("app-state-changed", Value::Null);
-    Ok(())
-}

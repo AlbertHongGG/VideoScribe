@@ -8,8 +8,10 @@ interface STTJobStore {
   results: STTResult[];
   vocalsAudioPath: string | null;
   backgroundAudioPath: string | null;
+  isOverlayVisible: boolean;
   
   setResults: (results: STTResult[]) => void;
+  setOverlayVisible: (visible: boolean) => void;
   appendCues: (cues: any[]) => void;
   syncAppState: (state: ProjectState) => void;
   reset: () => void;
@@ -20,8 +22,10 @@ export const useSTTJobStore = create<STTJobStore>((set) => ({
   results: [],
   vocalsAudioPath: null,
   backgroundAudioPath: null,
+  isOverlayVisible: false,
 
   setResults: (results) => set({ results }),
+  setOverlayVisible: (visible) => set({ isOverlayVisible: visible }),
   
   appendCues: (cues: any[]) => set((state) => ({ 
     results: [...state.results, ...cues] 
@@ -34,12 +38,13 @@ export const useSTTJobStore = create<STTJobStore>((set) => ({
     backgroundAudioPath: state.background_audio_path || null,
   }),
   
-  reset: () => set({ 
+  reset: () => set(() => ({ 
     tasks: [],
     results: [], 
     vocalsAudioPath: null,
     backgroundAudioPath: null,
-  }),
+    // explicitly NOT resetting isOverlayVisible because it's controlled independently
+  })),
 }));
 
 // Selectors for derived state

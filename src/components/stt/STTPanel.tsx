@@ -11,7 +11,7 @@ import { STTEmptyState } from "./STTEmptyState";
 
 export const STTPanel: React.FC = () => {
   const { isPanelOpen } = useSTTSettingsStore();
-  const { tasks, results } = useSTTJobStore();
+  const { results } = useSTTJobStore();
   const { currentTime, setSeekToTime, setIsPlaying } = useVideoStore();
   const { show } = useNotifyStore();
   
@@ -43,17 +43,10 @@ export const STTPanel: React.FC = () => {
     });
   };
 
-  // Determine if the pipeline is active or in a terminal state awaiting dismissal
-  const isPipelineActive = tasks.length > 0;
-  
-  // Only show empty state if no pipeline is active AND we have no results
-  const isEmpty = !isPipelineActive && results.length === 0;
+  // Only show empty state if we have no results
+  const isEmpty = results.length === 0;
 
   const renderContent = () => {
-    if (isPipelineActive) {
-      return <PipelineStatusOverlay />;
-    }
-    
     if (isEmpty) {
       return <STTEmptyState />;
     }
@@ -90,6 +83,7 @@ export const STTPanel: React.FC = () => {
           <STTPanelHeader />
 
           <div className="flex-1 relative overflow-hidden flex flex-col">
+            <PipelineStatusOverlay />
             {renderContent()}
           </div>
         </motion.div>

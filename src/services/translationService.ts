@@ -2,6 +2,7 @@
 import { useNotifyStore } from '../store/notifyStore';
 import { commands } from '../types/bindings';
 import { useSTTSettingsStore } from '../store/sttSettingsStore';
+import { useSTTJobStore } from '../store/sttJobStore';
 
 export class TranslationService {
   static async startTranslation() {
@@ -9,6 +10,8 @@ export class TranslationService {
     const settingsStore = useSTTSettingsStore.getState();
 
     notifyStore.show("Starting Dual Subtitle Translation...", "info");
+    
+    useSTTJobStore.getState().setOverlayVisible(true);
 
     try {
       await commands.startTranslation(settingsStore.targetLanguage);
