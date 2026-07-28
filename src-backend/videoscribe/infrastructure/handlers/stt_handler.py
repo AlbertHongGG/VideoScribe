@@ -33,14 +33,18 @@ class SttHandler(BaseHandler):
         is_gpu = device == "cuda"
         compute_type = "float16" if is_gpu else "int8"
         
-        reporter.report_task_progress(TaskType.STT, TaskStatus.RUNNING, 0.0, runtime_device=device, runtime_compute_type=compute_type, language=payload.language)
+        lang = payload.language
+        if lang == "auto":
+            lang = None
+            
+        reporter.report_task_progress(TaskType.STT, TaskStatus.RUNNING, 0.0, runtime_device=device, runtime_compute_type=compute_type, language=lang)
         
         try:
             options = TranscriptionOptions(
                 model_size=payload.model,
                 device=device,
                 compute_type=compute_type,
-                language=payload.language,
+                language=lang,
                 use_batch=payload.use_batch and is_gpu,
                 batch_size=payload.batch_size
             )

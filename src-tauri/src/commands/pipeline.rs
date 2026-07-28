@@ -64,6 +64,7 @@ pub fn trigger_pipeline(
         
         // Save args to project state so pipeline engine can use them
         proj.target_language = args.target_language.clone();
+        proj.source_language = Some(args.language.clone());
         proj.video_path = Some(args.video_path.clone());
         proj.stt_model_size = Some(args.model_size.clone());
         proj.vad_engine = Some(args.vad_engine.clone());

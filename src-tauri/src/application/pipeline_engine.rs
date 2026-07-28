@@ -74,7 +74,7 @@ impl PipelineEngine {
                         let payload = SttPayload {
                             audio_path: project_clone.vocals_audio_path.clone().or(project_clone.extracted_audio_path.clone()).or(project_clone.video_path.clone()).unwrap_or_default(),
                             model: project_clone.stt_model_size.clone().unwrap_or_default(),
-                            language: project_clone.target_language.clone(),
+                            language: project_clone.source_language.clone().unwrap_or_else(|| "auto".to_string()),
                             use_batch: project_clone.use_batch,
                             batch_size: project_clone.batch_size,
                             vad_segments: None, // Optional: Let python side load it if we save to disk, or we could pass it here if needed

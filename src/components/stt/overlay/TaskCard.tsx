@@ -82,10 +82,9 @@ export const TaskCard: React.FC<Props> = ({ task, index, firstIncompleteIndex, o
                  initial={{ opacity: 0, scale: 0.8 }}
                  animate={{ opacity: 1, scale: 1 }}
                  onClick={() => onViewErrorDetails(task)}
-                 className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-medium border border-red-500/20 transition-colors"
+                 className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors"
                >
                  <Search size={14} />
-                 <span>View Error Details</span>
                </motion.button>
             )}
           </AnimatePresence>
