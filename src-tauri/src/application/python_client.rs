@@ -148,6 +148,13 @@ impl PythonWorkerClient {
                 let _ = app.emit("stt_segment_replace_all", data);
                 let _ = app.emit("app-state-changed", Value::Null);
             }
+            WorkerEventData::VadSegments(data) => {
+                if let Some(state) = app.try_state::<crate::infrastructure::state::AppState>() {
+                    if let Ok(mut proj) = state.project.lock() {
+                        proj.vad_segments = Some(data.segments.clone());
+                    }
+                }
+            }
             WorkerEventData::Error(data) => {
                 *is_worker_busy.lock().unwrap() = false;
                 if let Some(state) = app.try_state::<crate::infrastructure::state::AppState>() {

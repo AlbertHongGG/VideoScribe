@@ -43,7 +43,6 @@ class CommandRouter:
             "run_fa": FaHandler(),
         }
         self.current_cancel_token: Optional[CancellationToken] = None
-        self.vad_segments_cache = None
 
     def route(self, cmd: IpcCommand):
         if cmd.action == "cancel":
@@ -60,12 +59,7 @@ class CommandRouter:
         self.current_cancel_token = CancellationToken()
         
         try:
-            if cmd.action == "run_stt":
-                handler.handle(job_id, payload, self.current_cancel_token, self.vad_segments_cache)
-            elif cmd.action == "run_vad":
-                self.vad_segments_cache = handler.handle(job_id, payload, self.current_cancel_token)
-            else:
-                handler.handle(job_id, payload, self.current_cancel_token)
+            handler.handle(job_id, payload, self.current_cancel_token)
         finally:
             self.current_cancel_token = None
 

@@ -30,6 +30,7 @@ class VadHandler(BaseHandler):
                     reporter.report_task_progress(TaskType.VAD, TaskStatus.RUNNING, pct)
                 segments = vad_analyzer.analyze(payload.audio_path, options, progress_callback)
                 
+            reporter.report_vad_segments(segments)
             reporter.report_task_progress(TaskType.VAD, TaskStatus.COMPLETED, 100.0)
             return segments
         except Exception as e:

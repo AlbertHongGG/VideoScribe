@@ -27,7 +27,7 @@ pub struct SttPayload {
     pub language: String,
     pub use_batch: bool,
     pub batch_size: i32,
-    pub vad_segments: Option<Vec<crate::domain::stt_job::SttCue>>, // Optional depending on if we pass via file or IPC
+    pub vad_segments: Option<Vec<crate::domain::project::VadSegment>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -101,11 +101,19 @@ pub struct ErrorData {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct VadSegmentsData {
+    pub job_id: String,
+    pub segments: Vec<crate::domain::project::VadSegment>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "event", content = "data", rename_all = "snake_case")]
 pub enum WorkerEventData {
     TaskProgress(TaskProgressData),
     SegmentBatch(SegmentBatchData),
     SegmentReplaceAll(SegmentBatchData),
+    VadSegments(VadSegmentsData),
     Error(ErrorData),
 }
 

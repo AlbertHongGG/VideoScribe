@@ -83,7 +83,7 @@ impl PipelineEngine {
                             language: project_clone.source_language.clone().unwrap_or_else(|| "auto".to_string()),
                             use_batch: project_clone.use_batch,
                             batch_size: project_clone.batch_size,
-                            vad_segments: None,
+                            vad_segments: project_clone.vad_segments,
                         };
                         let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
                         job_manager_clone.update_task_progress(TaskType::Stt, 0.0, dispatcher.clone());

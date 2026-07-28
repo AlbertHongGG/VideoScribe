@@ -84,6 +84,12 @@ class IpcReporter(ProgressReporter):
             "cues": cues
         })
 
+    def report_vad_segments(self, vad_result) -> None:
+        self._write_event("vad_segments", {
+            "job_id": self.job_id,
+            "segments": vad_result.to_dict_list() if vad_result else []
+        })
+
     def report_error(self, message: str) -> None:
         self._write_event("error", {
             "message": message

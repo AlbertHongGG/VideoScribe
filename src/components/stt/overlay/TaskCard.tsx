@@ -11,7 +11,7 @@ interface Props {
 }
 
 export const TaskCard: React.FC<Props> = ({ task, index, firstIncompleteIndex }) => {
-  const [isErrorExpanded, setIsErrorExpanded] = useState(true);
+  const [isErrorExpanded, setIsErrorExpanded] = useState(false);
   const isCompleted = task.status === "completed";
   const isTaskError = task.status === "error";
   const isTaskCancelled = task.status === "cancelled" || task.status === "outdated";

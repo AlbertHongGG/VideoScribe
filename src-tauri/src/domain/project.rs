@@ -65,6 +65,13 @@ pub struct PipelineTask {
 
 #[derive(Debug, Serialize, Deserialize, Clone, TS, Type)]
 #[ts(export, export_to = "../../src/types/app_types.ts")]
+pub struct VadSegment {
+    pub start: f64,
+    pub end: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, TS, Type)]
+#[ts(export, export_to = "../../src/types/app_types.ts")]
 pub struct ProjectState {
     pub video_path: Option<String>,
     pub extracted_audio_path: Option<String>,
@@ -81,6 +88,7 @@ pub struct ProjectState {
     pub fa_model: Option<String>,
     pub use_batch: bool,
     pub batch_size: i32,
+    pub vad_segments: Option<Vec<VadSegment>>,
 }
 
 impl Default for ProjectState {
@@ -101,6 +109,7 @@ impl Default for ProjectState {
             fa_model: None,
             use_batch: false,
             batch_size: 1,
+            vad_segments: None,
         }
     }
 }

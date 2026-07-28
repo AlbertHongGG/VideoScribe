@@ -51,7 +51,16 @@ impl JobManager {
                 job.error_message = None;
             }
 
-            for task_type in task_types {
+            for task_type in task_types.clone() {
+                // If we add a task, any existing task with a higher order index should be Outdated!
+                for t in &mut job.tasks {
+                    if t.task_type.order_index() > task_type.order_index() {
+                        if t.status == TaskStatus::Completed {
+                            t.status = TaskStatus::Outdated;
+                        }
+                    }
+                }
+                
                 if !job.tasks.iter().any(|t| t.task_type == task_type) {
                     job.tasks.push(PipelineTask {
                         task_type: task_type.clone(),
@@ -150,18 +159,21 @@ impl JobManager {
 
     pub fn complete_task(&self, task_type: TaskType, dispatcher: Arc<dyn EventDispatcher>) {
         if let Some(job) = self.current_job.lock().unwrap().as_mut() {
-            let mut all_completed = true;
             for task in &mut job.tasks {
                 if task.task_type == task_type {
                     task.status = TaskStatus::Completed;
                     task.progress = 100.0;
                 }
-                if task.status != TaskStatus::Completed {
-                    all_completed = false;
-                }
             }
-            if all_completed {
-                job.status = JobStatus::Completed;
+            
+            let any_active = job.tasks.iter().any(|t| t.status == TaskStatus::Pending || t.status == TaskStatus::Running);
+            if !any_active {
+                let any_error = job.tasks.iter().any(|t| t.status == TaskStatus::Error);
+                if any_error {
+                    job.status = JobStatus::Error;
+                } else {
+                    job.status = JobStatus::Completed;
+                }
             }
         }
         let _ = dispatcher.emit("job-state-changed", Value::Null);
