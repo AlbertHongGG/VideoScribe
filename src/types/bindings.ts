@@ -7,9 +7,9 @@ export const commands = {
 	lookupWord: (text: string, index: number) => typedError<LookupResult[], string>(__TAURI_INVOKE("lookup_word", { text, index })),
 	getFurigana: (text: string) => typedError<FuriganaToken[], string>(__TAURI_INVOKE("get_furigana", { text })),
 	triggerPipeline: (args: PipelineConfig) => typedError<string, string>(__TAURI_INVOKE("trigger_pipeline", { args })),
-	cancelPipeline: (jobId: string) => typedError<null, string>(__TAURI_INVOKE("cancel_pipeline", { jobId })),
+	cancelPipeline: () => typedError<null, string>(__TAURI_INVOKE("cancel_pipeline")),
 	importPipelineResults: (results: STTResult[]) => typedError<null, string>(__TAURI_INVOKE("import_pipeline_results", { results })),
-	dismissPipelineError: () => typedError<null, string>(__TAURI_INVOKE("dismiss_pipeline_error")),
+	dismissPipelineStatus: () => typedError<null, string>(__TAURI_INVOKE("dismiss_pipeline_status")),
 	startTranslation: (targetLanguage: string) => typedError<null, string>(__TAURI_INVOKE("start_translation", { targetLanguage })),
 	runAgentTask: (agentType: AgentType, payloadJson: string) => typedError<string, string>(__TAURI_INVOKE("run_agent_task", { agentType, payloadJson })),
 	startSegmentation: () => typedError<null, string>(__TAURI_INVOKE("start_segmentation")),
@@ -65,6 +65,7 @@ export type PipelineTask = {
 
 export type ProjectState = {
 	video_path: string | null,
+	extracted_audio_path: string | null,
 	tasks: PipelineTask[],
 	results: STTResult[],
 	target_language: string,
@@ -90,7 +91,7 @@ export type STTResult = {
 
 export type TaskStatus = "pending" | "running" | "completed" | "error" | "cancelled" | "outdated";
 
-export type TaskType = "mss" | "vad" | "stt" | "forced_alignment" | "translation" | "segmentation";
+export type TaskType = "preprocess" | "mss" | "vad" | "stt" | "forced_alignment" | "translation" | "segmentation";
 
 export type WordTiming = {
 	text: string,

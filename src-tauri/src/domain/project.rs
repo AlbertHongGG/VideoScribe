@@ -184,6 +184,9 @@ impl ProjectState {
 
     pub fn update_task_progress(&mut self, task_type: TaskType, progress: f64) {
         if let Some(task) = self.get_task_mut(&task_type) {
+            if task.status == TaskStatus::Cancelled || task.status == TaskStatus::Error || task.status == TaskStatus::Completed {
+                return;
+            }
             task.status = TaskStatus::Running;
             task.progress = progress;
         }
@@ -191,6 +194,9 @@ impl ProjectState {
 
     pub fn complete_task(&mut self, task_type: TaskType) {
         if let Some(task) = self.get_task_mut(&task_type) {
+            if task.status == TaskStatus::Cancelled || task.status == TaskStatus::Error {
+                return;
+            }
             task.status = TaskStatus::Completed;
             task.progress = 100.0;
         }
@@ -198,6 +204,9 @@ impl ProjectState {
 
     pub fn fail_task(&mut self, task_type: TaskType, error: String) {
         if let Some(task) = self.get_task_mut(&task_type) {
+            if task.status == TaskStatus::Cancelled || task.status == TaskStatus::Completed {
+                return;
+            }
             task.status = TaskStatus::Error;
             task.error_message = Some(error);
         }
