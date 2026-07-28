@@ -4,6 +4,7 @@ use crate::domain::project::{ProjectState, TaskType, STTResult};
 use crate::infrastructure::providers::AIProvider;
 use crate::domain::events::EventDispatcher;
 use crate::domain::alignment::WordAligner;
+use crate::application::job_manager::JobManager;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use serde_json::{json, Value};
@@ -16,19 +17,18 @@ impl SegmentationCoordinator {
         segmenter_provider: Arc<dyn AIProvider>,
         segmenter_chunk_size: usize,
         dispatcher: Arc<dyn EventDispatcher>,
+        job_manager: Arc<JobManager>,
         on_complete: F,
     ) -> Result<(), String> 
     where F: FnOnce() + Send + 'static {
-        let mut project = project_mutex.lock().map_err(|e| e.to_string())?;
+        let project = project_mutex.lock().map_err(|e| e.to_string())?;
         if project.is_results_empty() {
             return Err("No STT results to segment".into());
         }
         
-        project.update_task_progress(TaskType::Segmentation, 0.0);
-        let _ = dispatcher.emit("app-state-changed", Value::Null);
+        job_manager.update_task_progress(TaskType::Segmentation, 0.0, dispatcher.clone());
         
         let results_clone = project.get_results_clone();
-        let cancel_token = project.cancel_token.clone();
         
         // We drop the lock here because the process will take a long time
         drop(project);
@@ -46,7 +46,7 @@ impl SegmentationCoordinator {
             let mut was_cancelled = false;
 
             for (i, chunk) in chunks.iter().enumerate() {
-                if cancel_token.load(Ordering::SeqCst) {
+                if job_manager.is_cancelled() {
                     eprintln!("Segmentation cancelled by token");
                     was_cancelled = true;
                     break;
@@ -109,11 +109,8 @@ impl SegmentationCoordinator {
                     }
                     Err(e) => {
                         eprintln!("Segmentation chunk {} failed: {}", i, e);
-                        if let Ok(mut proj) = project_mutex.lock() {
-                            proj.fail_task(TaskType::Segmentation, e.to_string());
-                        }
+                        job_manager.fail_job(e.to_string(), dispatcher.clone());
                         let _ = dispatcher.emit("error", json!({"message": format!("Segmentation failed: {}", e)}));
-                        let _ = dispatcher.emit("app-state-changed", Value::Null);
                         
                         // Call on_complete even on failure to process cancellation if needed
                         on_complete();
@@ -123,24 +120,22 @@ impl SegmentationCoordinator {
                 
                 // Update state
                 if let Ok(mut proj) = project_mutex.lock() {
-                    let progress = ((i + 1) as f64 / total_chunks as f64) * 100.0;
-                    
                     let mut temp_results = final_results.clone();
                     for remaining_chunk in chunks.iter().skip(i + 1) {
                          temp_results.extend(remaining_chunk.clone());
                     }
                     proj.results = temp_results;
-                    proj.update_task_progress(TaskType::Segmentation, progress);
                 }
-                let _ = dispatcher.emit("app-state-changed", Value::Null);
+                
+                let progress = ((i + 1) as f64 / total_chunks as f64) * 100.0;
+                job_manager.update_task_progress(TaskType::Segmentation, progress, dispatcher.clone());
             }
             
             if !was_cancelled {
                 if let Ok(mut proj) = project_mutex.lock() {
                     proj.results = final_results;
-                    proj.complete_task(TaskType::Segmentation);
                 }
-                let _ = dispatcher.emit("app-state-changed", Value::Null);
+                job_manager.complete_task(TaskType::Segmentation, dispatcher.clone());
             }
             
             on_complete();

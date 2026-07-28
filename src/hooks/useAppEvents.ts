@@ -32,16 +32,28 @@ export const useAppEvents = () => {
 
       const u2 = await listen("app-state-changed", async () => {
         try {
-          const prevState = useSTTJobStore.getState().tasks;
           const stateRes = await commands.getAppState();
           if (stateRes.status === "ok") {
             const state = stateRes.data;
             useSTTJobStore.getState().syncAppState(state);
             useSTTSettingsStore.getState().setTargetLanguage(state.target_language);
-            
-            // Check for STT completion notification
-            const wasSttCompleted = prevState.find(t => t.task_type === 'stt')?.status === 'completed';
-            const isSttCompleted = state.tasks.find(t => t.task_type === 'stt')?.status === 'completed';
+          }
+        } catch (e) {
+          console.error("Failed to sync app state:", e);
+        }
+      });
+      if (isMounted) unlistenFunctions.push(u2); else u2();
+
+      const u3 = await listen("job-state-changed", async () => {
+        try {
+          const prevJob = useSTTJobStore.getState().currentJob;
+          await useSTTJobStore.getState().syncCurrentJob();
+          const currJob = useSTTJobStore.getState().currentJob;
+
+          // Check for STT completion notification
+          if (currJob) {
+            const wasSttCompleted = prevJob?.tasks.find(t => t.task_type === 'stt')?.status === 'completed';
+            const isSttCompleted = currJob.tasks.find(t => t.task_type === 'stt')?.status === 'completed';
             
             if (!wasSttCompleted && isSttCompleted) {
               import("../store/notifyStore").then(({ useNotifyStore }) => {
@@ -50,10 +62,10 @@ export const useAppEvents = () => {
             }
           }
         } catch (e) {
-          console.error("Failed to sync app state:", e);
+          console.error("Failed to sync job state:", e);
         }
       });
-      if (isMounted) unlistenFunctions.push(u2); else u2();
+      if (isMounted) unlistenFunctions.push(u3); else u3();
 
       const u4 = await listen("stt_segment_batch", (event: any) => {
         if (event.payload && event.payload.cues) {

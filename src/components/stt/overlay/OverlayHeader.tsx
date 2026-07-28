@@ -1,15 +1,14 @@
 import React from "react";
 import { ThinkingOrb } from "thinking-orbs";
-import { PipelineTask } from "../../../types/bindings";
+import { Job } from "../../../types/bindings";
 
 interface Props {
-  tasks: PipelineTask[];
+  currentJob: Job | null;
 }
 
-export const OverlayHeader: React.FC<Props> = ({ tasks }) => {
-  const hasError = tasks.some(t => t.status === "error");
-  const isCancelled = !hasError && tasks.some(t => t.status === "cancelled") && tasks.every(t => t.status !== "running" && t.status !== "pending");
-  const isTerminal = hasError || isCancelled;
+export const OverlayHeader: React.FC<Props> = ({ currentJob }) => {
+  if (!currentJob) return null;
+  const isTerminal = currentJob.status === "error" || currentJob.status === "cancelled" || currentJob.status === "completed";
 
   if (isTerminal) return null;
 

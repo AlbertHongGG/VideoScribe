@@ -1,5 +1,4 @@
 import { useNotifyStore } from '../store/notifyStore';
-import { useSTTJobStore } from '../store/sttJobStore';
 import { commands } from '../types/bindings';
 
 export class SegmentationService {
@@ -7,8 +6,6 @@ export class SegmentationService {
     const notifyStore = useNotifyStore.getState();
 
     notifyStore.show("Starting AI Semantic Segmentation...", "info");
-    
-    useSTTJobStore.getState().setOverlayVisible(true);
 
     try {
       await commands.startSegmentation();

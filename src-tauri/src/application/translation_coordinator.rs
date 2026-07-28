@@ -3,6 +3,7 @@ use crate::infrastructure::agents::AgentFactory;
 use crate::domain::project::{ProjectState, TaskType};
 use crate::infrastructure::providers::AIProvider;
 use crate::domain::events::EventDispatcher;
+use crate::application::job_manager::JobManager;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use serde_json::{json, Value};
@@ -15,20 +16,19 @@ impl TranslationCoordinator {
         provider: Arc<dyn AIProvider>,
         chunk_size: usize,
         dispatcher: Arc<dyn EventDispatcher>,
+        job_manager: Arc<JobManager>,
         on_complete: F,
     ) -> Result<(), String>
     where F: FnOnce() + Send + 'static {
-        let mut project = project_mutex.lock().map_err(|e| e.to_string())?;
+        let project = project_mutex.lock().map_err(|e| e.to_string())?;
         if project.is_results_empty() {
             return Err("No STT results to translate".into());
         }
         
-        project.update_task_progress(TaskType::Translation, 0.0);
-        let _ = dispatcher.emit("app-state-changed", Value::Null);
+        job_manager.update_task_progress(TaskType::Translation, 0.0, dispatcher.clone());
         
         let target_language = project.get_target_language().to_string();
         let results_clone = project.get_results_clone();
-        let cancel_token = project.cancel_token.clone();
         
         // We drop the lock here because the translation process will take a long time
         // and we want to be able to update progress along the way.
@@ -48,7 +48,7 @@ impl TranslationCoordinator {
             let mut was_cancelled = false;
 
             for (i, chunk) in chunks.iter().enumerate() {
-                if cancel_token.load(Ordering::SeqCst) {
+                if job_manager.is_cancelled() {
                     eprintln!("Translation cancelled by token");
                     was_cancelled = true;
                     break;
@@ -58,7 +58,9 @@ impl TranslationCoordinator {
                     Ok(a) => a,
                     Err(e) => {
                         eprintln!("Failed to create translator agent: {}", e);
-                        continue;
+                        job_manager.fail_job(e.to_string(), dispatcher.clone());
+                        on_complete();
+                        return;
                     }
                 };
 
@@ -95,11 +97,8 @@ impl TranslationCoordinator {
                     }
                     Err(e) => {
                         eprintln!("Translation chunk {} failed: {}", i, e);
-                        if let Ok(mut proj) = project_mutex.lock() {
-                            proj.fail_task(TaskType::Translation, e.to_string());
-                        }
+                        job_manager.fail_job(e.to_string(), dispatcher.clone());
                         let _ = dispatcher.emit("error", json!({"message": format!("Translation failed: {}", e)}));
-                        let _ = dispatcher.emit("app-state-changed", Value::Null);
                         
                         // Advance pipeline even on failure to process cancellation if needed
                         on_complete();
@@ -116,18 +115,18 @@ impl TranslationCoordinator {
                 
                 // Update state
                 if let Ok(mut proj) = project_mutex.lock() {
-                    let progress = ((i + 1) as f64 / total_chunks as f64) * 100.0;
                     proj.results = all_translated_results.clone();
-                    proj.update_task_progress(TaskType::Translation, progress);
                 }
+                let progress = ((i + 1) as f64 / total_chunks as f64) * 100.0;
+                job_manager.update_task_progress(TaskType::Translation, progress, dispatcher.clone());
                 let _ = dispatcher.emit("app-state-changed", Value::Null);
             }
             
             if !was_cancelled {
                 if let Ok(mut proj) = project_mutex.lock() {
                     proj.results = all_translated_results;
-                    proj.complete_task(TaskType::Translation);
                 }
+                job_manager.complete_task(TaskType::Translation, dispatcher.clone());
                 let _ = dispatcher.emit("app-state-changed", Value::Null);
             }
             

@@ -1,13 +1,15 @@
 import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useSTTJobStore } from "../../store/sttJobStore";
+import { useSTTJobStore, selectIsOverlayVisible } from "../../store/sttJobStore";
 import { OverlayHeader } from "./overlay/OverlayHeader";
 import { TaskList } from "./overlay/TaskList";
 import { OverlayFooter } from "./overlay/OverlayFooter";
-export const PipelineStatusOverlay: React.FC = () => {
-  const { tasks: pipelineTasks, isOverlayVisible } = useSTTJobStore();
 
-  if (!isOverlayVisible) return null;
+export const PipelineStatusOverlay: React.FC = () => {
+  const currentJob = useSTTJobStore(state => state.currentJob);
+  const isOverlayVisible = useSTTJobStore(selectIsOverlayVisible);
+
+  if (!isOverlayVisible || !currentJob) return null;
 
   return (
     <div className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-md z-10 overflow-y-auto custom-scrollbar">
@@ -22,9 +24,9 @@ export const PipelineStatusOverlay: React.FC = () => {
             transition={{ duration: 0.3 }}
             className="w-full relative"
           >
-            <OverlayHeader tasks={pipelineTasks} />
-            <TaskList tasks={pipelineTasks} />
-            <OverlayFooter tasks={pipelineTasks} />
+            <OverlayHeader currentJob={currentJob} />
+            <TaskList tasks={currentJob.tasks} />
+            <OverlayFooter currentJob={currentJob} />
           </motion.div>
         </AnimatePresence>
         </div>
@@ -32,3 +34,4 @@ export const PipelineStatusOverlay: React.FC = () => {
     </div>
   );
 };
+

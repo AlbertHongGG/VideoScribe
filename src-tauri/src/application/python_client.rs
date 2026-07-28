@@ -2,7 +2,8 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 use serde_json::Value;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Manager, Emitter};
+use crate::infrastructure::tauri_events::TauriEventDispatcher;
 
 use crate::domain::project::TaskType;
 use crate::domain::ipc_models::{
@@ -56,6 +57,7 @@ impl PythonWorkerClient {
                 let mut should_advance_pipeline = false;
                 
                 if let Some(state) = app.try_state::<crate::infrastructure::state::AppState>() {
+                    let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
                     if let Ok(mut proj) = state.project.lock() {
                         if let Some(ref v) = data.vocals_path {
                             proj.vocals_audio_path = Some(v.clone());
@@ -64,36 +66,38 @@ impl PythonWorkerClient {
                             proj.background_audio_path = Some(inst.clone());
                         }
                         
-                        if let Some(tt) = task_type {
-                            match data.status.as_str() {
-                                "completed" => {
-                                    if tt == TaskType::Preprocess {
-                                        if let Some(ref path) = data.vocals_path {
-                                            proj.extracted_audio_path = Some(path.clone());
-                                        }
-                                    }
-                                    proj.complete_task(tt.clone());
-                                    should_advance_pipeline = true;
-                                },
-                                "error" | "failed" => {
-                                    proj.fail_task(tt, data.error_message.clone().unwrap_or_else(|| "Unknown error".to_string()));
-                                    should_advance_pipeline = true;
-                                },
-                                "cancelled" => {
-                                    *is_cancelling.lock().unwrap() = false;
-                                    proj.cancel_pipeline();
-                                },
-                                _ => {
-                                    if let Some(prog) = data.progress {
-                                        proj.update_task_progress(tt, prog);
-                                    } else {
-                                        proj.update_task_progress(tt, 0.0);
-                                    }
+                        if let Some(tt) = task_type.clone() {
+                            if tt == TaskType::Preprocess {
+                                if let Some(ref path) = data.vocals_path {
+                                    proj.extracted_audio_path = Some(path.clone());
                                 }
                             }
                         }
                     }
-                    let _ = app.emit("app-state-changed", Value::Null);
+                    
+                    if let Some(tt) = task_type {
+                        match data.status.as_str() {
+                            "completed" => {
+                                state.job_manager.complete_task(tt.clone(), dispatcher.clone());
+                                should_advance_pipeline = true;
+                            },
+                            "error" | "failed" => {
+                                state.job_manager.fail_job(data.error_message.clone().unwrap_or_else(|| "Unknown error".to_string()), dispatcher.clone());
+                                should_advance_pipeline = true;
+                            },
+                            "cancelled" => {
+                                *is_cancelling.lock().unwrap() = false;
+                                state.job_manager.cancel_job(dispatcher.clone());
+                            },
+                            _ => {
+                                if let Some(prog) = data.progress {
+                                    state.job_manager.update_task_progress(tt.clone(), prog, dispatcher.clone());
+                                } else {
+                                    state.job_manager.update_task_progress(tt.clone(), 0.0, dispatcher.clone());
+                                }
+                            }
+                        }
+                    }
                 }
                 
                 if should_advance_pipeline {
@@ -116,6 +120,7 @@ impl PythonWorkerClient {
                     }
                 }
                 let _ = app.emit("stt_segment_batch", data);
+                let _ = app.emit("app-state-changed", Value::Null);
             }
             WorkerEventData::SegmentReplaceAll(data) => {
                 if let Some(state) = app.try_state::<crate::infrastructure::state::AppState>() {
@@ -134,20 +139,12 @@ impl PythonWorkerClient {
                     }
                 }
                 let _ = app.emit("stt_segment_replace_all", data);
+                let _ = app.emit("app-state-changed", Value::Null);
             }
             WorkerEventData::Error(data) => {
                 if let Some(state) = app.try_state::<crate::infrastructure::state::AppState>() {
-                    if let Ok(mut proj) = state.project.lock() {
-                        // generic fallback failure
-                        // we can fail any pending tasks?
-                        for task in &mut proj.tasks {
-                            if task.status == crate::domain::project::TaskStatus::Running {
-                                task.status = crate::domain::project::TaskStatus::Error;
-                                task.error_message = Some(data.message.clone());
-                            }
-                        }
-                    }
-                    let _ = app.emit("app-state-changed", Value::Null);
+                    let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
+                    state.job_manager.fail_job(data.message.clone(), dispatcher.clone());
                 }
                 let _ = app.emit("stt_error", data);
             }
@@ -181,10 +178,8 @@ impl PythonWorkerClient {
                     *is_cancelling_clone.lock().unwrap() = false;
                     
                     if let Some(state) = app_clone.try_state::<crate::infrastructure::state::AppState>() {
-                        if let Ok(mut proj) = state.project.lock() {
-                            proj.cancel_pipeline();
-                        }
-                        let _ = app_clone.emit("app-state-changed", Value::Null);
+                        let dispatcher = Arc::new(TauriEventDispatcher::new(app_clone.clone()));
+                        state.job_manager.cancel_job(dispatcher.clone());
                     }
                 }
             }
@@ -225,10 +220,8 @@ impl PythonWorkerClient {
         *self.is_cancelling.lock().unwrap() = true;
         
         if let Some(state) = self.app.try_state::<crate::infrastructure::state::AppState>() {
-            if let Ok(mut proj) = state.project.lock() {
-                proj.cancel_pipeline();
-            }
-            let _ = self.app.emit("app-state-changed", Value::Null);
+            let dispatcher = Arc::new(TauriEventDispatcher::new(self.app.clone()));
+            state.job_manager.cancel_job(dispatcher.clone());
         }
         
         let command = WorkerCommand::Cancel { job_id };

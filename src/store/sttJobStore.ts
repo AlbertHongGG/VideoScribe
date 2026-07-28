@@ -1,63 +1,79 @@
 import { create } from 'zustand';
-import { ProjectState, STTResult, PipelineTask, TaskStatus, TaskType } from '../types/bindings';
+import { ProjectState, STTResult, Job, TaskType, JobStatus, TaskStatus } from '../types/bindings';
+import { invoke } from '@tauri-apps/api/core';
 
-export type { STTResult, PipelineTask, TaskStatus, TaskType };
+export type { STTResult, Job, TaskType, JobStatus, TaskStatus };
 
-interface STTJobStore {
-  tasks: PipelineTask[];
+interface ActiveJobStore {
+  currentJob: Job | null;
   results: STTResult[];
   vocalsAudioPath: string | null;
   backgroundAudioPath: string | null;
-  isOverlayVisible: boolean;
   
+  // Handlers for state syncing
   setResults: (results: STTResult[]) => void;
-  setOverlayVisible: (visible: boolean) => void;
   appendCues: (cues: any[]) => void;
   syncAppState: (state: ProjectState) => void;
+  syncCurrentJob: () => Promise<void>;
   reset: () => void;
 }
 
-export const useSTTJobStore = create<STTJobStore>((set) => ({
-  tasks: [],
+export const useSTTJobStore = create<ActiveJobStore>((set, get) => ({
+  currentJob: null,
   results: [],
   vocalsAudioPath: null,
   backgroundAudioPath: null,
-  isOverlayVisible: false,
 
   setResults: (results) => set({ results }),
-  setOverlayVisible: (visible) => set({ isOverlayVisible: visible }),
   
   appendCues: (cues: any[]) => set((state) => ({ 
     results: [...state.results, ...cues] 
   })),
   
-  syncAppState: (state: ProjectState) => set({
-    tasks: state.tasks,
-    results: state.results,
-    vocalsAudioPath: state.vocals_audio_path || null,
-    backgroundAudioPath: state.background_audio_path || null,
-  }),
+  syncAppState: (state: ProjectState) => {
+    set({
+      results: state.results,
+      vocalsAudioPath: state.vocals_audio_path || null,
+      backgroundAudioPath: state.background_audio_path || null,
+    });
+    // Fire off async sync of current job
+    get().syncCurrentJob();
+  },
+
+  syncCurrentJob: async () => {
+    try {
+      const job = await invoke<Job | null>('get_current_job');
+      set({ currentJob: job });
+    } catch (error) {
+      console.error('Failed to sync current job:', error);
+    }
+  },
   
   reset: () => set(() => ({ 
-    tasks: [],
+    currentJob: null,
     results: [], 
     vocalsAudioPath: null,
     backgroundAudioPath: null,
-    // explicitly NOT resetting isOverlayVisible because it's controlled independently
   })),
 }));
 
 // Selectors for derived state
-export const selectIsProcessing = (state: STTJobStore) => {
-  return state.tasks.some(t => t.status === 'running' || t.status === 'pending');
+export const selectIsProcessing = (state: ActiveJobStore) => {
+  if (!state.currentJob) return false;
+  return state.currentJob.status === 'pending' || state.currentJob.status === 'running';
 };
 
-export const selectCanTranslate = (state: STTJobStore) => {
+export const selectCanTranslate = (state: ActiveJobStore) => {
   if (state.results.length === 0) return false;
-  const isProcessing = state.tasks.some(t => t.status === 'running' || t.status === 'pending');
-  return !isProcessing;
+  return !selectIsProcessing(state);
 };
 
-export const selectHasError = (state: STTJobStore) => {
-  return state.tasks.some(t => t.status === 'error');
+export const selectHasError = (state: ActiveJobStore) => {
+  if (!state.currentJob) return false;
+  return state.currentJob.status === 'error';
 };
+
+export const selectIsOverlayVisible = (state: ActiveJobStore) => {
+  return state.currentJob !== null;
+};
+

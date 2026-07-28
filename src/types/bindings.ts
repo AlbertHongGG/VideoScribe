@@ -9,6 +9,13 @@ export const commands = {
 	triggerPipeline: (args: PipelineConfig) => typedError<string, string>(__TAURI_INVOKE("trigger_pipeline", { args })),
 	cancelPipeline: () => typedError<null, string>(__TAURI_INVOKE("cancel_pipeline")),
 	importPipelineResults: (results: STTResult[]) => typedError<null, string>(__TAURI_INVOKE("import_pipeline_results", { results })),
+	dismissJob: () => typedError<null, string>(__TAURI_INVOKE("dismiss_job")),
+	getCurrentJob: () => typedError<{
+	id: string,
+	tasks: PipelineTask[],
+	status: JobStatus,
+	error_message: string | null,
+} | null, string>(__TAURI_INVOKE("get_current_job")),
 	startTranslation: (targetLanguage: string) => typedError<null, string>(__TAURI_INVOKE("start_translation", { targetLanguage })),
 	runAgentTask: (agentType: AgentType, payloadJson: string) => typedError<string, string>(__TAURI_INVOKE("run_agent_task", { agentType, payloadJson })),
 	startSegmentation: () => typedError<null, string>(__TAURI_INVOKE("start_segmentation")),
@@ -30,6 +37,15 @@ export type FuriganaToken = {
 	surface: string,
 	reading: string | null,
 };
+
+export type Job = {
+	id: string,
+	tasks: PipelineTask[],
+	status: JobStatus,
+	error_message: string | null,
+};
+
+export type JobStatus = "pending" | "running" | "completed" | "error" | "cancelled";
 
 export type LookupResult = {
 	original_text: string,
@@ -65,9 +81,9 @@ export type PipelineTask = {
 export type ProjectState = {
 	video_path: string | null,
 	extracted_audio_path: string | null,
-	tasks: PipelineTask[],
 	results: STTResult[],
 	target_language: string,
+	source_language: string | null,
 	vocals_audio_path: string | null,
 	background_audio_path: string | null,
 	stt_model_size: string | null,

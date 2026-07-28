@@ -1,16 +1,15 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { StopCircle } from "lucide-react";
-import { PipelineTask, commands } from "../../../types/bindings";
-import { useSTTJobStore } from "../../../store/sttJobStore";
+import { commands, Job } from "../../../types/bindings";
 
 interface Props {
-  tasks: PipelineTask[];
+  currentJob: Job | null;
 }
 
-export const OverlayFooter: React.FC<Props> = ({ tasks }) => {
-  const isTerminal = tasks.every(t => ['completed', 'error', 'cancelled'].includes(t.status));
-  const showTerminalFooter = isTerminal;
+export const OverlayFooter: React.FC<Props> = ({ currentJob }) => {
+  if (!currentJob) return null;
+  const isTerminal = currentJob.status === 'completed' || currentJob.status === 'error' || currentJob.status === 'cancelled';
 
   return (
     <motion.div 
@@ -19,10 +18,10 @@ export const OverlayFooter: React.FC<Props> = ({ tasks }) => {
       transition={{ delay: 0.5 }}
       className="mt-8 flex justify-center"
     >
-      {showTerminalFooter ? (
+      {isTerminal ? (
         <button 
           onClick={() => {
-            useSTTJobStore.getState().setOverlayVisible(false);
+            commands.dismissJob();
           }}
           className="px-8 py-3 rounded-full bg-white/10 hover:bg-white/15 transition-colors border border-white/20 text-xs font-bold tracking-widest text-white uppercase shadow-lg shadow-black/20"
         >

@@ -3,6 +3,7 @@ use crate::infrastructure::config::AppConfig;
 use crate::infrastructure::plugins::PluginManager;
 use crate::domain::agent::AgentType;
 use crate::domain::project::ProjectState;
+use crate::application::job_manager::JobManager;
 use std::sync::{Arc, Mutex};
 
 pub struct AppState {
@@ -10,6 +11,7 @@ pub struct AppState {
     pub translator_provider: Arc<dyn AIProvider>,
     pub segmenter_provider: Arc<dyn AIProvider>,
     pub project: Arc<Mutex<ProjectState>>,
+    pub job_manager: Arc<JobManager>,
     pub plugin_manager: Arc<PluginManager>,
 }
 
@@ -28,6 +30,7 @@ impl AppState {
             translator_provider: Arc::from(translator_provider),
             segmenter_provider: Arc::from(segmenter_provider),
             project: Arc::new(Mutex::new(ProjectState::default())),
+            job_manager: Arc::new(JobManager::new()),
             plugin_manager: Arc::new(plugin_manager),
         })
     }

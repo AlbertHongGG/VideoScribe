@@ -14,6 +14,8 @@ pub fn create_builder() -> tauri_specta::Builder<tauri::Wry> {
             pipeline::trigger_pipeline,
             pipeline::cancel_pipeline,
             pipeline::import_pipeline_results,
+            pipeline::dismiss_job,
+            pipeline::get_current_job,
             translation::start_translation,
             agent::run_agent_task,
             segmentation::start_segmentation,

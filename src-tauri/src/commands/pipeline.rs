@@ -6,6 +6,7 @@ use crate::application::python_client::PythonWorkerClient;
 use crate::domain::project::{STTResult, TaskType};
 use crate::infrastructure::state::AppState;
 use crate::application::pipeline_engine::PipelineEngine;
+use crate::infrastructure::tauri_events::TauriEventDispatcher;
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -35,11 +36,11 @@ pub fn trigger_pipeline(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
+    if state.job_manager.is_running() {
+        return Err("A job is already running".to_string());
+    }
+
     if let Ok(mut proj) = state.project.lock() {
-        if proj.is_pipeline_running() {
-            return Err("A job is already running".to_string());
-        }
-        
         let mut tasks = Vec::new();
         
         // Explicit Audio Extraction Step for videos
@@ -60,7 +61,8 @@ pub fn trigger_pipeline(
         if args.enable_segmentation { tasks.push(TaskType::Segmentation); }
         if args.enable_translation { tasks.push(TaskType::Translation); }
         
-        proj.init_pipeline(tasks);
+        let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
+        let job_id = state.job_manager.add_tasks(tasks, dispatcher)?;
         
         // Save args to project state so pipeline engine can use them
         proj.target_language = args.target_language.clone();
@@ -81,7 +83,7 @@ pub fn trigger_pipeline(
     PipelineEngine::advance_pipeline(app);
 
     // Job ID is now generated internally by pipeline, return dummy or actual
-    Ok(uuid::Uuid::new_v4().to_string())
+    Ok("".to_string())
 }
 
 #[tauri::command]
@@ -91,11 +93,11 @@ pub fn cancel_pipeline(
     state: State<'_, AppState>,
     client: State<'_, Arc<PythonWorkerClient>>
 ) -> Result<(), String> {
-    if let Ok(mut proj) = state.project.lock() {
-        proj.cancel_pipeline();
-    }
+    let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
+    state.job_manager.cancel_job(dispatcher);
+    
+
     let _ = client.cancel_job("".to_string());
-    let _ = app.emit("app-state-changed", Value::Null);
     Ok(())
 }
 
@@ -107,5 +109,19 @@ pub fn import_pipeline_results(app: AppHandle, results: Vec<STTResult>, state: S
     }
     let _ = app.emit("app-state-changed", Value::Null);
     Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn dismiss_job(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    let dispatcher = std::sync::Arc::new(crate::infrastructure::tauri_events::TauriEventDispatcher::new(app));
+    state.job_manager.dismiss_job(dispatcher);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_current_job(state: State<'_, AppState>) -> Result<Option<crate::domain::job::Job>, String> {
+    Ok(state.job_manager.get_current_job())
 }
 
