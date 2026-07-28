@@ -183,12 +183,24 @@ impl JobManager {
         if let Some(job) = self.current_job.lock().unwrap().as_mut() {
             job.status = JobStatus::Error;
             job.error_message = Some(error_message.clone());
-            
-            // Mark all running/pending tasks as error/cancelled
+            let mut found_running = false;
+            // Mark running tasks as error
             for task in &mut job.tasks {
-                if task.status == TaskStatus::Running || task.status == TaskStatus::Pending {
+                if task.status == TaskStatus::Running {
                     task.status = TaskStatus::Error;
                     task.error_message = Some(error_message.clone());
+                    found_running = true;
+                }
+            }
+            
+            // If no task was running (e.g., global error before starting), mark the first pending task as error
+            if !found_running {
+                for task in &mut job.tasks {
+                    if task.status == TaskStatus::Pending {
+                        task.status = TaskStatus::Error;
+                        task.error_message = Some(error_message.clone());
+                        break;
+                    }
                 }
             }
         }

@@ -6,7 +6,7 @@ from videoscribe.domain.ipc_models import SttPayload
 from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
 from videoscribe.infrastructure.utils import get_device
 from videoscribe.domain.models import TaskType, TaskStatus, VADResult, SpeechSegment
-from videoscribe.domain.transcription_options import TranscriptionOptions
+from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType
 
 class SttHandler(BaseHandler):
     def __init__(self):
@@ -39,12 +39,15 @@ class SttHandler(BaseHandler):
             
         reporter.report_task_progress(TaskType.STT, TaskStatus.RUNNING, 0.0, runtime_device=device, runtime_compute_type=compute_type, language=lang)
         
+        vad_engine_enum = VADEngineType(payload.vad_engine) if payload.vad_engine in ["off", "native", "silero_v6", "firered_vad"] else VADEngineType.OFF
+        
         try:
             options = TranscriptionOptions(
                 model_size=payload.model,
                 device=device,
                 compute_type=compute_type,
                 language=lang,
+                vad_engine=vad_engine_enum,
                 use_batch=payload.use_batch and is_gpu,
                 batch_size=payload.batch_size
             )

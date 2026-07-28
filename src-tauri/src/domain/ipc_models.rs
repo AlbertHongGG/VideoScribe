@@ -27,6 +27,7 @@ pub struct SttPayload {
     pub language: String,
     pub use_batch: bool,
     pub batch_size: i32,
+    pub vad_engine: String,
     pub vad_segments: Option<Vec<crate::domain::project::VadSegment>>,
 }
 

@@ -25,6 +25,7 @@ class SttPayload:
     language: str
     use_batch: bool
     batch_size: int
+    vad_engine: str
     vad_segments: Optional[List[Dict[str, Any]]] = None
 
 @dataclass
