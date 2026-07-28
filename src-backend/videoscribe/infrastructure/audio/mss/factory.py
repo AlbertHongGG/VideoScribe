@@ -4,6 +4,7 @@ from videoscribe.domain.interfaces import MSSAnalyzer
 from videoscribe.domain.transcription_options import TranscriptionOptions, MSSEngineType
 from videoscribe.infrastructure.audio.mss.audio_separator_engine import AudioSeparatorEngine
 
+
 logger = logging.getLogger(__name__)
 
 class MSSFactory:

@@ -2,6 +2,7 @@ import logging
 from typing import Iterator, Tuple, Optional, Any
 from faster_whisper import WhisperModel, BatchedInferencePipeline
 from faster_whisper.audio import decode_audio
+
 from videoscribe.domain.models import Word, TranscriptionInfo, VADResult, TranscriptionSegment
 from videoscribe.domain.interfaces import SpeechRecognizer
 from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType

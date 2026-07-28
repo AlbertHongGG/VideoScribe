@@ -1,5 +1,4 @@
 from typing import Dict, Any, Optional
-import torch
 from videoscribe.infrastructure.handlers.base import BaseHandler
 from videoscribe.domain.cancellation import CancellationToken
 from videoscribe.domain.ipc_models import FaPayload
@@ -7,6 +6,7 @@ from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
 from videoscribe.domain.models import TaskType, TaskStatus, TranscriptionSegment
 from videoscribe.domain.transcription_options import TranscriptionOptions, ForcedAlignmentEngineType
 from videoscribe.infrastructure.audio.alignment.factory import ForcedAlignmentFactory
+from videoscribe.infrastructure.utils import get_device
 
 class FaHandler(BaseHandler):
     def handle(self, job_id: str, payload_data: Dict[str, Any], cancel_token: Optional[CancellationToken]):
@@ -21,7 +21,7 @@ class FaHandler(BaseHandler):
         
         try:
             fa_engine_enum = ForcedAlignmentEngineType(payload.fa_engine)
-            options = TranscriptionOptions(fa_engine=fa_engine_enum, fa_model=payload.fa_model, device="cuda" if torch.cuda.is_available() else "cpu")
+            options = TranscriptionOptions(fa_engine=fa_engine_enum, fa_model=payload.fa_model, device=get_device())
             fa_analyzer = ForcedAlignmentFactory.create(options)
             
             if fa_analyzer:

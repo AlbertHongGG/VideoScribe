@@ -1,16 +1,23 @@
 from typing import Dict, Any, Optional, List
-import torch
+
 from videoscribe.infrastructure.handlers.base import BaseHandler
 from videoscribe.domain.cancellation import CancellationToken, CancelledException
 from videoscribe.domain.ipc_models import SttPayload
 from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
+from videoscribe.infrastructure.utils import get_device
 from videoscribe.domain.models import TaskType, TaskStatus, VADResult, SpeechSegment
 from videoscribe.domain.transcription_options import TranscriptionOptions
-from videoscribe.infrastructure.recognizers.faster_whisper_engine import FasterWhisperEngine
 
 class SttHandler(BaseHandler):
     def __init__(self):
-        self.recognizer = FasterWhisperEngine()
+        self._recognizer = None
+
+    @property
+    def recognizer(self):
+        if self._recognizer is None:
+            from videoscribe.infrastructure.recognizers.faster_whisper_engine import FasterWhisperEngine
+            self._recognizer = FasterWhisperEngine()
+        return self._recognizer
 
     def handle(self, job_id: str, payload_data: Dict[str, Any], cancel_token: Optional[CancellationToken], cached_vad_segments: Optional[List[Dict[str, Any]]] = None):
         try:
@@ -20,8 +27,10 @@ class SttHandler(BaseHandler):
             return
             
         reporter = IpcReporter(job_id)
-        is_gpu = torch.cuda.is_available()
-        device = "cuda" if is_gpu else "cpu"
+        
+        
+        device = get_device()
+        is_gpu = device == "cuda"
         compute_type = "float16" if is_gpu else "int8"
         
         reporter.report_task_progress(TaskType.STT, TaskStatus.RUNNING, 0.0, runtime_device=device, runtime_compute_type=compute_type, language=payload.language)

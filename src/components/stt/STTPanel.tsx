@@ -51,7 +51,7 @@ export const STTPanel: React.FC = () => {
 
   const renderContent = () => {
     if (isPipelineActive) {
-      return <PipelineStatusOverlay tasks={tasks} />;
+      return <PipelineStatusOverlay />;
     }
     
     if (isEmpty) {

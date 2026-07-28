@@ -1,10 +1,10 @@
 from typing import Optional
 from videoscribe.domain.interfaces import VADAnalyzer
 from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType
-
-from .silero_v6_analyzer import SileroEngine
-from .firered_analyzer import FireRedEngine
 from .pipeline_analyzer import VADPipelineAnalyzer
+from videoscribe.infrastructure.audio.vad.silero_v6_analyzer import SileroEngine
+from videoscribe.infrastructure.audio.vad.firered_analyzer import FireRedEngine
+
 import logging
 
 logger = logging.getLogger(__name__)

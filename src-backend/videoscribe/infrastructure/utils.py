@@ -24,3 +24,20 @@ def get_tmp_dir() -> str:
     tmp_dir = os.path.join(root, ".runtime", "tmp")
     os.makedirs(tmp_dir, exist_ok=True)
     return tmp_dir
+
+_device = None
+
+def get_device() -> str:
+    """
+    Lazily determine and cache the compute device (cuda or cpu).
+    This prevents importing torch at the top level and multiple evaluations.
+    """
+    global _device
+    if _device is None:
+        try:
+            import torch
+            _device = "cuda" if torch.cuda.is_available() else "cpu"
+        except ImportError:
+            _device = "cpu"
+    return _device
+
