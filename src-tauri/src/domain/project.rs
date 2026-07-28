@@ -209,13 +209,8 @@ impl ProjectState {
         }
     }
     
-    pub fn dismiss_error(&mut self) {
-        for t in self.tasks.iter_mut() {
-            if t.status == TaskStatus::Error {
-                t.status = TaskStatus::Cancelled;
-                t.error_message = None;
-            }
-        }
+    pub fn dismiss_pipeline_status(&mut self) {
+        self.tasks.clear();
     }
 
     pub fn cancel_pipeline(&mut self) {

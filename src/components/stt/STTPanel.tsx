@@ -5,10 +5,9 @@ import { useSTTSettingsStore } from "../../store/sttSettingsStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNotifyStore } from "../../store/notifyStore";
 import { STTPanelHeader } from "./STTPanelHeader";
-import { STTProcessingOverlay } from "./STTProcessingOverlay";
+import { PipelineStatusOverlay } from "./PipelineStatusOverlay";
 import { STTResultList } from "./STTResultList";
 import { STTEmptyState } from "./STTEmptyState";
-import { STTErrorState } from "./STTErrorState";
 
 export const STTPanel: React.FC = () => {
   const { isPanelOpen } = useSTTSettingsStore();
@@ -44,18 +43,17 @@ export const STTPanel: React.FC = () => {
     });
   };
 
-  const isProcessing = tasks.some(t => t.status === "running" || t.status === "pending");
-  const hasError = tasks.some(t => t.status === "error");
-  const allTasksDead = tasks.length > 0 && tasks.every(t => t.status === "error" || t.status === "cancelled" || t.status === "outdated");
-  const isEmpty = (tasks.length === 0 || allTasksDead) && results.length === 0;
+  // Determine if the pipeline is active or in a terminal state awaiting dismissal
+  const isPipelineActive = tasks.length > 0;
+  
+  // Only show empty state if no pipeline is active AND we have no results
+  const isEmpty = !isPipelineActive && results.length === 0;
 
   const renderContent = () => {
-    if (hasError) {
-      return <STTErrorState />;
+    if (isPipelineActive) {
+      return <PipelineStatusOverlay tasks={tasks} />;
     }
-    if (isProcessing) {
-      return <STTProcessingOverlay tasks={tasks} />;
-    }
+    
     if (isEmpty) {
       return <STTEmptyState />;
     }
