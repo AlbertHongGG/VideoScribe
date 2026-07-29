@@ -4,7 +4,7 @@ from videoscribe.infrastructure.handlers.base import BaseHandler
 from videoscribe.domain.cancellation import CancellationToken, CancelledException
 from videoscribe.domain.ipc_models import SttPayload
 from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
-from videoscribe.infrastructure.utils import get_device, get_ai_audio_path
+from videoscribe.infrastructure.utils import get_device, get_ai_audio_path, clean_memory
 from videoscribe.domain.models import TaskType, TaskStatus, VADResult, SpeechSegment
 from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType
 
@@ -18,6 +18,12 @@ class SttHandler(BaseHandler):
             from videoscribe.infrastructure.recognizers.faster_whisper_engine import FasterWhisperEngine
             self._recognizer = FasterWhisperEngine()
         return self._recognizer
+        
+    def cleanup(self):
+        if self._recognizer is not None:
+            del self._recognizer
+            self._recognizer = None
+        clean_memory()
 
     def handle(self, job_id: str, payload_data: Dict[str, Any], cancel_token: Optional[CancellationToken], cached_vad_segments: Optional[List[Dict[str, Any]]] = None):
         try:

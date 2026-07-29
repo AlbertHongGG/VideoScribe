@@ -1,5 +1,6 @@
 import os
 from typing import Dict, Any, Optional
+from datetime import datetime
 
 from videoscribe.domain.cancellation import CancellationToken
 from videoscribe.domain.models import TaskType, TaskStatus
@@ -11,6 +12,9 @@ from videoscribe.infrastructure.utils import get_tmp_dir
 class PreprocessHandler(BaseHandler):
     def __init__(self):
         self.analyzer = FFmpegAudioAnalyzer()
+
+    def cleanup(self):
+        pass # No heavy resources to clean up
 
     def handle(self, job_id: str, payload_data: Dict[str, Any], cancel_token: Optional[CancellationToken]):
         import logging
@@ -27,8 +31,14 @@ class PreprocessHandler(BaseHandler):
             if not video_path:
                 raise ValueError("Missing video_path in payload")
 
-            # Store temp files in .runtime/tmp/<job_id> instead of polluting the user's video folder
-            job_workspace = os.path.join(get_tmp_dir(), job_id)
+            # Store temp files in .runtime/tmp/yyyymmdd_hhmmss_<video_name>
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            video_name = os.path.splitext(os.path.basename(video_path))[0]
+            # Replace spaces and invalid characters to make it a safe directory name
+            safe_video_name = "".join([c if c.isalnum() else "_" for c in video_name])
+            folder_name = f"{timestamp}_{safe_video_name}"
+            
+            job_workspace = os.path.join(get_tmp_dir(), folder_name)
             wav_path = os.path.join(job_workspace, "extracted_audio.wav")
             
             logger.info(f"Running ffmpeg extraction to {wav_path}")

@@ -9,11 +9,17 @@ from videoscribe.domain.models import TaskType, TaskStatus
 from videoscribe.domain.transcription_options import TranscriptionOptions, MSSEngineType
 from videoscribe.infrastructure.audio.mss.factory import MSSFactory
 from videoscribe.infrastructure.audio.ffmpeg_analyzer import FFmpegAudioAnalyzer
-from videoscribe.infrastructure.utils import get_device
+from videoscribe.infrastructure.utils import get_device, clean_memory
 
 class MssHandler(BaseHandler):
     def __init__(self):
-        pass
+        self.mss_analyzer = None
+        
+    def cleanup(self):
+        if self.mss_analyzer is not None:
+            del self.mss_analyzer
+            self.mss_analyzer = None
+        clean_memory()
 
     def handle(self, job_id: str, payload_data: Dict[str, Any], cancel_token: Optional[CancellationToken]):
         try:
@@ -30,11 +36,11 @@ class MssHandler(BaseHandler):
         try:
             mss_engine_enum = MSSEngineType(payload.mss_engine)
             options = TranscriptionOptions(mss_engine=mss_engine_enum, mss_model=payload.mss_model, device=get_device())
-            mss_analyzer = MSSFactory.create(options)
-            if mss_analyzer:
+            self.mss_analyzer = MSSFactory.create(options)
+            if self.mss_analyzer:
                 def progress_callback(pct: float):
                     reporter.report_task_progress(TaskType.MSS, TaskStatus.RUNNING, pct)
-                result = mss_analyzer.separate(payload.audio_path, options, progress_callback)
+                result = self.mss_analyzer.separate(payload.audio_path, options, progress_callback)
                 
                 # Convention over Configuration: Generate 16k AI track for vocals
                 if result and result.vocals_path:

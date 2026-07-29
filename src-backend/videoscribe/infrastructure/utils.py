@@ -1,5 +1,7 @@
 import os
 import sys
+import gc
+import logging
 
 def get_project_root() -> str:
     """
@@ -51,3 +53,24 @@ def get_ai_audio_path(master_audio_path: str) -> str:
         
     ai_path = master_audio_path.replace(".wav", "_16k.wav")
     return ai_path if os.path.exists(ai_path) else master_audio_path
+
+def clean_memory():
+    """
+    Forces Python garbage collection and thoroughly empties PyTorch CUDA caches.
+    This is critical for ensuring models are physically removed from VRAM.
+    """
+    logger = logging.getLogger("utils.clean_memory")
+    
+    # Force Python GC to collect unreferenced objects (like detached models)
+    collected = gc.collect()
+    
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.ipc_collect()
+            logger.info(f"Memory cleaned: {collected} objects collected, CUDA cache emptied.")
+        else:
+            logger.info(f"Memory cleaned: {collected} objects collected (CPU).")
+    except ImportError:
+        logger.info(f"Memory cleaned: {collected} objects collected (Torch not available).")

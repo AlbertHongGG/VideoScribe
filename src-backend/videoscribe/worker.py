@@ -62,6 +62,10 @@ class CommandRouter:
             handler.handle(job_id, payload, self.current_cancel_token)
         finally:
             self.current_cancel_token = None
+            try:
+                handler.cleanup()
+            except Exception as e:
+                logger.error(f"Error during handler cleanup for {cmd.action}: {e}")
 
     def handle_cancel(self):
         if self.current_cancel_token:
