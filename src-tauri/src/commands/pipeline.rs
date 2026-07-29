@@ -67,7 +67,26 @@ pub fn trigger_pipeline(
         if args.enable_translation { tasks.push(TaskType::Translation); }
         
         let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
-        let _job_id = state.job_manager.start_new_job(tasks, dispatcher)?;
+        let _job_id = state.job_manager.start_new_job(tasks.clone(), dispatcher)?;
+        
+        // --- Cache Invalidation ---
+        // In a Blackboard Architecture, if a node is scheduled for re-execution,
+        // we MUST clear its previous output immediately to prevent downstream
+        // tasks from accidentally consuming stale data if this task fails.
+        if tasks.contains(&TaskType::Preprocess) {
+            proj.extracted_audio_path = None;
+        }
+        if tasks.contains(&TaskType::Mss) {
+            proj.vocals_audio_path = None;
+            proj.background_audio_path = None;
+        }
+        if tasks.contains(&TaskType::Vad) {
+            proj.vad_segments = None;
+        }
+        if tasks.contains(&TaskType::Stt) {
+            proj.results.clear();
+        }
+        // --------------------------
         
         // Save args to project state so pipeline engine can use them
         proj.target_language = args.target_language.clone();

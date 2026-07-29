@@ -59,13 +59,18 @@ class SttHandler(BaseHandler):
             )
             
             vad_result_obj = None
-            if payload.vad_segments:
-                vad_result_obj = VADResult(segments=[SpeechSegment(start_time=s["start"], end_time=s["end"]) for s in payload.vad_segments])
-            elif cached_vad_segments:
-                if isinstance(cached_vad_segments, VADResult):
-                    vad_result_obj = cached_vad_segments
-                elif isinstance(cached_vad_segments, list):
-                    vad_result_obj = VADResult(segments=[SpeechSegment(start_time=s["start"], end_time=s["end"]) for s in cached_vad_segments])
+            # Architectural Fix: Single Source of Truth.
+            # Only consume the cached VAD payload if the user actually requested an external VAD engine.
+            # This prevents stale frontend state (state leakage) from overriding the user's intent to turn VAD off.
+            if options.vad_engine in [VADEngineType.SILERO_V6, VADEngineType.FIRERED_VAD]:
+                if payload.vad_segments:
+                    vad_result_obj = VADResult(segments=[SpeechSegment(start_time=s["start"], end_time=s["end"]) for s in payload.vad_segments])
+                elif cached_vad_segments:
+                    if isinstance(cached_vad_segments, VADResult):
+                        vad_result_obj = cached_vad_segments
+                    elif isinstance(cached_vad_segments, list):
+                        vad_result_obj = VADResult(segments=[SpeechSegment(start_time=s["start"], end_time=s["end"]) for s in cached_vad_segments])
+            
             self.recognizer.load_model(options)
             
             # Convention over Configuration: Intercept with AI track if exists
