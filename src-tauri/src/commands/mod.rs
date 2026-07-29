@@ -20,6 +20,7 @@ pub fn create_builder() -> tauri_specta::Builder<tauri::Wry> {
             agent::run_agent_task,
             segmentation::start_segmentation,
             project::get_app_state,
+            project::set_video_path,
             project::export_mss_stems,
             project::import_mss_stems,
         ])

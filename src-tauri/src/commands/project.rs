@@ -15,6 +15,17 @@ pub fn get_app_state(state: State<'_, AppState>) -> Result<ProjectState, String>
 
 #[tauri::command]
 #[specta::specta]
+pub fn set_video_path(app: tauri::AppHandle, state: State<'_, AppState>, path: String) -> Result<(), String> {
+    let mut project = state.project.lock().map_err(|e| e.to_string())?;
+    project.video_path = Some(path);
+    
+    use tauri::Emitter;
+    let _ = app.emit("app-state-changed", Value::Null);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn export_mss_stems(state: State<'_, AppState>, export_path: String) -> Result<(), String> {
     let project = state.project.lock().map_err(|e| e.to_string())?;
     
@@ -55,7 +66,7 @@ pub fn export_mss_stems(state: State<'_, AppState>, export_path: String) -> Resu
 #[specta::specta]
 pub fn import_mss_stems(app: tauri::AppHandle, state: State<'_, AppState>, import_path: String) -> Result<(), String> {
     let mut project = state.project.lock().map_err(|e| e.to_string())?;
-    let video_path = project.video_path.clone().ok_or_else(|| "No active video to import stems into.".to_string())?;
+    let video_path = project.video_path.clone().ok_or_else(|| "Please open a video first.".to_string())?;
     
     let workspace = WorkspaceManager::get_or_create_workspace(&video_path);
     project.workspace_dir = Some(workspace.clone());

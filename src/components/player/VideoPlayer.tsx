@@ -290,12 +290,8 @@ export const VideoPlayer: React.FC = () => {
               onEnded={() => setIsPlaying(false)}
               onClick={() => setIsPlaying(!isPlaying)}
             />
-            {vocalsUrl && (
-              <audio ref={vocalsAudioRef} src={vocalsUrl} preload="auto" />
-            )}
-            {backgroundUrl && (
-              <audio ref={backgroundAudioRef} src={backgroundUrl} preload="auto" />
-            )}
+            <audio ref={vocalsAudioRef} src={vocalsUrl || undefined} preload="auto" />
+            <audio ref={backgroundAudioRef} src={backgroundUrl || undefined} preload="auto" />
             
             {hoverText && (
               <DictionaryTooltip

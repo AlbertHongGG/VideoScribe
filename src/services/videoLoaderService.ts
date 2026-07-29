@@ -1,5 +1,5 @@
 import { useVideoStore } from '../store/videoStore';
-import { convertFileSrc } from '@tauri-apps/api/core';
+import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 
 export class VideoLoaderService {
   /**
@@ -16,6 +16,7 @@ export class VideoLoaderService {
         const mockFile = new File([], fileName);
         
         useVideoStore.getState().setVideo(mockFile, url, path);
+        invoke("set_video_path", { path }).catch(console.error);
         return true;
       }
       return false;

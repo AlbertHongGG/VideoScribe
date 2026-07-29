@@ -1,5 +1,4 @@
 import { useSTTSettingsStore } from "../../store/sttSettingsStore";
-
 import { SettingSection } from "../settings/SettingSection";
 import { SettingRow, SettingDivider, SettingGroup } from "../settings/SettingRow";
 import { SettingSelect, SettingToggle, SettingSlider } from "../settings/SettingControls";
@@ -7,6 +6,7 @@ import { Download, Upload } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { save, open } from "@tauri-apps/plugin-dialog";
 import { Tooltip } from "../ui/Tooltip";
+import { useNotifyStore } from "../../store/notifyStore";
 
 const MODEL_OPTIONS = [
   { value: "tiny", label: "Tiny (Fastest, least accurate)" },
@@ -62,6 +62,8 @@ const FA_MODEL_OPTIONS = [
 ];
 
 const MssStemActions = () => {
+  const notify = useNotifyStore();
+
   const handleExport = async () => {
     try {
       const exportPath = await save({
@@ -70,9 +72,11 @@ const MssStemActions = () => {
       });
       if (exportPath) {
         await invoke("export_mss_stems", { exportPath });
+        notify.show("Stems exported successfully.", "success");
       }
     } catch (e) {
       console.error("Export failed:", e);
+      notify.show(`Export failed: ${e}`, "error");
     }
   };
 
@@ -84,9 +88,11 @@ const MssStemActions = () => {
       });
       if (importPath) {
         await invoke("import_mss_stems", { importPath });
+        notify.show("Stems imported successfully.", "success");
       }
     } catch (e) {
       console.error("Import failed:", e);
+      notify.show(`Import failed: ${e}`, "error");
     }
   };
 
