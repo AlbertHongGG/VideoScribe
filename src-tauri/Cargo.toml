@@ -44,5 +44,6 @@ thiserror = "2.0"
 lazy_static = "1.5"
 uuid = { version = "1.24.0", features = ["v4", "fast-rng"] }
 reqwest-eventsource = "0.6.0"
+zip = "8.6.0"
 
 

@@ -88,6 +88,9 @@ pub fn trigger_pipeline(
         }
         // --------------------------
         
+        let workspace_dir = crate::infrastructure::workspace_manager::WorkspaceManager::get_or_create_workspace(&args.video_path);
+        proj.workspace_dir = Some(workspace_dir);
+        
         // Save args to project state so pipeline engine can use them
         proj.target_language = args.target_language.clone();
         proj.source_language = Some(args.language.clone());

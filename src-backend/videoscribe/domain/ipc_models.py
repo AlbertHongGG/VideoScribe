@@ -12,6 +12,7 @@ class MssPayload:
     audio_path: str
     mss_engine: str
     mss_model: str
+    workspace_dir: str
 
 @dataclass
 class VadPayload:

@@ -3,6 +3,10 @@ import { useSTTSettingsStore } from "../../store/sttSettingsStore";
 import { SettingSection } from "../settings/SettingSection";
 import { SettingRow, SettingDivider, SettingGroup } from "../settings/SettingRow";
 import { SettingSelect, SettingToggle, SettingSlider } from "../settings/SettingControls";
+import { Download, Upload } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
+import { save, open } from "@tauri-apps/plugin-dialog";
+import { Tooltip } from "../ui/Tooltip";
 
 const MODEL_OPTIONS = [
   { value: "tiny", label: "Tiny (Fastest, least accurate)" },
@@ -56,6 +60,57 @@ const FA_MODEL_OPTIONS = [
   { value: "wav2vec2-large-xlsr-53-chinese", label: "Wav2Vec2 Chinese" },
   { value: "wav2vec2-large-960h-lv60k", label: "Wav2Vec2 English" }
 ];
+
+const MssStemActions = () => {
+  const handleExport = async () => {
+    try {
+      const exportPath = await save({
+        filters: [{ name: "VideoScribe Project Stems", extensions: ["zip"] }],
+        defaultPath: "stems.zip"
+      });
+      if (exportPath) {
+        await invoke("export_mss_stems", { exportPath });
+      }
+    } catch (e) {
+      console.error("Export failed:", e);
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      const importPath = await open({
+        filters: [{ name: "VideoScribe Project Stems", extensions: ["zip"] }],
+        multiple: false,
+      });
+      if (importPath) {
+        await invoke("import_mss_stems", { importPath });
+      }
+    } catch (e) {
+      console.error("Import failed:", e);
+    }
+  };
+
+  return (
+    <div className="flex gap-2">
+      <Tooltip content="Import Stems" position="top">
+        <button 
+          onClick={handleImport}
+          className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 transition-colors"
+        >
+          <Download size={16} />
+        </button>
+      </Tooltip>
+      <Tooltip content="Export Stems" position="top">
+        <button 
+          onClick={handleExport}
+          className="flex items-center justify-center w-8 h-8 rounded-lg bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 transition-colors"
+        >
+          <Upload size={16} />
+        </button>
+      </Tooltip>
+    </div>
+  );
+};
 
 export const SettingsPanel: React.FC = () => {
   const store = useSTTSettingsStore();
@@ -115,7 +170,7 @@ export const SettingsPanel: React.FC = () => {
                   <SettingSelect settingKey="mssModel" value={store.mssModel} options={MSS_MODEL_OPTIONS} setter={store.setMssModel} />
                 </SettingRow>
                 <SettingDivider />
-                <SettingGroup title="Audio Stem Mixing & Volume Balance">
+                <SettingGroup title="Audio Stem Mixing & Volume Balance" headerAction={<MssStemActions />}>
                   <SettingSlider settingKey="vocalVolume" label="Vocals Volume" value={store.vocalVolume} min={0} max={100} unit="%" setter={store.setVocalVolume} />
                   <SettingSlider settingKey="backgroundVolume" label="Background Music Volume" value={store.backgroundVolume} min={0} max={100} unit="%" setter={store.setBackgroundVolume} />
                 </SettingGroup>

@@ -10,7 +10,6 @@ from videoscribe.domain.transcription_options import TranscriptionOptions, MSSEn
 from videoscribe.infrastructure.audio.mss.factory import MSSFactory
 from videoscribe.infrastructure.audio.ffmpeg_analyzer import FFmpegAudioAnalyzer
 from videoscribe.infrastructure.utils import get_device, clean_memory
-
 class MssHandler(BaseHandler):
     def __init__(self):
         self.mss_analyzer = None
@@ -35,7 +34,12 @@ class MssHandler(BaseHandler):
         
         try:
             mss_engine_enum = MSSEngineType(payload.mss_engine)
-            options = TranscriptionOptions(mss_engine=mss_engine_enum, mss_model=payload.mss_model, device=get_device())
+            options = TranscriptionOptions(
+                mss_engine=mss_engine_enum, 
+                mss_model=payload.mss_model, 
+                device=get_device(),
+                workspace_dir=payload.workspace_dir
+            )
             self.mss_analyzer = MSSFactory.create(options)
             if self.mss_analyzer:
                 def progress_callback(pct: float):

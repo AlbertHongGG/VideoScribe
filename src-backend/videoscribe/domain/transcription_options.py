@@ -37,3 +37,4 @@ class TranscriptionOptions:
     fa_engine: ForcedAlignmentEngineType = ForcedAlignmentEngineType.OFF
     fa_model: str = "mms-300m"
     cue_policy: CuePolicy = field(default_factory=CuePolicy)
+    workspace_dir: Optional[str] = None

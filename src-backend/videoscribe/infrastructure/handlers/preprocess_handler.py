@@ -7,7 +7,6 @@ from videoscribe.domain.models import TaskType, TaskStatus
 from videoscribe.infrastructure.handlers.base import BaseHandler
 from videoscribe.infrastructure.audio.ffmpeg_analyzer import FFmpegAudioAnalyzer
 from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
-from videoscribe.infrastructure.utils import get_or_create_workspace
 
 class PreprocessHandler(BaseHandler):
     def __init__(self):
@@ -27,11 +26,13 @@ class PreprocessHandler(BaseHandler):
             logger.info("Successfully sent TaskProgress RUNNING")
 
             video_path = payload_data.get("video_path")
+            job_workspace = payload_data.get("workspace_dir")
 
             if not video_path:
                 raise ValueError("Missing video_path in payload")
+            if not job_workspace:
+                raise ValueError("Missing workspace_dir in payload")
 
-            job_workspace = get_or_create_workspace(video_path)
             wav_path = os.path.join(job_workspace, "extracted_audio.wav")
             
             logger.info(f"Running ffmpeg extraction to {wav_path}")

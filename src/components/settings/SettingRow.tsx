@@ -41,13 +41,17 @@ export const SettingDivider: React.FC = () => {
 
 interface SettingGroupProps {
   title: string;
+  headerAction?: React.ReactNode;
   children: React.ReactNode;
 }
 
-export const SettingGroup: React.FC<SettingGroupProps> = ({ title, children }) => {
+export const SettingGroup: React.FC<SettingGroupProps> = ({ title, headerAction, children }) => {
   return (
     <div className="space-y-4">
-      <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">{title}</h4>
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{title}</h4>
+        {headerAction && <div>{headerAction}</div>}
+      </div>
       <div className="bg-white/[0.02] p-4 rounded-xl border border-white/5 space-y-6">
         {children}
       </div>
