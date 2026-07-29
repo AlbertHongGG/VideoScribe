@@ -18,6 +18,28 @@ def get_project_root() -> str:
     current_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
 
+def get_ffmpeg_path() -> str:
+    """
+    Get the path to ffmpeg.
+    In Portable mode, looks for ffmpeg/bin/ffmpeg.exe adjacent to the backend directory.
+    Otherwise falls back to system PATH "ffmpeg".
+    """
+    backend_root = get_project_root()
+    portable_ffmpeg = os.path.join(os.path.dirname(backend_root), "ffmpeg", "bin", "ffmpeg.exe")
+    if os.path.exists(portable_ffmpeg):
+        return portable_ffmpeg
+    return "ffmpeg"
+
+def get_ffprobe_path() -> str:
+    """
+    Get the path to ffprobe.
+    """
+    backend_root = get_project_root()
+    portable_ffprobe = os.path.join(os.path.dirname(backend_root), "ffmpeg", "bin", "ffprobe.exe")
+    if os.path.exists(portable_ffprobe):
+        return portable_ffprobe
+    return "ffprobe"
+
 _device = None
 
 def get_device() -> str:

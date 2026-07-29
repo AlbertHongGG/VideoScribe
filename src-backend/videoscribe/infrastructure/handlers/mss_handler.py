@@ -9,7 +9,7 @@ from videoscribe.domain.models import TaskType, TaskStatus
 from videoscribe.domain.transcription_options import TranscriptionOptions, MSSEngineType
 from videoscribe.infrastructure.audio.mss.factory import MSSFactory
 from videoscribe.infrastructure.audio.ffmpeg_analyzer import FFmpegAudioAnalyzer
-from videoscribe.infrastructure.utils import get_device, clean_memory
+from videoscribe.infrastructure.utils import get_device, clean_memory, get_ffmpeg_path
 class MssHandler(BaseHandler):
     def __init__(self):
         self.mss_analyzer = None
@@ -50,7 +50,7 @@ class MssHandler(BaseHandler):
                 if result and result.vocals_path:
                     vocals_16k_path = result.vocals_path.replace(".wav", "_16k.wav")
                     ffmpeg_cmd = [
-                        "ffmpeg", "-y",
+                        get_ffmpeg_path(), "-y",
                         "-i", result.vocals_path,
                         "-vn",
                         "-acodec", "pcm_s16le",

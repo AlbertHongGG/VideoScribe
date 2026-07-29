@@ -1,32 +1,56 @@
 # VideoScribe
 
-VideoScribe is an AI-powered offline transcription and translation tool for videos. It leverages Faster-Whisper to run STT locally with GPU acceleration.
+VideoScribe is an AI-powered offline transcription, translation, and audio stem mixing tool for videos. It leverages `faster-whisper` to run Speech-to-Text locally with GPU acceleration, and integrates advanced audio separation models to give you full control over vocals and background music.
 
-## Building the Portable Application
+## Key Features
+- **Local AI Transcription**: High-performance, offline transcription using Faster-Whisper.
+- **Audio Stem Separation**: Isolate vocals and background music using state-of-the-art models (MelBandRoformer, MDX-Net).
+- **Logarithmic Audio Mixer**: Smooth, studio-grade volume control over individual audio stems.
+- **Dual Subtitle Translation**: Local LLM-powered translation and sentence segmentation.
+- **Interactive Karaoke Subtitles**: Dynamic word-highlighting and Japanese Furigana/Dictionary support.
 
-To build the application into a standalone "Portable" version that requires no Python or FFmpeg installation on the target machine, follow these steps:
+---
 
+## Keyboard Shortcuts (Hotkeys)
+
+The video player supports several global hotkeys for a seamless editing experience:
+
+- **`Space`**: Play / Pause
+- **`Enter`**: Toggle Fullscreen
+- **`Esc`**: Exit Fullscreen
+- **`Arrow Left` / `Arrow Right`**: Seek backward / forward 1 second
+- **`,` (Comma) / `.` (Period)**: Precise frame-by-frame scrubbing (backward/forward by 1/30s)
+- **`A` / `D`**: Decrease / Increase playback speed by 0.1x
+- **`S`**: Reset playback speed to 1.0x (press again to toggle back to previous speed)
+
+---
+
+## Portable Build Guide (No Installation Required)
+
+VideoScribe can be packaged into a truly standalone "Portable" directory. This means users do not need to install Python, FFmpeg, or any dependencies on their system. You can simply zip the folder and share it.
+
+### How to Build
 1. Close all active development servers (`npm run dev`).
 2. Open a PowerShell terminal in the project root.
 3. Run the portable build script:
 ```powershell
 .\build_portable.ps1
 ```
-4. The script will automatically compile the frontend, package the Python backend using PyInstaller, download FFmpeg, and assemble everything into a `VideoScribe-Portable` directory.
-5. You can now zip the `VideoScribe-Portable` directory and distribute it. Users can simply run `VideoScribe.exe` inside it.
 
-## Troubleshooting / Known Issues
+### How the Portable Build Works
+We use a **Standalone Python Architecture (uv managed)** instead of PyInstaller. This completely avoids the notorious DLL/C-Extension errors associated with packaging PyTorch and heavy AI models.
+- **Tauri App**: Compiled to a standalone `.exe`.
+- **Backend Environment**: `uv` automatically fetches a standalone Python 3.11 environment, copies it to `VideoScribe-Portable/backend/python`, and installs all dependencies into it.
+- **FFmpeg**: Automatically downloaded and placed in `ffmpeg/bin`.
+- **Smart Launch**: The Rust backend automatically detects if `backend/python/python.exe` exists next to it. If it does, it runs in Portable Mode; otherwise, it falls back to Development Mode.
 
-### CUDA / GPU Acceleration Issues (faster-whisper)
+---
 
-**Problem**: 
-When running the Speech-to-Text (STT) feature, you might encounter issues where `faster-whisper` falls back to the CPU instead of using the GPU, or fails to find the correct CUDA libraries. By default, package managers might fetch the CPU-only version of PyTorch on Windows.
+## Troubleshooting & Developer Notes
 
-**Solution**: 
-To ensure the backend uses GPU acceleration, the PyTorch CUDA 12.8 wheel index is explicitly defined in `src-backend/pyproject.toml`. When using `uv` to install dependencies, it will fetch the correct GPU-enabled version.
-
-If you are setting this up from scratch or encountering CUDA errors, make sure your `src-backend/pyproject.toml` includes:
-
+### 1. CUDA / GPU Acceleration Issues
+If `faster-whisper` or PyTorch falls back to the CPU, it means your Python environment fetched the CPU-only PyTorch binaries.
+**Fix**: We explicitly enforce the CUDA 12.8 wheel in `src-backend/pyproject.toml`. Make sure it contains:
 ```toml
 [tool.uv.sources]
 torch = [{ index = "pytorch-cu128" }]
@@ -37,37 +61,21 @@ url = "https://download.pytorch.org/whl/cu128"
 explicit = true
 ```
 
-*Note: If you still encounter DLL load errors (e.g., `cublas64_12.dll` not found), ensure that you have the appropriate NVIDIA CUDA 12 toolkit installed on your Windows system and that its `bin` directory is in your system `%PATH%`.*
+### 2. Custom API Providers (Tauri Security Blocks)
+If you add a custom API (like a local LLM server on `localhost:8000`), Tauri will block the frontend from making requests to it (throwing a `url not allowed on the configured scope` error).
+**Fix**: Add the domain to the `http` scope in `src-tauri/capabilities/default.json` and restart the Tauri dev server.
+```json
+"permissions": [
+  {
+    "identifier": "http:default",
+    "allow": [
+      { "url": "http://127.0.0.1:8000/*" },
+      { "url": "http://localhost:8000/*" }
+    ]
+  }
+]
+```
 
-## Adding a Custom AI Provider
-
-If you want to integrate your own custom AI Provider (like a local LLM server or a third-party API) into the translation system, you will need to follow these steps:
-
-1. **Implement the SDK and Provider Interface**: 
-   Create a new directory for your provider under `src/multiagent/providers/`. Implement your API client and create a Provider class that implements the `AIProvider` interface.
-   
-2. **Register in ProviderFactory**: 
-   Update `src/multiagent/providers/ProviderFactory.ts` to include your new provider in the `switch` statement and read any necessary configuration from environment variables.
-
-3. **Update Environment Variables**: 
-   Add your provider's configuration options to both `.env.example` and your local `.env` file. Change `VITE_AGENT_TRANSLATOR_PROVIDER` to your new provider's name to use it.
-
-4. **Configure Tauri Security Capabilities (Crucial)**: 
-   Tauri has strict security policies for frontend network requests. If your custom API endpoint is not explicitly allowed, Tauri will block the request and throw a `url not allowed on the configured scope` error. 
-   
-   To fix this, you must add your API endpoint's URL or domain to the allowed `http` scope in `src-tauri/capabilities/default.json`. For example, if your local server runs on port 8000:
-   
-   ```json
-   "permissions": [
-     // ... other permissions
-     {
-       "identifier": "http:default",
-       "allow": [
-         { "url": "http://127.0.0.1:8000/*" },
-         { "url": "http://localhost:8000/*" }
-         // Add your custom API domains here
-       ]
-     }
-   ]
-   ```
-   *Note: After modifying `capabilities/default.json`, you must restart the Tauri development server (`npm run dev`) for the changes to take effect.*
+### 3. State Synchronization (Frontend vs Rust)
+**Architecture Rule**: Rust is the Single Source of Truth (SSOT).
+If you add new features (e.g., loading new files), you **must** immediately synchronize the state to Rust via IPC (e.g., `invoke("set_video_path")`). Do not hold critical state exclusively in the React frontend (Zustand), as the Rust backend or Python worker will fail to access it during execution.

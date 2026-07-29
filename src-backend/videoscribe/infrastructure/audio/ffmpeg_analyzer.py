@@ -2,13 +2,14 @@ import subprocess
 import logging
 import os
 from videoscribe.domain.interfaces import AudioAnalyzer
+from videoscribe.infrastructure.utils import get_ffmpeg_path, get_ffprobe_path
 
 logger = logging.getLogger(__name__)
 
 class FFmpegAudioAnalyzer(AudioAnalyzer):
     def get_duration(self, audio_path: str) -> float:
         command = [
-            "ffprobe",
+            get_ffprobe_path(),
             "-v", "error",
             "-show_entries", "format=duration",
             "-of", "default=noprint_wrappers=1:nokey=1",
@@ -30,7 +31,7 @@ class FFmpegAudioAnalyzer(AudioAnalyzer):
         out_path = os.path.join(output_dir, "extracted_audio.wav")
         out_16k_path = os.path.join(output_dir, "extracted_audio_16k.wav")
         command = [
-            "ffmpeg", "-y",
+            get_ffmpeg_path(), "-y",
             "-i", video_path,
             
             # 1. High fidelity master track (for UI and MSS)

@@ -58,24 +58,39 @@ impl WorkerProcess {
             .unwrap_or_else(|| std::path::Path::new("."))
             .to_path_buf();
         
-        let workspace_root = exe_dir.join("..").join("..").join("..");  
-        let mut backend_dir = workspace_root.join("src-backend");
-
-        if !backend_dir.exists() {
-            backend_dir = std::env::current_dir()
-                .unwrap_or_default()
-                .join("..")
-                .join("src-backend");
-        }
+        let portable_backend_dir = exe_dir.join("backend");
+        let portable_python_exe = portable_backend_dir.join("python").join("python.exe");
         
-        let mut child_cmd = Command::new("uv");
+        let mut child_cmd = if portable_python_exe.exists() {
+            // Portable Standalone Mode
+            let mut cmd = Command::new(&portable_python_exe);
+            cmd.arg("-m")
+               .arg("videoscribe.worker")
+               .current_dir(&portable_backend_dir);
+            cmd
+        } else {
+            // Development Mode
+            let workspace_root = exe_dir.join("..").join("..").join("..");  
+            let mut backend_dir = workspace_root.join("src-backend");
+
+            if !backend_dir.exists() {
+                backend_dir = std::env::current_dir()
+                    .unwrap_or_default()
+                    .join("..")
+                    .join("src-backend");
+            }
+            
+            let mut cmd = Command::new("uv");
+            cmd.arg("run")
+               .arg("python")
+               .arg("-m")
+               .arg("videoscribe.worker")
+               .current_dir(&backend_dir);
+            cmd
+        };
+
         child_cmd
-            .arg("run")
-            .arg("python")
-            .arg("-m")
-            .arg("videoscribe.worker")
             .env("PYTHONUTF8", "1")
-            .current_dir(&backend_dir)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit());
