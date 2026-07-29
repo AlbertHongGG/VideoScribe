@@ -4,7 +4,7 @@ from typing import Optional, Callable
 from audio_separator.separator import Separator
 from videoscribe.domain.interfaces import MSSAnalyzer
 from videoscribe.domain.transcription_options import TranscriptionOptions
-from videoscribe.infrastructure.utils import get_tmp_dir
+from videoscribe.infrastructure.utils import get_or_create_workspace
 
 from videoscribe.domain.models import MSSResult
 
@@ -28,7 +28,7 @@ class AudioSeparatorEngine(MSSAnalyzer):
 
         report(5.0)
         # Use the centralized temporary directory for processing
-        actual_output_dir = self.output_dir or get_tmp_dir()
+        actual_output_dir = self.output_dir or get_or_create_workspace(audio_path)
         os.makedirs(actual_output_dir, exist_ok=True)
 
         self.logger.info(f"Initializing AudioSeparator in {actual_output_dir}...")

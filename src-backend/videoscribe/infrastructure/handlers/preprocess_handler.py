@@ -7,7 +7,7 @@ from videoscribe.domain.models import TaskType, TaskStatus
 from videoscribe.infrastructure.handlers.base import BaseHandler
 from videoscribe.infrastructure.audio.ffmpeg_analyzer import FFmpegAudioAnalyzer
 from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
-from videoscribe.infrastructure.utils import get_tmp_dir
+from videoscribe.infrastructure.utils import get_or_create_workspace
 
 class PreprocessHandler(BaseHandler):
     def __init__(self):
@@ -31,14 +31,7 @@ class PreprocessHandler(BaseHandler):
             if not video_path:
                 raise ValueError("Missing video_path in payload")
 
-            # Store temp files in .runtime/tmp/yyyymmdd_hhmmss_<video_name>
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            video_name = os.path.splitext(os.path.basename(video_path))[0]
-            # Replace spaces and invalid characters to make it a safe directory name
-            safe_video_name = "".join([c if c.isalnum() else "_" for c in video_name])
-            folder_name = f"{timestamp}_{safe_video_name}"
-            
-            job_workspace = os.path.join(get_tmp_dir(), folder_name)
+            job_workspace = get_or_create_workspace(video_path)
             wav_path = os.path.join(job_workspace, "extracted_audio.wav")
             
             logger.info(f"Running ffmpeg extraction to {wav_path}")

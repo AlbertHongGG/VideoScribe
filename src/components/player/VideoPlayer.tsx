@@ -5,7 +5,6 @@ import { useSTTSettingsStore } from "../../store/sttSettingsStore";
 import { useAudioMixer } from "./useAudioMixer";
 import { VideoControls } from "./VideoControls";
 import { AnimatePresence, motion } from "framer-motion";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import { DictionaryTooltip } from "../stt/DictionaryTooltip";
 import { VideoEmptyState } from "./VideoEmptyState";
@@ -125,6 +124,18 @@ export const VideoPlayer: React.FC = () => {
   const scrubTargetTime = useRef<number | null>(null);
   const scrubAnimationFrame = useRef<number | null>(null);
 
+  // Sync fullscreen state with HTML5 fullscreen API
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isFs = !!document.fullscreenElement;
+      useVideoStore.getState().setIsFullscreen(isFs);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
   // Handle global hotkeys for smooth frame-by-frame scrubbing
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -135,18 +146,17 @@ export const VideoPlayer: React.FC = () => {
 
       if (e.key === 'Enter') {
         e.preventDefault();
-        const appWindow = getCurrentWindow();
-        const newState = !state.isFullscreen;
-        appWindow.setFullscreen(newState).catch(console.error);
-        state.setIsFullscreen(newState);
+        if (!document.fullscreenElement) {
+          playerWrapperRef.current?.requestFullscreen().catch(console.error);
+        } else {
+          document.exitFullscreen().catch(console.error);
+        }
         return;
       }
 
-      if (e.key === 'Escape' && state.isFullscreen) {
+      if (e.key === 'Escape' && document.fullscreenElement) {
         e.preventDefault();
-        const appWindow = getCurrentWindow();
-        appWindow.setFullscreen(false).catch(console.error);
-        state.setIsFullscreen(false);
+        document.exitFullscreen().catch(console.error);
         return;
       }
 

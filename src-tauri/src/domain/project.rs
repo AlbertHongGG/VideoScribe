@@ -73,6 +73,7 @@ pub struct VadSegment {
 #[derive(Debug, Serialize, Deserialize, Clone, TS, Type)]
 #[ts(export, export_to = "../../src/types/app_types.ts")]
 pub struct ProjectState {
+    pub workspace_dir: Option<String>,
     pub video_path: Option<String>,
     pub extracted_audio_path: Option<String>,
     pub results: Vec<STTResult>,
@@ -94,6 +95,7 @@ pub struct ProjectState {
 impl Default for ProjectState {
     fn default() -> Self {
         Self {
+            workspace_dir: None,
             video_path: None,
             extracted_audio_path: None,
             results: Vec::new(),

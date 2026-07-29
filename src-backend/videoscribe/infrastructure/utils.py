@@ -27,6 +27,31 @@ def get_tmp_dir() -> str:
     os.makedirs(tmp_dir, exist_ok=True)
     return tmp_dir
 
+def get_or_create_workspace(input_path: str) -> str:
+    """
+    Returns the workspace directory for the current pipeline run.
+    If the input_path is already inside the tmp_dir, it uses its parent directory.
+    Otherwise, it creates a new timestamped folder inside tmp_dir.
+    """
+    from datetime import datetime
+    tmp_dir = get_tmp_dir()
+    
+    # Check if input is already in tmp_dir
+    abs_input = os.path.abspath(input_path)
+    if abs_input.startswith(os.path.abspath(tmp_dir)):
+        return os.path.dirname(abs_input)
+        
+    # Generate new workspace
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    file_name = os.path.splitext(os.path.basename(input_path))[0]
+    safe_name = "".join([c if c.isalnum() else "_" for c in file_name])
+    folder_name = f"{timestamp}_{safe_name}"
+    
+    workspace_dir = os.path.join(tmp_dir, folder_name)
+    os.makedirs(workspace_dir, exist_ok=True)
+    return workspace_dir
+
+
 _device = None
 
 def get_device() -> str:

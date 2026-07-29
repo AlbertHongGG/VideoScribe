@@ -144,6 +144,9 @@ impl JobManager {
 
     pub fn update_task_progress(&self, task_type: TaskType, progress: f64, dispatcher: Arc<dyn EventDispatcher>) {
         if let Some(job) = self.current_job.lock().unwrap().as_mut() {
+            if job.status == JobStatus::Cancelled {
+                return;
+            }
             job.status = JobStatus::Running;
             for task in &mut job.tasks {
                 if task.task_type == task_type {
@@ -159,6 +162,9 @@ impl JobManager {
 
     pub fn complete_task(&self, task_type: TaskType, dispatcher: Arc<dyn EventDispatcher>) {
         if let Some(job) = self.current_job.lock().unwrap().as_mut() {
+            if job.status == JobStatus::Cancelled {
+                return;
+            }
             for task in &mut job.tasks {
                 if task.task_type == task_type {
                     task.status = TaskStatus::Completed;
@@ -181,6 +187,9 @@ impl JobManager {
 
     pub fn fail_job(&self, error_message: String, dispatcher: Arc<dyn EventDispatcher>) {
         if let Some(job) = self.current_job.lock().unwrap().as_mut() {
+            if job.status == JobStatus::Cancelled {
+                return;
+            }
             job.status = JobStatus::Error;
             job.error_message = Some(error_message.clone());
             let mut found_running = false;
