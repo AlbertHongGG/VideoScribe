@@ -6,7 +6,7 @@ from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
 from videoscribe.domain.models import TaskType, TaskStatus, TranscriptionSegment
 from videoscribe.domain.transcription_options import TranscriptionOptions, ForcedAlignmentEngineType
 from videoscribe.infrastructure.audio.alignment.factory import ForcedAlignmentFactory
-from videoscribe.infrastructure.utils import get_device
+from videoscribe.infrastructure.utils import get_device, get_ai_audio_path
 
 class FaHandler(BaseHandler):
     def handle(self, job_id: str, payload_data: Dict[str, Any], cancel_token: Optional[CancellationToken]):
@@ -32,7 +32,10 @@ class FaHandler(BaseHandler):
                 def progress_cb(pct: float):
                     reporter.report_task_progress(TaskType.FORCED_ALIGNMENT, TaskStatus.RUNNING, pct)
                 
-                aligned_cues = fa_analyzer.align(payload.audio_path, cues, options, progress_cb)
+                # Convention over Configuration: Intercept with AI track if exists
+                audio_to_process = get_ai_audio_path(payload.audio_path)
+                
+                aligned_cues = fa_analyzer.align(audio_to_process, cues, options, progress_cb)
                 reporter.report_result_replace_all(aligned_cues)
                 
             reporter.report_task_progress(TaskType.FORCED_ALIGNMENT, TaskStatus.COMPLETED, 100.0)

@@ -4,7 +4,7 @@ from videoscribe.infrastructure.handlers.base import BaseHandler
 from videoscribe.domain.cancellation import CancellationToken, CancelledException
 from videoscribe.domain.ipc_models import SttPayload
 from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
-from videoscribe.infrastructure.utils import get_device
+from videoscribe.infrastructure.utils import get_device, get_ai_audio_path
 from videoscribe.domain.models import TaskType, TaskStatus, VADResult, SpeechSegment
 from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType
 
@@ -60,11 +60,13 @@ class SttHandler(BaseHandler):
                     vad_result_obj = cached_vad_segments
                 elif isinstance(cached_vad_segments, list):
                     vad_result_obj = VADResult(segments=[SpeechSegment(start_time=s["start"], end_time=s["end"]) for s in cached_vad_segments])
-            
             self.recognizer.load_model(options)
             
+            # Convention over Configuration: Intercept with AI track if exists
+            audio_to_process = get_ai_audio_path(payload.audio_path)
+            
             results, info = self.recognizer.transcribe_file(
-                payload.audio_path,
+                audio_to_process,
                 options,
                 cancel_token,
                 vad_result_obj

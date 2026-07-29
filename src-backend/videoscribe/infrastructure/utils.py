@@ -41,3 +41,13 @@ def get_device() -> str:
             _device = "cpu"
     return _device
 
+def get_ai_audio_path(master_audio_path: str) -> str:
+    """
+    Convention over Configuration: Check if a 16kHz AI-optimized track exists.
+    Returns the path to the 16k version if it exists, otherwise falls back to the original.
+    """
+    if not master_audio_path:
+        return master_audio_path
+        
+    ai_path = master_audio_path.replace(".wav", "_16k.wav")
+    return ai_path if os.path.exists(ai_path) else master_audio_path

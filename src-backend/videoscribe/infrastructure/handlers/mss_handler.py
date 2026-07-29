@@ -1,5 +1,6 @@
 from typing import Dict, Any, Optional
 import os
+import subprocess
 from videoscribe.infrastructure.handlers.base import BaseHandler
 from videoscribe.domain.cancellation import CancellationToken
 from videoscribe.domain.ipc_models import MssPayload
@@ -34,6 +35,21 @@ class MssHandler(BaseHandler):
                 def progress_callback(pct: float):
                     reporter.report_task_progress(TaskType.MSS, TaskStatus.RUNNING, pct)
                 result = mss_analyzer.separate(payload.audio_path, options, progress_callback)
+                
+                # Convention over Configuration: Generate 16k AI track for vocals
+                if result and result.vocals_path:
+                    vocals_16k_path = result.vocals_path.replace(".wav", "_16k.wav")
+                    ffmpeg_cmd = [
+                        "ffmpeg", "-y",
+                        "-i", result.vocals_path,
+                        "-vn",
+                        "-acodec", "pcm_s16le",
+                        "-ar", "16000",
+                        "-ac", "1",
+                        vocals_16k_path
+                    ]
+                    subprocess.run(ffmpeg_cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                
                 reporter.report_task_progress(TaskType.MSS, TaskStatus.COMPLETED, 100.0, vocals_path=result.vocals_path, instrumental_path=result.instrumental_path)
             else:
                 reporter.report_task_progress(TaskType.MSS, TaskStatus.COMPLETED, 100.0)

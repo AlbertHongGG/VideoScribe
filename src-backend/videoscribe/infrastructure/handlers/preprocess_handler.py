@@ -6,6 +6,7 @@ from videoscribe.domain.models import TaskType, TaskStatus
 from videoscribe.infrastructure.handlers.base import BaseHandler
 from videoscribe.infrastructure.audio.ffmpeg_analyzer import FFmpegAudioAnalyzer
 from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
+from videoscribe.infrastructure.utils import get_tmp_dir
 
 class PreprocessHandler(BaseHandler):
     def __init__(self):
@@ -22,16 +23,17 @@ class PreprocessHandler(BaseHandler):
             logger.info("Successfully sent TaskProgress RUNNING")
 
             video_path = payload_data.get("video_path")
-            workspace_dir = payload_data.get("workspace_dir")
 
-            if not video_path or not workspace_dir:
-                raise ValueError("Missing video_path or workspace_dir in payload")
+            if not video_path:
+                raise ValueError("Missing video_path in payload")
 
-            wav_path = os.path.join(workspace_dir, "extracted_audio.wav")
-            if not os.path.exists(wav_path):
-                logger.info(f"Running ffmpeg extraction to {wav_path}")
-                wav_path = self.analyzer.extract_audio(video_path, workspace_dir)
-                logger.info("FFmpeg extraction complete")
+            # Store temp files in .runtime/tmp/<job_id> instead of polluting the user's video folder
+            job_workspace = os.path.join(get_tmp_dir(), job_id)
+            wav_path = os.path.join(job_workspace, "extracted_audio.wav")
+            
+            logger.info(f"Running ffmpeg extraction to {wav_path}")
+            wav_path = self.analyzer.extract_audio(video_path, job_workspace)
+            logger.info("FFmpeg extraction complete")
 
             # We pass the resulting wav path back as vocals_path for now
             # since vocals_path is an Optional<String> in TaskProgressData
