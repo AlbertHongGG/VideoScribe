@@ -54,6 +54,7 @@ impl PipelineEngine {
                             audio_path: project_clone.extracted_audio_path.clone().or(project_clone.video_path.clone()).unwrap_or_default(),
                             mss_engine: project_clone.mss_engine.clone().unwrap_or_default(),
                             mss_model: project_clone.mss_model.clone().unwrap_or_default(),
+                            workspace_dir: project_clone.workspace_dir.clone().unwrap_or_default(),
                         };
                         let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
                         job_manager_clone.update_task_progress(TaskType::Mss, 0.0, dispatcher.clone());
@@ -67,6 +68,7 @@ impl PipelineEngine {
                         let payload = VadPayload {
                             audio_path: project_clone.vocals_audio_path.clone().or(project_clone.extracted_audio_path.clone()).or(project_clone.video_path.clone()).unwrap_or_default(),
                             vad_engine: project_clone.vad_engine.clone().unwrap_or_default(),
+                            workspace_dir: project_clone.workspace_dir.clone().unwrap_or_default(),
                         };
                         let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
                         job_manager_clone.update_task_progress(TaskType::Vad, 0.0, dispatcher.clone());
@@ -85,6 +87,7 @@ impl PipelineEngine {
                             batch_size: project_clone.batch_size,
                             vad_engine: project_clone.vad_engine.clone().unwrap_or_default(),
                             vad_segments: project_clone.vad_segments,
+                            workspace_dir: project_clone.workspace_dir.clone().unwrap_or_default(),
                         };
                         let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
                         job_manager_clone.update_task_progress(TaskType::Stt, 0.0, dispatcher.clone());
@@ -100,6 +103,7 @@ impl PipelineEngine {
                             fa_engine: project_clone.fa_engine.clone().unwrap_or_default(),
                             fa_model: project_clone.fa_model.clone().unwrap_or_default(),
                             transcripts: project_clone.results.clone(),
+                            workspace_dir: project_clone.workspace_dir.clone().unwrap_or_default(),
                         };
                         let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
                         job_manager_clone.update_task_progress(TaskType::ForcedAlignment, 0.0, dispatcher.clone());

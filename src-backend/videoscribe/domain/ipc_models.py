@@ -18,6 +18,7 @@ class MssPayload:
 class VadPayload:
     audio_path: str
     vad_engine: str
+    workspace_dir: str
 
 @dataclass
 class SttPayload:
@@ -27,6 +28,7 @@ class SttPayload:
     use_batch: bool
     batch_size: int
     vad_engine: str
+    workspace_dir: str
     vad_segments: Optional[List[Dict[str, Any]]] = None
 
 @dataclass
@@ -35,6 +37,7 @@ class FaPayload:
     fa_engine: str
     fa_model: str
     transcripts: List[Dict[str, Any]]
+    workspace_dir: str
 
 @dataclass
 class IpcCommand:

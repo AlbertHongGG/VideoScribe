@@ -12,12 +12,14 @@ pub struct MssPayload {
     pub audio_path: String,
     pub mss_engine: String,
     pub mss_model: String,
+    pub workspace_dir: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VadPayload {
     pub audio_path: String,
     pub vad_engine: String,
+    pub workspace_dir: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,6 +31,7 @@ pub struct SttPayload {
     pub batch_size: i32,
     pub vad_engine: String,
     pub vad_segments: Option<Vec<crate::domain::project::VadSegment>>,
+    pub workspace_dir: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,6 +40,7 @@ pub struct FaPayload {
     pub fa_engine: String,
     pub fa_model: String,
     pub transcripts: Vec<crate::domain::project::STTResult>,
+    pub workspace_dir: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
