@@ -3,6 +3,7 @@ import { useVideoStore } from "../../store/videoStore";
 import { Play, Pause, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Volume2, VolumeX } from "lucide-react";
 import * as Slider from "@radix-ui/react-slider";
 import { formatTime } from "../../utils/time";
+import { Tooltip } from "../ui/Tooltip";
 
 export const VideoControls: React.FC = () => {
   const { 
@@ -68,31 +69,42 @@ export const VideoControls: React.FC = () => {
 
         {/* Center: Playback Controls */}
         <div className="w-1/3 flex items-center justify-center gap-3 text-white/40">
-          <button onClick={() => skipTime(-5)} className="hover:text-white transition-colors p-1" title="-5s">
-            <ChevronsLeft size={16} />
-          </button>
-          <button onClick={() => skipTime(-1)} className="hover:text-white transition-colors p-1" title="-1s">
-            <ChevronLeft size={16} />
-          </button>
+          <Tooltip content="-5s">
+            <button onClick={() => skipTime(-5)} className="hover:text-white transition-colors p-1 focus:outline-none">
+              <ChevronsLeft size={16} />
+            </button>
+          </Tooltip>
           
-          <button 
-            onClick={handlePlayPause}
-            className="w-8 h-8 text-white/90 hover:text-[#facc15] transition-colors flex items-center justify-center focus:outline-none mx-1"
-            title={isPlaying ? "Pause" : "Play"}
-          >
-            {isPlaying ? (
-              <Pause size={18} className="fill-current" />
-            ) : (
-              <Play size={18} className="fill-current ml-0.5" />
-            )}
-          </button>
+          <Tooltip content="-1s">
+            <button onClick={() => skipTime(-1)} className="hover:text-white transition-colors p-1 focus:outline-none">
+              <ChevronLeft size={16} />
+            </button>
+          </Tooltip>
+          
+          <Tooltip content={isPlaying ? "Pause" : "Play"}>
+            <button 
+              onClick={handlePlayPause}
+              className="w-8 h-8 text-white/90 hover:text-[#facc15] transition-colors flex items-center justify-center focus:outline-none mx-1"
+            >
+              {isPlaying ? (
+                <Pause size={18} className="fill-current" />
+              ) : (
+                <Play size={18} className="fill-current ml-0.5" />
+              )}
+            </button>
+          </Tooltip>
 
-          <button onClick={() => skipTime(1)} className="hover:text-white transition-colors p-1" title="+1s">
-            <ChevronRight size={16} />
-          </button>
-          <button onClick={() => skipTime(5)} className="hover:text-white transition-colors p-1" title="+5s">
-            <ChevronsRight size={16} />
-          </button>
+          <Tooltip content="+1s">
+            <button onClick={() => skipTime(1)} className="hover:text-white transition-colors p-1 focus:outline-none">
+              <ChevronRight size={16} />
+            </button>
+          </Tooltip>
+          
+          <Tooltip content="+5s">
+            <button onClick={() => skipTime(5)} className="hover:text-white transition-colors p-1 focus:outline-none">
+              <ChevronsRight size={16} />
+            </button>
+          </Tooltip>
         </div>
 
         {/* Right: Volume Control & Speed */}
@@ -105,12 +117,14 @@ export const VideoControls: React.FC = () => {
           )}
           
           <div className="flex items-center gap-2 w-24 group/vol">
-            <button 
-              onClick={() => setVolume(volume === 0 ? 1 : 0)}
-              className="text-white/40 hover:text-white transition-colors focus:outline-none p-1"
-            >
-              {volume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
-            </button>
+            <Tooltip content={volume === 0 ? "Unmute" : "Mute"}>
+              <button 
+                onClick={() => setVolume(volume === 0 ? 1 : 0)}
+                className="text-white/40 hover:text-white transition-colors focus:outline-none p-1"
+              >
+                {volume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
+              </button>
+            </Tooltip>
             <Slider.Root
               className="relative flex items-center select-none touch-none w-full h-5 cursor-pointer"
               value={[volume]}
