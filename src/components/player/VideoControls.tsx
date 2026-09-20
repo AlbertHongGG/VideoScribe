@@ -4,13 +4,14 @@ import { Play, Pause, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Vo
 import * as Slider from "@radix-ui/react-slider";
 import { formatTime } from "../../utils/time";
 import { Tooltip } from "../ui/Tooltip";
+import { PlayerCommandService } from "../../services/commands/playerCommandService";
 
 export const VideoControls: React.FC = () => {
   const { 
     isPlaying, 
     currentTime, 
     duration, 
-    volume,
+    volume, 
     playbackRate,
     setIsPlaying, 
     setVolume,
@@ -24,9 +25,7 @@ export const VideoControls: React.FC = () => {
   const handleTimeChange = (value: number[]) => setSeekToTime(value[0]);
 
   const skipTime = (amount: number) => {
-    const state = useVideoStore.getState();
-    const newTime = Math.max(0, Math.min(state.currentTime + amount, state.duration));
-    state.setSeekToTime(newTime);
+    PlayerCommandService.getInstance().seekRelative(amount);
   };
 
   const handleWheel = (e: React.WheelEvent) => {

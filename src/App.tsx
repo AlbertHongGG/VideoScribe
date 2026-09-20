@@ -5,9 +5,11 @@ import { VideoPlayer } from "./components/player/VideoPlayer";
 import { STTPanel } from "./components/stt/STTPanel";
 
 import { useAppEvents } from "./hooks/useAppEvents";
+import { useAppHotkeys } from "./hooks/useAppHotkeys";
 
 function App() {
   useAppEvents();
+  useAppHotkeys();
 
   return (
     <div className="flex w-screen h-screen bg-transparent text-white overflow-hidden rounded-lg relative">

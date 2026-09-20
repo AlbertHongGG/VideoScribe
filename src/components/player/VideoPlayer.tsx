@@ -11,6 +11,7 @@ import { VideoEmptyState } from "./VideoEmptyState";
 import { SubtitleRenderer } from "./subtitle/SubtitleRenderer";
 import { SubtitleRenderContext } from "./subtitle/SubtitleModels";
 import { STTResult } from "../../types/bindings";
+import { PlayerCommandService } from "../../services/commands/playerCommandService";
 
 export const VideoPlayer: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -120,10 +121,6 @@ export const VideoPlayer: React.FC = () => {
     subtitleSpacing, enableFurigana, enableDictionary, enableKaraokeMode, hoverText, isPlaying
   ]);
 
-  const lastSyncTime = useRef(0);
-  const scrubTargetTime = useRef<number | null>(null);
-  const scrubAnimationFrame = useRef<number | null>(null);
-
   // Sync fullscreen state with HTML5 fullscreen API
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -136,133 +133,20 @@ export const VideoPlayer: React.FC = () => {
     };
   }, []);
 
-  // Handle global hotkeys for smooth frame-by-frame scrubbing
+  // Attach player DOM refs to PlayerCommandService for centralized control
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (!videoRef.current) return;
+    const playerService = PlayerCommandService.getInstance();
+    playerService.attachPlayer({
+      video: videoRef.current,
+      vocalsAudio: vocalsAudioRef.current,
+      backgroundAudio: backgroundAudioRef.current,
+      wrapper: playerWrapperRef.current,
+    });
 
-      const state = useVideoStore.getState();
-
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        if (!document.fullscreenElement) {
-          playerWrapperRef.current?.requestFullscreen().catch(console.error);
-        } else {
-          document.exitFullscreen().catch(console.error);
-        }
-        return;
-      }
-
-      if (e.key === 'Escape' && document.fullscreenElement) {
-        e.preventDefault();
-        document.exitFullscreen().catch(console.error);
-        return;
-      }
-
-      if (e.code === 'Space') {
-        e.preventDefault();
-        setIsPlaying(!state.isPlaying);
-        return;
-      }
-
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        const newTime = Math.max(0, videoRef.current.currentTime - 1);
-        videoRef.current.currentTime = newTime;
-        if (vocalsAudioRef.current) vocalsAudioRef.current.currentTime = newTime;
-        if (backgroundAudioRef.current) backgroundAudioRef.current.currentTime = newTime;
-        setCurrentTime(newTime);
-        return;
-      }
-
-      if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        const newTime = Math.min(state.duration, videoRef.current.currentTime + 1);
-        videoRef.current.currentTime = newTime;
-        if (vocalsAudioRef.current) vocalsAudioRef.current.currentTime = newTime;
-        if (backgroundAudioRef.current) backgroundAudioRef.current.currentTime = newTime;
-        setCurrentTime(newTime);
-        return;
-      }
-
-      if (e.key === 'a' || e.key === 'A') {
-        const newRate = Math.max(0.1, state.playbackRate - 0.1);
-        state.setPlaybackRate(Number(newRate.toFixed(1)));
-        return;
-      }
-
-      if (e.key === 'd' || e.key === 'D') {
-        const newRate = Math.min(16.0, state.playbackRate + 0.1);
-        state.setPlaybackRate(Number(newRate.toFixed(1)));
-        return;
-      }
-
-      if ((e.key === 's' || e.key === 'S') && !e.repeat) {
-        if (state.playbackRate !== 1) {
-          state.setPreviousPlaybackRate(state.playbackRate);
-          state.setPlaybackRate(1);
-        } else {
-          state.setPlaybackRate(state.previousPlaybackRate);
-        }
-        return;
-      }
-
-      if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') {
-        if (isPlaying) {
-          setIsPlaying(false);
-        }
-
-        if (scrubTargetTime.current === null) {
-          scrubTargetTime.current = videoRef.current.currentTime;
-        }
-
-        if (e.key === ',' || e.key === '<') {
-          scrubTargetTime.current = Math.max(0, scrubTargetTime.current - 1 / 30);
-        } else {
-          scrubTargetTime.current = Math.min(videoRef.current.duration, scrubTargetTime.current + 1 / 30);
-        }
-
-        if (scrubAnimationFrame.current === null) {
-          scrubAnimationFrame.current = requestAnimationFrame(() => {
-            if (videoRef.current && scrubTargetTime.current !== null) {
-              const target = scrubTargetTime.current;
-              videoRef.current.currentTime = target;
-              if (vocalsAudioRef.current) vocalsAudioRef.current.currentTime = target;
-              if (backgroundAudioRef.current) backgroundAudioRef.current.currentTime = target;
-              
-              const now = performance.now();
-              if (now - lastSyncTime.current > 100) {
-                setCurrentTime(target);
-                lastSyncTime.current = now;
-              }
-            }
-            scrubAnimationFrame.current = null;
-          });
-        }
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === ',' || e.key === '<' || e.key === '.' || e.key === '>') {
-        scrubTargetTime.current = null;
-        if (scrubAnimationFrame.current !== null) {
-          cancelAnimationFrame(scrubAnimationFrame.current);
-          scrubAnimationFrame.current = null;
-        }
-        if (videoRef.current) {
-          setCurrentTime(videoRef.current.currentTime);
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
+      playerService.detachPlayer();
     };
-  }, [isPlaying, setIsPlaying, setCurrentTime]);
+  }, [videoUrl]);
 
   const handleTimeUpdate = () => {
     if (videoRef.current && isPlaying) {

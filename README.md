@@ -13,15 +13,32 @@ VideoScribe is an AI-powered offline transcription, translation, and audio stem 
 
 ## Keyboard Shortcuts (Hotkeys)
 
-The video player supports several global hotkeys for a seamless editing experience:
+VideoScribe 配備中央熱鍵排程引擎，提供全域與影片播放控制的快捷操作（在文字輸入框中會自動停用，以防誤觸）：
 
-- **`Space`**: Play / Pause
-- **`Enter`**: Toggle Fullscreen
-- **`Esc`**: Exit Fullscreen
-- **`Arrow Left` / `Arrow Right`**: Seek backward / forward 1 second
-- **`,` (Comma) / `.` (Period)**: Precise frame-by-frame scrubbing (backward/forward by 1/30s)
-- **`A` / `D`**: Decrease / Increase playback speed by 0.1x
-- **`S`**: Reset playback speed to 1.0x (press again to toggle back to previous speed)
+### 導航與版面 (Navigation & Layout)
+| 按鍵 (Shortcut) | 功能 (Action) | 說明 (Description) |
+| :--- | :--- | :--- |
+| **`P`** / **`p`** | 展開 / 收起右側面板 | 全域快捷鍵（不分大小寫），隨時切換 STT 轉錄與字幕面板 |
+
+### 影片播放與跳轉 (Playback & Seeking)
+| 按鍵 (Shortcut) | 功能 (Action) | 說明 (Description) |
+| :--- | :--- | :--- |
+| **`Arrow Left` (←)** | 快退 5 秒 | 相對向後跳轉 5 秒（支援長按連續觸發） |
+| **`Arrow Right` (→)** | 快進 5 秒 | 相對向前跳轉 5 秒（支援長按連續觸發） |
+| **`Ctrl + Arrow Left`** | 快退 1 秒 | 精確向後跳轉 1 秒（亦支援 `Cmd + ←`） |
+| **`Ctrl + Arrow Right`** | 快進 1 秒 | 精確向前跳轉 1 秒（亦支援 `Cmd + →`） |
+| **`Space`** | 播放 / 暫停 | 切換影片播放狀態 |
+| **`,`** 或 **`<`** | 逐幀微調倒退 | 長按或連點進行 1/30 秒逐幀連續微調 |
+| **`.`** 或 **`>`** | 逐幀微調前進 | 長按或連點進行 1/30 秒逐幀連續微調 |
+
+### 播放速度與顯示 (Speed & Display)
+| 按鍵 (Shortcut) | 功能 (Action) | 說明 (Description) |
+| :--- | :--- | :--- |
+| **`Enter`** | 切換全螢幕 | 進入 / 退出全螢幕模式 |
+| **`Esc`** | 退出全螢幕 | 退出當前全螢幕模式 |
+| **`A`** / **`a`** | 速度 -0.1x | 降低播放速率（最低 0.1x） |
+| **`D`** / **`d`** | 速度 +0.1x | 提高播放速率（最高 16.0x） |
+| **`S`** / **`s`** | 1.0x 速度切換 | 重設為原速 1.0x，再次按下切換回前一次速度 |
 
 ---
 
