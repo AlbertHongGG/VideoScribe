@@ -1,5 +1,6 @@
 pub mod prompts;
 pub mod validator;
+pub mod codec;
 
 use crate::infrastructure::agents::Agent;
 use crate::infrastructure::providers::AIProvider;
@@ -9,6 +10,7 @@ use async_trait::async_trait;
 use serde_json::{Value, json};
 use std::sync::Arc;
 use validator::{RubyCorrectionItem, validate_invariance};
+use codec::RubyCodec;
 
 pub struct RubyAnnotatorAgent {
     provider: Arc<dyn AIProvider>,
@@ -68,7 +70,7 @@ impl Agent for RubyAnnotatorAgent {
 
                     match serde_json::from_str::<Vec<RubyCorrectionItem>>(text) {
                         Ok(corrections) => {
-                            // Validate character invariance for each correction
+                            // Validate character invariance and syntax for each correction
                             let mut valid = true;
                             for corr in &corrections {
                                 let orig_item = sentences_arr.iter().find(|s| {
@@ -77,10 +79,19 @@ impl Agent for RubyAnnotatorAgent {
 
                                 if let Some(orig) = orig_item {
                                     if let Some(orig_text) = orig.get("text").and_then(|t| t.as_str()) {
-                                        if let Err(e) = validate_invariance(orig_text, &corr.ruby) {
-                                            println!("[RubyAnnotatorAgent] Invariance validation error on id {}: {}", corr.id, e);
-                                            valid = false;
-                                            break;
+                                        match RubyCodec::from_compact(&corr.ruby) {
+                                            Ok(segments) => {
+                                                if let Err(e) = validate_invariance(orig_text, &segments) {
+                                                    println!("[RubyAnnotatorAgent] Invariance validation error on id {}: {}", corr.id, e);
+                                                    valid = false;
+                                                    break;
+                                                }
+                                            }
+                                            Err(e) => {
+                                                println!("[RubyAnnotatorAgent] Codec parse error on id {}: {}", corr.id, e);
+                                                valid = false;
+                                                break;
+                                            }
                                         }
                                     }
                                 } else {

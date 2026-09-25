@@ -44,6 +44,19 @@ impl TaskType {
             TaskType::Translation => 7,
         }
     }
+
+    pub fn display_label(&self) -> &'static str {
+        match self {
+            TaskType::Preprocess => "Extracting Audio",
+            TaskType::Mss => "Separating Audio Sources",
+            TaskType::Vad => "Detecting Voice Activity",
+            TaskType::Stt => "Transcribing Speech",
+            TaskType::ForcedAlignment => "Aligning Subtitles",
+            TaskType::Segmentation => "Segmenting Content",
+            TaskType::RubyAnnotation => "Annotating Furigana",
+            TaskType::Translation => "Translating Subtitles",
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, TS, Type, PartialEq)]

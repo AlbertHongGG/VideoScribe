@@ -1,7 +1,7 @@
 use crate::domain::agent::AgentType;
 use crate::infrastructure::agents::AgentFactory;
 use crate::domain::project::{ProjectState, TaskType};
-use crate::domain::language::{RubySegment, RubyAnnotationProvider};
+use crate::domain::language::RubyAnnotationProvider;
 use crate::infrastructure::providers::AIProvider;
 use crate::infrastructure::plugins::PluginManager;
 use crate::domain::events::EventDispatcher;
@@ -91,10 +91,13 @@ impl RubyAnnotationCoordinator {
 
                 let start_idx = i * batch_size;
                 let sentences = chunk.iter().enumerate().map(|(idx, r)| {
+                    let compact_ruby = r.ruby.as_deref()
+                        .map(crate::infrastructure::agents::ruby_annotator_agent::codec::RubyCodec::to_compact)
+                        .unwrap_or_else(|| r.text.clone());
                     json!({
                         "id": start_idx + idx,
                         "text": r.text,
-                        "current_ruby": r.ruby
+                        "ruby": compact_ruby
                     })
                 }).collect::<Vec<_>>();
 
@@ -106,14 +109,14 @@ impl RubyAnnotationCoordinator {
 
                 match agent.execute(payload).await {
                     Ok(response) => {
-                        // Delta Overwrite: response is an array of { id, ruby }
+                        // Delta Overwrite: response is an array of { id, ruby: "[Base]{Ruby}..." }
                         if let Some(arr) = response.as_array() {
                             for item in arr {
-                                if let (Some(id), Some(ruby_val)) = (
+                                if let (Some(id), Some(ruby_str)) = (
                                     item.get("id").and_then(|v| v.as_u64()),
-                                    item.get("ruby"),
+                                    item.get("ruby").and_then(|v| v.as_str()),
                                 ) {
-                                    if let Ok(ruby_segments) = serde_json::from_value::<Vec<RubySegment>>(ruby_val.clone()) {
+                                    if let Ok(ruby_segments) = crate::infrastructure::agents::ruby_annotator_agent::codec::RubyCodec::from_compact(ruby_str) {
                                         if let Some(res) = all_annotated_results.get_mut(id as usize) {
                                             res.ruby = Some(ruby_segments);
                                         }

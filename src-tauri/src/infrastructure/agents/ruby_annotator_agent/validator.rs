@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RubyCorrectionItem {
     pub id: usize,
-    pub ruby: Vec<RubySegment>,
+    pub ruby: String,
 }
 
 /// Validates that the reconstructed string from the ruby segments
@@ -49,7 +49,7 @@ mod tests {
         let orig = "一日本にいます";
         let segments = vec![
             RubySegment::Ruby { base: "一日".into(), ruby: "いちにち".into() },
-            RubySegment::Text { text: "日本にいます".into() }, // duplicated "日"
+            RubySegment::Text { text: "日本にいます".into() },
         ];
         assert!(validate_invariance(orig, &segments).is_err());
     }
