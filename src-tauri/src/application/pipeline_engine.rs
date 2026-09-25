@@ -103,11 +103,12 @@ impl PipelineEngine {
                         let chunk_size = state.config.proofreader_batch_size;
                         let project_mutex = state.project.clone();
                         let job_manager_clone = state.job_manager.clone();
+                        let plugin_manager = state.plugin_manager.clone();
 
                         tauri::async_runtime::spawn(async move {
                             let app_clone = app.clone();
                             if let Err(e) = crate::application::proofread_coordinator::ProofreadCoordinator::start_proofread(
-                                project_mutex, provider, chunk_size, dispatcher.clone(), job_manager_clone.clone(), move || {
+                                project_mutex, provider, plugin_manager, chunk_size, dispatcher.clone(), job_manager_clone.clone(), move || {
                                     crate::application::pipeline_engine::PipelineEngine::advance_pipeline(app_clone);
                                 }
                             ) {

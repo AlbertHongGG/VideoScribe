@@ -1,27 +1,33 @@
 import { STTResult, RubySegment } from "../../../types/bindings";
 
-export interface RenderableToken {
-  /** The text content of the token (can be a word or a single character) */
+export interface RichSubtitleToken {
+  /** The text content of the token (base word or Kanji) */
   text: string;
   
+  /** Furigana reading if this token represents Kanji (e.g. "あたた" for "暖") */
+  ruby?: string;
+
   /** Start time in seconds (if available) */
   start?: number;
   
   /** End time in seconds (if available) */
   end?: number;
-  
-  /** Whether the token matches a dictionary term (can be expanded later) */
-  isDictionaryWord?: boolean;
+
+  /** Character index within the original canonical sentence text */
+  charIndex: number;
 }
 
+// Backwards-compatible alias for RenderableToken
+export type RenderableToken = RichSubtitleToken;
+
 export interface ProcessedSubtitle {
-  /** The original STT result */
+  /** The canonical STT result (Single Source of Truth) */
   original: STTResult;
   
-  /** The processed tokens ready for deterministic rendering (KTV Layer) */
-  tokens: RenderableToken[];
+  /** Unified rich tokens combining Text, Timing, and Furigana */
+  tokens: RichSubtitleToken[];
 
-  /** Strongly typed Ruby annotation segments generated from full sentence context (Ruby Overlay Layer) */
+  /** Optional raw Ruby segments for reference */
   rubySegments?: RubySegment[];
 }
 

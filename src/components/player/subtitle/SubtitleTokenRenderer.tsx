@@ -1,15 +1,14 @@
 import React, { useRef, useLayoutEffect } from "react";
-import { RenderableToken, SubtitleRenderContext } from "./SubtitleModels";
+import { RichSubtitleToken, SubtitleRenderContext } from "./SubtitleModels";
 
 interface SubtitleTokenRendererProps {
-  token: RenderableToken;
+  token: RichSubtitleToken;
   context: SubtitleRenderContext;
   index: number;
   fullText: string;
-  charIndex: number;
 }
 
-export const SubtitleTokenRenderer: React.FC<SubtitleTokenRendererProps> = ({ token, context, index, fullText, charIndex }) => {
+export const SubtitleTokenRenderer: React.FC<SubtitleTokenRendererProps> = ({ token, context, index, fullText }) => {
   const hasWordTimings = token.start !== undefined && token.end !== undefined;
   const isKaraokeActive = context.enableKaraokeMode && hasWordTimings;
   const highlightRef = useRef<HTMLSpanElement>(null);
@@ -33,7 +32,7 @@ export const SubtitleTokenRenderer: React.FC<SubtitleTokenRendererProps> = ({ to
         progress = ((currentTime - token.start!) / duration) * 100;
       }
       
-      // Direct DOM mutation! Bypass React render cycle for ultra-smooth 60FPS.
+      // Direct DOM mutation for ultra-smooth 60FPS
       highlightRef.current.style.width = `${progress}%`;
 
       if (context.isPlaying) {
@@ -56,10 +55,22 @@ export const SubtitleTokenRenderer: React.FC<SubtitleTokenRendererProps> = ({ to
     };
   }, [isKaraokeActive, context.isPlaying, token.start, token.end, context.getVideoTime, context.currentTime]);
 
-  // Helper: Base text node (No whitespace classes, relies on parent constraints)
-  const renderTextContent = () => (
-    <span>{token.text}</span>
-  );
+  // Unified renderer for text content with optional Furigana
+  const renderTextContent = (isHighlight: boolean = false) => {
+    if (token.ruby && context.enableFurigana) {
+      return (
+        <ruby className="inline-flex flex-col items-center align-bottom mx-[1px]">
+          <rt className={`text-[0.48em] leading-none select-none pb-0.5 tracking-wider font-semibold ${
+            isHighlight ? "text-[#facc15]/90" : "text-white/90"
+          }`}>
+            {token.ruby}
+          </rt>
+          <span>{token.text}</span>
+        </ruby>
+      );
+    }
+    return <span>{token.text}</span>;
+  };
 
   // Interactive events for dictionary hover
   const isHovered = context.hoverText?.startIndex === index;
@@ -76,7 +87,7 @@ export const SubtitleTokenRenderer: React.FC<SubtitleTokenRendererProps> = ({ to
         x: e.clientX,
         y: e.clientY,
         startIndex: index,
-        charIndex: charIndex
+        charIndex: token.charIndex,
       });
     }
   } : {};
@@ -87,30 +98,29 @@ export const SubtitleTokenRenderer: React.FC<SubtitleTokenRendererProps> = ({ to
       : "hover:text-yellow-400 hover:bg-white/10"
   }` : "";
 
-  const innerContent = (
+  return (
     <span key={index} className={`relative inline-block ${dictionaryHoverClass}`} {...hoverEvents}>
-      {/* 1. Spacer Layer: Invisible, dictates layout bounds for the text flow. Forced nowrap to prevent internal wrap. */}
+      {/* 1. Spacer Layer: Invisible, dictates layout bounds for text + ruby */}
       <span className="invisible whitespace-nowrap" aria-hidden="true">
-        {renderTextContent()}
+        {renderTextContent(false)}
       </span>
 
-      {/* 2. Base Layer: Default text, perfectly overlapping using absolute positioning */}
+      {/* 2. Base Layer: Default text + ruby, perfectly overlapping using absolute positioning */}
       <span className="absolute left-0 top-0 whitespace-nowrap text-white" aria-hidden="true">
-        {renderTextContent()}
+        {renderTextContent(false)}
       </span>
 
-      {/* 3. Highlight Layer: Active text (yellow), clipped by width mutated by RAF */}
+      {/* 3. Highlight Layer: Active text + ruby (yellow), clipped by width mutated by RAF */}
       {isKaraokeActive && (
         <span 
-          ref={highlightRef}
-          className="absolute left-0 top-0 whitespace-nowrap overflow-hidden text-[#facc15]" 
+          ref={highlightRef} 
+          className="absolute left-0 top-0 whitespace-nowrap overflow-hidden text-[#facc15] pointer-events-none z-10" 
           style={{ width: '0%' }}
+          aria-hidden="true"
         >
-          {renderTextContent()}
+          {renderTextContent(true)}
         </span>
       )}
     </span>
   );
-
-  return innerContent;
 };

@@ -1,7 +1,9 @@
 use crate::domain::agent::AgentType;
 use crate::infrastructure::agents::AgentFactory;
 use crate::domain::project::{ProjectState, TaskType};
+use crate::domain::language::RubyAnnotationProvider;
 use crate::infrastructure::providers::AIProvider;
+use crate::infrastructure::plugins::PluginManager;
 use crate::domain::events::EventDispatcher;
 use crate::application::job_manager::JobManager;
 
@@ -14,6 +16,7 @@ impl ProofreadCoordinator {
     pub fn start_proofread<F>(
         project_mutex: Arc<Mutex<ProjectState>>,
         provider: Arc<dyn AIProvider>,
+        plugin_manager: Arc<PluginManager>,
         chunk_size: usize,
         dispatcher: Arc<dyn EventDispatcher>,
         job_manager: Arc<JobManager>,
@@ -42,6 +45,8 @@ impl ProofreadCoordinator {
 
             let mut all_proofread_results = results_clone.clone();
             let mut was_cancelled = false;
+
+            let ruby_provider = plugin_manager.get_service::<dyn RubyAnnotationProvider>("japanese");
 
             for (i, chunk) in chunks.iter().enumerate() {
                 if job_manager.is_cancelled() {
@@ -88,7 +93,7 @@ impl ProofreadCoordinator {
                                         let trimmed = new_text.trim();
                                         if !trimmed.is_empty() && trimmed != res.text {
                                             println!("[ProofreadCoordinator] Correcting id {}: '{}' -> '{}'", id, res.text, trimmed);
-                                            res.text = trimmed.to_string();
+                                            res.set_text_and_sync(trimmed.to_string(), ruby_provider.as_deref());
                                         }
                                     }
                                 }

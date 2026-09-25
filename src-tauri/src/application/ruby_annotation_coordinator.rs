@@ -44,10 +44,21 @@ impl RubyAnnotationCoordinator {
             return Ok(());
         }
 
-        // Auto-Baseline Injection: Ensure all results have a baseline UniDic annotation
+        // Auto-Baseline Injection: Ensure all results have a valid, synchronized UniDic annotation
         if let Some(ruby_provider) = plugin_manager.get_service::<dyn RubyAnnotationProvider>("japanese") {
             for res in &mut project.results {
-                if res.ruby.is_none() {
+                let needs_reannotation = match &res.ruby {
+                    None => true,
+                    Some(segments) => {
+                        let ruby_text: String = segments.iter().map(|s| match s {
+                            crate::domain::language::RubySegment::Text { text } => text.as_str(),
+                            crate::domain::language::RubySegment::Ruby { base, .. } => base.as_str(),
+                        }).collect();
+                        ruby_text != res.text
+                    }
+                };
+
+                if needs_reannotation {
                     if let Ok(ruby) = ruby_provider.annotate(&res.text) {
                         res.ruby = Some(ruby);
                     }

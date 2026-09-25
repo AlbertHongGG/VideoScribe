@@ -32,7 +32,7 @@ export const useSTTJobStore = create<ActiveJobStore>((set, get) => ({
   
   syncAppState: (state: ProjectState) => {
     set({
-      results: state.results,
+      results: [...state.results],
       vocalsAudioPath: state.vocals_audio_path || null,
       backgroundAudioPath: state.background_audio_path || null,
     });
