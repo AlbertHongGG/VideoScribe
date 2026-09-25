@@ -1,5 +1,6 @@
 pub mod tokenizer;
 pub mod dictionary;
+pub mod ruby_aligner;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -116,24 +117,72 @@ impl FuriganaProvider for JapanesePlugin {
         for info in token_infos {
             let surface = info.token_text;
             
-            // Check if surface contains Kanji (Unicode range 4E00-9FAF)
-            let has_kanji = surface.chars().any(|c| {
-                let code = c as u32;
-                code >= 0x4E00 && code <= 0x9FAF
-            });
-            
-            let reading = if has_kanji {
-                info.reading.map(|r| tokenizer::katakana_to_hiragana(&r))
+            if ruby_aligner::RubyAligner::has_kanji(&surface) {
+                if let Some(r) = info.reading {
+                    let hiragana = tokenizer::katakana_to_hiragana(&r);
+                    let aligned = ruby_aligner::RubyAligner::align(&surface, &hiragana);
+                    furigana_tokens.extend(aligned);
+                } else {
+                    furigana_tokens.push(FuriganaToken {
+                        surface,
+                        reading: None,
+                    });
+                }
             } else {
-                None
-            };
-            
-            furigana_tokens.push(FuriganaToken {
-                surface,
-                reading,
-            });
+                furigana_tokens.push(FuriganaToken {
+                    surface,
+                    reading: None,
+                });
+            }
         }
         
         Ok(furigana_tokens)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_furigana_provider() {
+        let tokenizer = JapaneseTokenizer::new().unwrap();
+        let cases = vec![
+            "フリーサイトで明日まで一泊ですね。",
+            "もしよかったらおばあちゃん家一緒に泊まりに来ない？",
+            "浜で一日本読んで",
+            "ご飯を美味しく食べる。",
+        ];
+
+        for text in cases {
+            let token_infos = tokenizer.tokenize_all(text).unwrap();
+            let mut furigana_tokens = Vec::new();
+            for info in token_infos {
+                let surface = info.token_text;
+                if ruby_aligner::RubyAligner::has_kanji(&surface) {
+                    if let Some(r) = info.reading {
+                        let hiragana = tokenizer::katakana_to_hiragana(&r);
+                        let aligned = ruby_aligner::RubyAligner::align(&surface, &hiragana);
+                        furigana_tokens.extend(aligned);
+                    } else {
+                        furigana_tokens.push(FuriganaToken { surface, reading: None });
+                    }
+                } else {
+                    furigana_tokens.push(FuriganaToken { surface, reading: None });
+                }
+            }
+
+            let reconstructed: String = furigana_tokens.iter().map(|t| t.surface.as_str()).collect();
+            println!("\n=== INPUT: {} ===", text);
+            println!("RECONSTRUCTED: {}", reconstructed);
+            for t in &furigana_tokens {
+                if let Some(r) = &t.reading {
+                    println!("  [KANJI] {} -> {}", t.surface, r);
+                } else {
+                    println!("  [PLAIN] {}", t.surface);
+                }
+            }
+            assert_eq!(reconstructed, text);
+        }
     }
 }
