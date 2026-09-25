@@ -50,7 +50,7 @@ export const STTPanelHeader: React.FC = () => {
               onClick={() => SubtitleIOService.importSubtitles()}
               className="text-gray-400 hover:text-[#facc15] transition-colors p-1"
             >
-              <Download size={16} />
+              <Upload size={16} />
             </button>
           </Tooltip>
           <Tooltip content="Export Subtitles" position="bottom">
@@ -58,7 +58,7 @@ export const STTPanelHeader: React.FC = () => {
               onClick={() => SubtitleIOService.exportSubtitles()}
               className="text-gray-400 hover:text-[#facc15] transition-colors p-1"
             >
-              <Upload size={16} />
+              <Download size={16} />
             </button>
           </Tooltip>
         </div>
