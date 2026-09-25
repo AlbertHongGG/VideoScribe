@@ -115,23 +115,56 @@ impl RubyAnnotationProvider for JapanesePlugin {
     fn annotate(&self, text: &str) -> Result<Vec<RubySegment>, String> {
         let tokens = self.tokenizer.tokenize_all(text)?;
         
-        let mut segments = Vec::new();
+        let mut raw_segments = Vec::new();
+        let mut cursor = 0;
+
         for token in tokens {
             let surface = token.surface;
             
+            // Re-align with original text to preserve any skipped characters (e.g. whitespace, symbols)
+            if let Some(rel_idx) = text[cursor..].find(&surface) {
+                if rel_idx > 0 {
+                    let gap = &text[cursor..cursor + rel_idx];
+                    raw_segments.push(RubySegment::text(gap));
+                }
+                cursor += rel_idx + surface.len();
+            }
+
             if ruby_aligner::RubyAligner::has_kanji(&surface) {
                 if let Some(r) = token.reading_hiragana {
                     let aligned = ruby_aligner::RubyAligner::align(&surface, &r);
-                    segments.extend(aligned);
+                    raw_segments.extend(aligned);
                 } else {
-                    segments.push(RubySegment::text(surface));
+                    raw_segments.push(RubySegment::text(surface));
                 }
             } else {
-                segments.push(RubySegment::text(surface));
+                raw_segments.push(RubySegment::text(surface));
+            }
+        }
+
+        // Preserve any trailing characters (e.g. trailing whitespace or punctuation)
+        if cursor < text.len() {
+            raw_segments.push(RubySegment::text(&text[cursor..]));
+        }
+
+        // Merge adjacent Text segments for optimal compactness and DOM performance
+        let mut merged = Vec::with_capacity(raw_segments.len());
+        for seg in raw_segments {
+            match seg {
+                RubySegment::Text { text } => {
+                    if let Some(RubySegment::Text { text: prev_text }) = merged.last_mut() {
+                        prev_text.push_str(&text);
+                    } else {
+                        merged.push(RubySegment::Text { text });
+                    }
+                }
+                ruby_seg @ RubySegment::Ruby { .. } => {
+                    merged.push(ruby_seg);
+                }
             }
         }
         
-        Ok(segments)
+        Ok(merged)
     }
 }
 
@@ -152,6 +185,13 @@ mod tests {
             "もしよかったらおばあちゃん家一緒に泊まりに来ない？",
             "浜で一日本読んで",
             "ご飯を美味しく食べる。",
+            "りんちゃんも 山梨からよう来たね",
+            "あ… はじめまして お世話になります",
+            "はあ… ないっこ 久しぶり",
+            "おお! アヤちゃん もう来てたんだ!",
+            "おお! この子は 時彩乃ちゃん",
+            "  前後にスペース  ",
+            "全角　スペースと　複数   スペース",
         ];
 
         for text in cases {
