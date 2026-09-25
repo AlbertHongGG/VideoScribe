@@ -41,11 +41,13 @@ impl Agent for RubyAnnotatorAgent {
         println!("[RubyAnnotatorAgent] Starting Furigana inspection for {} sentences...", sentences_arr.len());
 
         let mut retries = 2;
+        let mut current_prompt = prompt.clone();
+
         while retries >= 0 {
             println!("[RubyAnnotatorAgent] Sending inspection request... (Attempt {}/3)", 3 - retries);
 
             let request = GenerateRequest {
-                prompt: prompt.clone(),
+                prompt: current_prompt.clone(),
                 system_prompt: Some(system_prompt.clone()),
                 messages: None,
                 temperature: Some(0.1),
@@ -70,9 +72,10 @@ impl Agent for RubyAnnotatorAgent {
 
                     match serde_json::from_str::<Vec<RubyCorrectionItem>>(text) {
                         Ok(corrections) => {
-                            // Validate character invariance and syntax for each correction
-                            let mut valid = true;
-                            for corr in &corrections {
+                            let mut valid_corrections = Vec::new();
+                            let mut violation_errors = Vec::new();
+
+                            for corr in corrections {
                                 let orig_item = sentences_arr.iter().find(|s| {
                                     s.get("id").and_then(|id| id.as_u64()) == Some(corr.id as u64)
                                 });
@@ -83,38 +86,52 @@ impl Agent for RubyAnnotatorAgent {
                                             Ok(segments) => {
                                                 if let Err(e) = validate_invariance(orig_text, &segments) {
                                                     println!("[RubyAnnotatorAgent] Invariance validation error on id {}: {}", corr.id, e);
-                                                    valid = false;
-                                                    break;
+                                                    violation_errors.push(format!("id {}: {}", corr.id, e));
+                                                } else {
+                                                    valid_corrections.push(corr);
                                                 }
                                             }
                                             Err(e) => {
                                                 println!("[RubyAnnotatorAgent] Codec parse error on id {}: {}", corr.id, e);
-                                                valid = false;
-                                                break;
+                                                violation_errors.push(format!("id {}: codec parse error: {}", corr.id, e));
                                             }
                                         }
                                     }
                                 } else {
                                     println!("[RubyAnnotatorAgent] Received correction for unknown id: {}", corr.id);
-                                    valid = false;
-                                    break;
+                                    violation_errors.push(format!("id {}: unknown id", corr.id));
                                 }
                             }
 
-                            if !valid {
-                                if retries == 0 {
-                                    return Err("Output violated character invariance after retries".to_string());
-                                }
+                            // If there were violations and we still have retries, give LLM targeted feedback!
+                            if !violation_errors.is_empty() && retries > 0 {
+                                println!(
+                                    "[RubyAnnotatorAgent] {} violations detected on attempt {}/3. Providing dynamic feedback for retry...",
+                                    violation_errors.len(),
+                                    3 - retries
+                                );
+                                current_prompt = format!("{}\n{}", prompt, prompts::build_retry_feedback(&violation_errors));
                                 retries -= 1;
                                 continue;
                             }
 
-                            let parsed_val = serde_json::to_value(&corrections).map_err(|e| e.to_string())?;
+                            // If all retries exhausted and there are still some violations:
+                            // Graceful Per-Item Fallback: Drop ONLY the invalid corrections and accept all valid ones!
+                            if !violation_errors.is_empty() {
+                                eprintln!(
+                                    "[RubyAnnotatorAgent] Retries exhausted. Graceful fallback: dropping {} invalid corrections ({:?}). Preserving {} valid corrections.",
+                                    violation_errors.len(),
+                                    violation_errors,
+                                    valid_corrections.len()
+                                );
+                            }
+
+                            let parsed_val = serde_json::to_value(&valid_corrections).map_err(|e| e.to_string())?;
 
                             AppLogger::log(
                                 self.name(),
-                                json!({ "count": corrections.len() }),
-                                json!({ "prompt": prompt, "systemPrompt": system_prompt }),
+                                json!({ "validCount": valid_corrections.len(), "droppedCount": violation_errors.len() }),
+                                json!({ "prompt": current_prompt, "systemPrompt": system_prompt }),
                                 parsed_val.clone(),
                             );
 
@@ -122,8 +139,14 @@ impl Agent for RubyAnnotatorAgent {
                         }
                         Err(e) => {
                             println!("[RubyAnnotatorAgent] JSON parse error: {}", e);
-                            if retries == 0 {
-                                return Err(format!("JSON parse error: {}", e));
+                            if retries > 0 {
+                                current_prompt = format!(
+                                    "{}\n\n[ERROR]: Your output was not a valid JSON array: {}. Please output strictly a valid JSON array.",
+                                    prompt, e
+                                );
+                            } else {
+                                eprintln!("[RubyAnnotatorAgent] JSON parse failed after all retries. Falling back to empty corrections.");
+                                return Ok(json!([]));
                             }
                         }
                     }
@@ -138,6 +161,6 @@ impl Agent for RubyAnnotatorAgent {
             retries -= 1;
         }
 
-        Err("Failed to execute RubyAnnotatorAgent after retries".to_string())
+        Ok(json!([]))
     }
 }
