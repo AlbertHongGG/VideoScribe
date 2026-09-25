@@ -133,6 +133,28 @@ impl PipelineEngine {
                         });
                     }
                 }
+                TaskType::RubyAnnotation => {
+                    if let Some(state) = app.try_state::<AppState>() {
+                        let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
+                        let provider = state.ruby_annotator_provider.clone();
+                        let chunk_size = state.config.ruby_annotator_batch_size;
+                        let project_mutex = state.project.clone();
+                        let job_manager_clone = state.job_manager.clone();
+                        let plugin_manager = state.plugin_manager.clone();
+
+                        tauri::async_runtime::spawn(async move {
+                            let app_clone = app.clone();
+                            if let Err(e) = crate::application::ruby_annotation_coordinator::RubyAnnotationCoordinator::start_ruby_annotation(
+                                project_mutex, provider, plugin_manager, chunk_size, dispatcher.clone(), job_manager_clone.clone(), move || {
+                                    crate::application::pipeline_engine::PipelineEngine::advance_pipeline(app_clone);
+                                }
+                            ) {
+                                eprintln!("Failed to start ruby annotation: {}", e);
+                                job_manager_clone.fail_job(e, dispatcher);
+                            }
+                        });
+                    }
+                }
                 TaskType::Translation => {
                     if let Some(state) = app.try_state::<AppState>() {
                         let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));

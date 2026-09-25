@@ -10,6 +10,7 @@ pub struct AppState {
     pub config: AppConfig,
     pub translator_provider: Arc<dyn AIProvider>,
     pub segmenter_provider: Arc<dyn AIProvider>,
+    pub ruby_annotator_provider: Arc<dyn AIProvider>,
     pub project: Arc<Mutex<ProjectState>>,
     pub job_manager: Arc<JobManager>,
     pub plugin_manager: Arc<PluginManager>,
@@ -24,11 +25,15 @@ impl AppState {
             
         let segmenter_provider = ProviderFactory::create_provider(&AgentType::SegmenterAgent, &config)
             .map_err(|e| e.to_string())?;
+
+        let ruby_annotator_provider = ProviderFactory::create_provider(&AgentType::RubyAnnotatorAgent, &config)
+            .map_err(|e| e.to_string())?;
             
         Ok(Self {
             config,
             translator_provider: Arc::from(translator_provider),
             segmenter_provider: Arc::from(segmenter_provider),
+            ruby_annotator_provider: Arc::from(ruby_annotator_provider),
             project: Arc::new(Mutex::new(ProjectState::default())),
             job_manager: Arc::new(JobManager::new()),
             plugin_manager: Arc::new(plugin_manager),

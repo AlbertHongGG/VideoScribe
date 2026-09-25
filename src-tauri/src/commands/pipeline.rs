@@ -27,6 +27,8 @@ pub struct PipelineConfig {
     pub enable_segmentation: bool,
     pub enable_translation: bool,
     pub target_language: String,
+    pub enable_ruby_annotation: bool,
+    pub enable_furigana: bool,
 }
 
 #[tauri::command]
@@ -64,6 +66,7 @@ pub fn trigger_pipeline(
         tasks.push(TaskType::Stt);
         if args.fa_engine != "off" { tasks.push(TaskType::ForcedAlignment); }
         if args.enable_segmentation { tasks.push(TaskType::Segmentation); }
+        if args.enable_ruby_annotation { tasks.push(TaskType::RubyAnnotation); }
         if args.enable_translation { tasks.push(TaskType::Translation); }
         
         let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
@@ -103,6 +106,7 @@ pub fn trigger_pipeline(
         proj.fa_model = Some(args.fa_model.clone());
         proj.use_batch = args.use_batch;
         proj.batch_size = args.batch_size;
+        proj.enable_furigana = args.enable_furigana;
     }
     
     let _ = app.emit("app-state-changed", Value::Null);

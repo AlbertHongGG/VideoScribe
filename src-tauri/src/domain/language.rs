@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use specta::Type;
+use ts_rs::TS;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, Type)]
 #[serde(rename_all = "lowercase")]
@@ -43,7 +44,8 @@ pub struct DictionaryEntry {
     pub glossary: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Type)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, TS, Type)]
+#[ts(export, export_to = "../../src/types/app_types.ts")]
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum RubySegment {
     /// Non-ruby text segment (e.g. Kana, punctuation, whitespace).

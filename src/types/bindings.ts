@@ -20,6 +20,7 @@ export const commands = {
 	startTranslation: (targetLanguage: string) => typedError<null, string>(__TAURI_INVOKE("start_translation", { targetLanguage })),
 	runAgentTask: (agentType: AgentType, payloadJson: string) => typedError<string, string>(__TAURI_INVOKE("run_agent_task", { agentType, payloadJson })),
 	startSegmentation: () => typedError<null, string>(__TAURI_INVOKE("start_segmentation")),
+	startRubyAnnotation: () => typedError<null, string>(__TAURI_INVOKE("start_ruby_annotation")),
 	getAppState: () => typedError<ProjectState, string>(__TAURI_INVOKE("get_app_state")),
 	setVideoPath: (path: string) => typedError<null, string>(__TAURI_INVOKE("set_video_path", { path })),
 	exportMssStems: (exportPath: string) => typedError<null, string>(__TAURI_INVOKE("export_mss_stems", { exportPath })),
@@ -27,7 +28,7 @@ export const commands = {
 };
 
 /* Types */
-export type AgentType = "TranslatorAgent" | "SegmenterAgent";
+export type AgentType = "TranslatorAgent" | "SegmenterAgent" | "RubyAnnotatorAgent";
 
 export type DictionaryEntry = {
 	id: string,
@@ -69,6 +70,8 @@ export type PipelineConfig = {
 	enableSegmentation: boolean,
 	enableTranslation: boolean,
 	targetLanguage: string,
+	enableRubyAnnotation: boolean,
+	enableFurigana: boolean,
 };
 
 export type PipelineTask = {
@@ -96,6 +99,7 @@ export type ProjectState = {
 	use_batch: boolean,
 	batch_size: number,
 	vad_segments: VadSegment[] | null,
+	enable_furigana: boolean,
 };
 
 export type RubySegment = 
@@ -116,11 +120,12 @@ export type STTResult = {
 	text: string,
 	translation: string | null,
 	words: WordTiming[] | null,
+	ruby: RubySegment[] | null,
 };
 
 export type TaskStatus = "pending" | "running" | "completed" | "error" | "cancelled" | "outdated";
 
-export type TaskType = "preprocess" | "mss" | "vad" | "stt" | "forced_alignment" | "translation" | "segmentation";
+export type TaskType = "preprocess" | "mss" | "vad" | "stt" | "forced_alignment" | "segmentation" | "ruby_annotation" | "translation";
 
 export type VadSegment = {
 	start: number | null,

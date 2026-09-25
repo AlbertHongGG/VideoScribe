@@ -5,6 +5,7 @@ use async_trait::async_trait;
 
 pub mod translator_agent;
 pub mod segmenter_agent;
+pub mod ruby_annotator_agent;
 
 #[async_trait]
 pub trait Agent: Send + Sync {
@@ -23,6 +24,7 @@ impl AgentFactory {
         match agent_type {
             AgentType::TranslatorAgent => Ok(Box::new(translator_agent::TranslatorAgent::new(provider))),
             AgentType::SegmenterAgent => Ok(Box::new(segmenter_agent::SegmenterAgent::new(provider))),
+            AgentType::RubyAnnotatorAgent => Ok(Box::new(ruby_annotator_agent::RubyAnnotatorAgent::new(provider))),
         }
     }
 }

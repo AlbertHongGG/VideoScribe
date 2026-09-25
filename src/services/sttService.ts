@@ -24,7 +24,9 @@ export class STTService {
         batchSize: settingsStore.batchSize,
         enableSegmentation: settingsStore.enableSegmentation,
         enableTranslation: settingsStore.enableTranslation,
-        targetLanguage: settingsStore.targetLanguage
+        targetLanguage: settingsStore.targetLanguage,
+        enableRubyAnnotation: settingsStore.enableRubyAnnotation,
+        enableFurigana: settingsStore.enableFurigana,
       });
       
       if (triggerRes.status === "error") throw new Error(triggerRes.error);

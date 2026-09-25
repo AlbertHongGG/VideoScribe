@@ -114,13 +114,21 @@ impl PythonWorkerClient {
             WorkerEventData::SegmentBatch(data) => {
                 if let Some(state) = app.try_state::<crate::infrastructure::state::AppState>() {
                     if let Ok(mut proj) = state.project.lock() {
+                        let ruby_provider = if proj.enable_furigana {
+                            state.plugin_manager.get_service::<dyn crate::domain::language::RubyAnnotationProvider>("japanese")
+                        } else {
+                            None
+                        };
+
                         for cue in &data.cues {
+                            let ruby = ruby_provider.as_ref().and_then(|p| p.annotate(&cue.text).ok());
                             let stt_result = crate::domain::project::STTResult {
                                 start: cue.start_ms as f64 / 1000.0,
                                 end: cue.end_ms as f64 / 1000.0,
                                 text: cue.text.clone(),
                                 translation: None,
                                 words: cue.words.clone(),
+                                ruby,
                             };
                             proj.add_stt_result(stt_result);
                         }
@@ -133,13 +141,21 @@ impl PythonWorkerClient {
                 if let Some(state) = app.try_state::<crate::infrastructure::state::AppState>() {
                     if let Ok(mut proj) = state.project.lock() {
                         proj.results.clear();
+                        let ruby_provider = if proj.enable_furigana {
+                            state.plugin_manager.get_service::<dyn crate::domain::language::RubyAnnotationProvider>("japanese")
+                        } else {
+                            None
+                        };
+
                         for cue in &data.cues {
+                            let ruby = ruby_provider.as_ref().and_then(|p| p.annotate(&cue.text).ok());
                             let stt_result = crate::domain::project::STTResult {
                                 start: cue.start_ms as f64 / 1000.0,
                                 end: cue.end_ms as f64 / 1000.0,
                                 text: cue.text.clone(),
                                 translation: None,
                                 words: cue.words.clone(),
+                                ruby,
                             };
                             proj.add_stt_result(stt_result);
                         }

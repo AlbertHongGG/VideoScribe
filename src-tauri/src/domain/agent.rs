@@ -9,6 +9,7 @@ use specta::Type;
 pub enum AgentType {
     TranslatorAgent,
     SegmenterAgent,
+    RubyAnnotatorAgent,
 }
 
 impl AgentType {
@@ -16,6 +17,7 @@ impl AgentType {
         match self {
             AgentType::TranslatorAgent => "translator_agent",
             AgentType::SegmenterAgent => "segmenter_agent",
+            AgentType::RubyAnnotatorAgent => "ruby_annotator_agent",
         }
     }
 }
@@ -27,6 +29,7 @@ impl FromStr for AgentType {
         match s {
             "translator_agent" => Ok(AgentType::TranslatorAgent),
             "segmenter_agent" => Ok(AgentType::SegmenterAgent),
+            "ruby_annotator_agent" => Ok(AgentType::RubyAnnotatorAgent),
             _ => Err(format!("Unknown agent type: '{}'", s)),
         }
     }

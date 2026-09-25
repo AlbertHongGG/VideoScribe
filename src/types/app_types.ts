@@ -6,13 +6,15 @@ export type JobStatus = "pending" | "running" | "completed" | "error" | "cancell
 
 export type PipelineTask = { task_type: TaskType, status: TaskStatus, progress: number, error_message: string | null, };
 
-export type ProjectState = { workspace_dir: string | null, video_path: string | null, extracted_audio_path: string | null, results: Array<STTResult>, target_language: string, source_language: string | null, vocals_audio_path: string | null, background_audio_path: string | null, stt_model_size: string | null, vad_engine: string | null, mss_engine: string | null, mss_model: string | null, fa_engine: string | null, fa_model: string | null, use_batch: boolean, batch_size: number, vad_segments: Array<VadSegment> | null, };
+export type ProjectState = { workspace_dir: string | null, video_path: string | null, extracted_audio_path: string | null, results: Array<STTResult>, target_language: string, source_language: string | null, vocals_audio_path: string | null, background_audio_path: string | null, stt_model_size: string | null, vad_engine: string | null, mss_engine: string | null, mss_model: string | null, fa_engine: string | null, fa_model: string | null, use_batch: boolean, batch_size: number, vad_segments: Array<VadSegment> | null, enable_furigana: boolean, };
 
-export type STTResult = { start: number, end: number, text: string, translation: string | null, words: Array<WordTiming> | null, };
+export type RubySegment = { "kind": "text", text: string, } | { "kind": "ruby", base: string, ruby: string, };
+
+export type STTResult = { start: number, end: number, text: string, translation: string | null, words: Array<WordTiming> | null, ruby: Array<RubySegment> | null, };
 
 export type TaskStatus = "pending" | "running" | "completed" | "error" | "cancelled" | "outdated";
 
-export type TaskType = "preprocess" | "mss" | "vad" | "stt" | "forced_alignment" | "translation" | "segmentation";
+export type TaskType = "preprocess" | "mss" | "vad" | "stt" | "forced_alignment" | "segmentation" | "ruby_annotation" | "translation";
 
 export type VadSegment = { start: number, end: number, };
 

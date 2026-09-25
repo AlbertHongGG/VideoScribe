@@ -30,14 +30,18 @@ export class SubtitleProcessor {
     const isJapanese = context.language === "ja" || /[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/.test(subtitle.text);
     
     if (isJapanese && (context.enableFurigana || context.enableDictionary)) {
-      try {
-        // Fetch ruby annotations based on the COMPLETE sentence context
-        const res = await commands.getRubyAnnotations(subtitle.text);
-        if (res.status === "ok") {
-          rubySegments = res.data;
+      if (subtitle.ruby && subtitle.ruby.length > 0) {
+        rubySegments = subtitle.ruby;
+      } else {
+        try {
+          // If not pre-annotated, fetch ruby annotations based on the sentence context
+          const res = await commands.getRubyAnnotations(subtitle.text);
+          if (res.status === "ok") {
+            rubySegments = res.data;
+          }
+        } catch (e) {
+          console.error("Failed to fetch Ruby annotations:", e);
         }
-      } catch (e) {
-        console.error("Failed to fetch Ruby annotations:", e);
       }
     }
 

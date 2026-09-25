@@ -65,6 +65,7 @@ impl WordAligner {
                     text: sentence.clone(),
                     translation: None,
                     words: Some(segment_words),
+                    ruby: None,
                 });
             }
         }

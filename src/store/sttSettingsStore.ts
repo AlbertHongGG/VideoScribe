@@ -8,6 +8,7 @@ interface STTSettingsStore {
   showSubtitles: boolean;
   enableDictionary: boolean;
   enableFurigana: boolean;
+  enableRubyAnnotation: boolean;
   enableSegmentation: boolean;
   enableTranslation: boolean;
   enableKaraokeMode: boolean;
@@ -34,6 +35,7 @@ interface STTSettingsStore {
   setShowSubtitles: (show: boolean) => void;
   setEnableDictionary: (enable: boolean) => void;
   setEnableFurigana: (enable: boolean) => void;
+  setEnableRubyAnnotation: (enable: boolean) => void;
   setEnableSegmentation: (enable: boolean) => void;
   setEnableTranslation: (enable: boolean) => void;
   setEnableKaraokeMode: (enable: boolean) => void;
@@ -63,6 +65,7 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
       showSubtitles: true,
       enableDictionary: false,
       enableFurigana: false,
+      enableRubyAnnotation: false,
       enableSegmentation: false,
       enableTranslation: false,
       enableKaraokeMode: false,
@@ -89,6 +92,10 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
       setShowSubtitles: (showSubtitles) => set({ showSubtitles }),
       setEnableDictionary: (enable) => set({ enableDictionary: enable }),
       setEnableFurigana: (enable) => set({ enableFurigana: enable }),
+      setEnableRubyAnnotation: (enable) => set((state) => ({
+        enableRubyAnnotation: enable,
+        enableFurigana: enable ? true : state.enableFurigana,
+      })),
       setEnableSegmentation: (enable) => set({ enableSegmentation: enable }),
       setEnableTranslation: (enable) => set({ enableTranslation: enable }),
       setEnableKaraokeMode: (enable) => set({ enableKaraokeMode: enable }),
@@ -116,6 +123,7 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
         showSubtitles: state.showSubtitles,
         enableDictionary: state.enableDictionary,
         enableFurigana: state.enableFurigana,
+        enableRubyAnnotation: state.enableRubyAnnotation,
         enableSegmentation: state.enableSegmentation,
         enableTranslation: state.enableTranslation,
         enableKaraokeMode: state.enableKaraokeMode,

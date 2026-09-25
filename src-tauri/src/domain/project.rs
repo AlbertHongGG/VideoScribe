@@ -4,6 +4,7 @@ use specta::Type;
 
 
 use crate::domain::stt_job::WordTiming;
+use crate::domain::language::RubySegment;
 
 #[derive(Debug, Serialize, Deserialize, Clone, TS, Type)]
 #[ts(export, export_to = "../../src/types/app_types.ts")]
@@ -13,6 +14,7 @@ pub struct STTResult {
     pub text: String,
     pub translation: Option<String>,
     pub words: Option<Vec<WordTiming>>,
+    pub ruby: Option<Vec<RubySegment>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, TS, Type, PartialEq)]
@@ -24,8 +26,9 @@ pub enum TaskType {
     Vad,
     Stt,
     ForcedAlignment,
-    Translation,
     Segmentation,
+    RubyAnnotation,
+    Translation,
 }
 
 impl TaskType {
@@ -37,7 +40,8 @@ impl TaskType {
             TaskType::Stt => 3,
             TaskType::ForcedAlignment => 4,
             TaskType::Segmentation => 5,
-            TaskType::Translation => 6,
+            TaskType::RubyAnnotation => 6,
+            TaskType::Translation => 7,
         }
     }
 }
@@ -90,6 +94,7 @@ pub struct ProjectState {
     pub use_batch: bool,
     pub batch_size: i32,
     pub vad_segments: Option<Vec<VadSegment>>,
+    pub enable_furigana: bool,
 }
 
 impl Default for ProjectState {
@@ -112,6 +117,7 @@ impl Default for ProjectState {
             use_batch: false,
             batch_size: 1,
             vad_segments: None,
+            enable_furigana: false,
         }
     }
 }
