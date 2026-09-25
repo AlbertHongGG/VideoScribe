@@ -2546,7 +2546,7 @@ dependencies = [
  "daachorse",
  "kanaria",
  "lindera-dictionary",
- "lindera-ipadic",
+ "lindera-unidic",
  "log",
  "once_cell",
  "percent-encoding",
@@ -2596,10 +2596,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "lindera-ipadic"
+name = "lindera-unidic"
 version = "3.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "130c598519a40bbfb762c4c06d6ad29315331eb4c154fcb2d1d6b46776cee7d9"
+checksum = "25a0ad0f434cb8c3eff24e7867d9d6b41ad727cb3ac1359fc49bed40a18b1203"
 dependencies = [
  "anyhow",
  "byteorder",

@@ -1,6 +1,8 @@
 pub mod tokenizer;
 pub mod dictionary;
 pub mod ruby_aligner;
+pub mod token;
+pub mod schema;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -76,7 +78,7 @@ impl DictionaryLookup for JapanesePlugin {
             // as we are building prefixes starting from the hovered character.
             if let Ok(token_info) = self.tokenizer.tokenize(&prefix) {
                 let target_word = if token_info.base_form == "*" {
-                    token_info.token_text.clone()
+                    token_info.surface.clone()
                 } else {
                     token_info.base_form.clone()
                 };
@@ -92,9 +94,9 @@ impl DictionaryLookup for JapanesePlugin {
                     if !entries.is_empty() {
                         results.push(LookupResult {
                             original_text: prefix,
-                            token: token_info.token_text,
+                            token: token_info.surface,
                             base_form: token_info.base_form,
-                            reading: token_info.reading,
+                            reading: token_info.reading_hiragana,
                             entries,
                         });
                     }
@@ -111,16 +113,15 @@ impl DictionaryLookup for JapanesePlugin {
 
 impl RubyAnnotationProvider for JapanesePlugin {
     fn annotate(&self, text: &str) -> Result<Vec<RubySegment>, String> {
-        let token_infos = self.tokenizer.tokenize_all(text)?;
+        let tokens = self.tokenizer.tokenize_all(text)?;
         
         let mut segments = Vec::new();
-        for info in token_infos {
-            let surface = info.token_text;
+        for token in tokens {
+            let surface = token.surface;
             
             if ruby_aligner::RubyAligner::has_kanji(&surface) {
-                if let Some(r) = info.reading {
-                    let hiragana = tokenizer::katakana_to_hiragana(&r);
-                    let aligned = ruby_aligner::RubyAligner::align(&surface, &hiragana);
+                if let Some(r) = token.reading_hiragana {
+                    let aligned = ruby_aligner::RubyAligner::align(&surface, &r);
                     segments.extend(aligned);
                 } else {
                     segments.push(RubySegment::text(surface));
@@ -141,6 +142,11 @@ mod tests {
     #[test]
     fn test_ruby_annotation_provider() {
         let tokenizer = JapaneseTokenizer::new().unwrap();
+        let plugin = JapanesePlugin {
+            tokenizer,
+            dict_service: JMDictService::new(PathBuf::from("jmdict.db")),
+        };
+
         let cases = vec![
             "フリーサイトで明日まで一泊ですね。",
             "もしよかったらおばあちゃん家一緒に泊まりに来ない？",
@@ -149,23 +155,7 @@ mod tests {
         ];
 
         for text in cases {
-            let token_infos = tokenizer.tokenize_all(text).unwrap();
-            let mut segments = Vec::new();
-            for info in token_infos {
-                let surface = info.token_text;
-                if ruby_aligner::RubyAligner::has_kanji(&surface) {
-                    if let Some(r) = info.reading {
-                        let hiragana = tokenizer::katakana_to_hiragana(&r);
-                        let aligned = ruby_aligner::RubyAligner::align(&surface, &hiragana);
-                        segments.extend(aligned);
-                    } else {
-                        segments.push(RubySegment::text(surface));
-                    }
-                } else {
-                    segments.push(RubySegment::text(surface));
-                }
-            }
-
+            let segments = plugin.annotate(text).unwrap();
             let reconstructed: String = segments.iter().map(|s| s.text_content()).collect();
             println!("\n=== INPUT: {} ===", text);
             println!("RECONSTRUCTED: {}", reconstructed);
