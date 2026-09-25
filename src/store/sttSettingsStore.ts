@@ -9,6 +9,7 @@ interface STTSettingsStore {
   enableDictionary: boolean;
   enableFurigana: boolean;
   enableRubyAnnotation: boolean;
+  enableProofread: boolean;
   enableSegmentation: boolean;
   enableTranslation: boolean;
   enableKaraokeMode: boolean;
@@ -36,6 +37,7 @@ interface STTSettingsStore {
   setEnableDictionary: (enable: boolean) => void;
   setEnableFurigana: (enable: boolean) => void;
   setEnableRubyAnnotation: (enable: boolean) => void;
+  setEnableProofread: (enable: boolean) => void;
   setEnableSegmentation: (enable: boolean) => void;
   setEnableTranslation: (enable: boolean) => void;
   setEnableKaraokeMode: (enable: boolean) => void;
@@ -66,6 +68,7 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
       enableDictionary: false,
       enableFurigana: false,
       enableRubyAnnotation: false,
+      enableProofread: false,
       enableSegmentation: false,
       enableTranslation: false,
       enableKaraokeMode: false,
@@ -96,6 +99,7 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
         enableRubyAnnotation: enable,
         enableFurigana: enable ? true : state.enableFurigana,
       })),
+      setEnableProofread: (enable) => set({ enableProofread: enable }),
       setEnableSegmentation: (enable) => set({ enableSegmentation: enable }),
       setEnableTranslation: (enable) => set({ enableTranslation: enable }),
       setEnableKaraokeMode: (enable) => set({ enableKaraokeMode: enable }),
@@ -124,6 +128,7 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
         enableDictionary: state.enableDictionary,
         enableFurigana: state.enableFurigana,
         enableRubyAnnotation: state.enableRubyAnnotation,
+        enableProofread: state.enableProofread,
         enableSegmentation: state.enableSegmentation,
         enableTranslation: state.enableTranslation,
         enableKaraokeMode: state.enableKaraokeMode,

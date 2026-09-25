@@ -24,6 +24,7 @@ pub struct PipelineConfig {
     pub fa_model: String,
     pub use_batch: bool,
     pub batch_size: i32,
+    pub enable_proofread: bool,
     pub enable_segmentation: bool,
     pub enable_translation: bool,
     pub target_language: String,
@@ -64,6 +65,7 @@ pub fn trigger_pipeline(
         if args.mss_engine != "off" { tasks.push(TaskType::Mss); }
         if args.vad_engine != "off" { tasks.push(TaskType::Vad); }
         tasks.push(TaskType::Stt);
+        if args.enable_proofread { tasks.push(TaskType::Proofread); }
         if args.fa_engine != "off" { tasks.push(TaskType::ForcedAlignment); }
         if args.enable_segmentation { tasks.push(TaskType::Segmentation); }
         if args.enable_ruby_annotation { tasks.push(TaskType::RubyAnnotation); }

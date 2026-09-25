@@ -15,6 +15,10 @@ pub struct AppConfig {
     pub ruby_annotator_ai_model: String,
     pub ruby_annotator_batch_size: usize,
     
+    pub proofreader_ai_provider: String,
+    pub proofreader_ai_model: String,
+    pub proofreader_batch_size: usize,
+    
     // Backend Server
 
     
@@ -57,6 +61,10 @@ impl AppConfig {
             ruby_annotator_ai_provider: env::var("RUBY_ANNOTATOR_AI_PROVIDER").unwrap_or_else(|_| "GEMINIFLOW".to_string()),
             ruby_annotator_ai_model: env::var("RUBY_ANNOTATOR_AI_MODEL").unwrap_or_else(|_| "gemini-3.5-flash".to_string()),
             ruby_annotator_batch_size: env::var("RUBY_ANNOTATOR_BATCH_SIZE").unwrap_or_else(|_| "15".to_string()).parse().unwrap_or(15),
+
+            proofreader_ai_provider: env::var("PROOFREADER_AI_PROVIDER").unwrap_or_else(|_| "GEMINIFLOW".to_string()),
+            proofreader_ai_model: env::var("PROOFREADER_AI_MODEL").unwrap_or_else(|_| "gemini-3.5-flash".to_string()),
+            proofreader_batch_size: env::var("PROOFREADER_BATCH_SIZE").unwrap_or_else(|_| "20".to_string()).parse().unwrap_or(20),
             
             ollama_base_url: env::var("OLLAMA_BASE_URL").ok(),
             

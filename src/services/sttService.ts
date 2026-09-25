@@ -22,6 +22,7 @@ export class STTService {
         faModel: settingsStore.faModel,
         useBatch: settingsStore.useBatch,
         batchSize: settingsStore.batchSize,
+        enableProofread: settingsStore.enableProofread,
         enableSegmentation: settingsStore.enableSegmentation,
         enableTranslation: settingsStore.enableTranslation,
         targetLanguage: settingsStore.targetLanguage,

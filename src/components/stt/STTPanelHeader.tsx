@@ -1,5 +1,5 @@
 import React from "react";
-import { Download, Upload, Languages, Wand2, Sparkles } from "lucide-react";
+import { Download, Upload, Languages, Wand2, Sparkles, CheckCheck } from "lucide-react";
 import { Tooltip } from "../ui/Tooltip";
 import { SubtitleIOService } from "../../services/subtitleIOService";
 import { useSTTJobStore, selectIsProcessing, selectCanTranslate } from "../../store/sttJobStore";
@@ -19,6 +19,18 @@ export const STTPanelHeader: React.FC = () => {
         <div className="flex items-center gap-3">
           {canTranslate && (
             <>
+              <Tooltip content="AI Speech Proofreading" position="bottom">
+                <button 
+                  onClick={() => {
+                    import("../../services/proofreadService").then(({ ProofreadService }) => {
+                      ProofreadService.startProofread();
+                    });
+                  }}
+                  className="text-gray-400 hover:text-[#facc15] transition-colors p-1"
+                >
+                  <CheckCheck size={16} />
+                </button>
+              </Tooltip>
               <Tooltip content="AI Furigana Correction" position="bottom">
                 <button 
                   onClick={() => {

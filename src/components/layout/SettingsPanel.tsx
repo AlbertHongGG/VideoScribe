@@ -217,13 +217,17 @@ export const SettingsPanel: React.FC = () => {
             </SettingRow>
           </SettingSection>
 
-          <SettingSection title="Dual Subtitle Translation">
-            <SettingRow label="Enable AI Furigana Correction" description="Automatically correct and refine Japanese Furigana using LLM">
-              <SettingToggle settingKey="enableRubyAnnotation" checked={store.enableRubyAnnotation} setter={store.setEnableRubyAnnotation} />
+          <SettingSection title="Dual Subtitle & AI Translation">
+            <SettingRow label="Enable AI Speech Proofreading" description="Automatically proofread and correct speech recognition homophone errors using LLM">
+              <SettingToggle settingKey="enableProofread" checked={store.enableProofread} setter={store.setEnableProofread} />
             </SettingRow>
             <SettingDivider />
             <SettingRow label="Enable AI Segmentation" description="Automatically re-segment and combine sentences using local LLM">
               <SettingToggle settingKey="enableSegmentation" checked={store.enableSegmentation} setter={store.setEnableSegmentation} />
+            </SettingRow>
+            <SettingDivider />
+            <SettingRow label="Enable AI Furigana Correction" description="Automatically correct and refine Japanese Furigana using LLM">
+              <SettingToggle settingKey="enableRubyAnnotation" checked={store.enableRubyAnnotation} setter={store.setEnableRubyAnnotation} />
             </SettingRow>
             <SettingDivider />
             <SettingRow label="Enable Translation" description="Automatically translate generated subtitles using local LLM">

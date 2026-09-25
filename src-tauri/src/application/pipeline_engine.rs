@@ -96,6 +96,27 @@ impl PipelineEngine {
                         }
                     }
                 }
+                TaskType::Proofread => {
+                    if let Some(state) = app.try_state::<AppState>() {
+                        let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
+                        let provider = state.proofreader_provider.clone();
+                        let chunk_size = state.config.proofreader_batch_size;
+                        let project_mutex = state.project.clone();
+                        let job_manager_clone = state.job_manager.clone();
+
+                        tauri::async_runtime::spawn(async move {
+                            let app_clone = app.clone();
+                            if let Err(e) = crate::application::proofread_coordinator::ProofreadCoordinator::start_proofread(
+                                project_mutex, provider, chunk_size, dispatcher.clone(), job_manager_clone.clone(), move || {
+                                    crate::application::pipeline_engine::PipelineEngine::advance_pipeline(app_clone);
+                                }
+                            ) {
+                                eprintln!("Failed to start proofreading: {}", e);
+                                job_manager_clone.fail_job(e, dispatcher);
+                            }
+                        });
+                    }
+                }
                 TaskType::ForcedAlignment => {
                     if let Some(client) = app.try_state::<Arc<PythonWorkerClient>>() {
                         let payload = FaPayload {

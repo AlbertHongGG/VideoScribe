@@ -10,6 +10,7 @@ pub enum AgentType {
     TranslatorAgent,
     SegmenterAgent,
     RubyAnnotatorAgent,
+    ProofreaderAgent,
 }
 
 impl AgentType {
@@ -18,6 +19,7 @@ impl AgentType {
             AgentType::TranslatorAgent => "translator_agent",
             AgentType::SegmenterAgent => "segmenter_agent",
             AgentType::RubyAnnotatorAgent => "ruby_annotator_agent",
+            AgentType::ProofreaderAgent => "proofreader_agent",
         }
     }
 }
@@ -30,6 +32,7 @@ impl FromStr for AgentType {
             "translator_agent" => Ok(AgentType::TranslatorAgent),
             "segmenter_agent" => Ok(AgentType::SegmenterAgent),
             "ruby_annotator_agent" => Ok(AgentType::RubyAnnotatorAgent),
+            "proofreader_agent" => Ok(AgentType::ProofreaderAgent),
             _ => Err(format!("Unknown agent type: '{}'", s)),
         }
     }

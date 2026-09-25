@@ -14,7 +14,7 @@ export type STTResult = { start: number, end: number, text: string, translation:
 
 export type TaskStatus = "pending" | "running" | "completed" | "error" | "cancelled" | "outdated";
 
-export type TaskType = "preprocess" | "mss" | "vad" | "stt" | "forced_alignment" | "segmentation" | "ruby_annotation" | "translation";
+export type TaskType = "preprocess" | "mss" | "vad" | "stt" | "proofread" | "forced_alignment" | "segmentation" | "ruby_annotation" | "translation";
 
 export type VadSegment = { start: number, end: number, };
 

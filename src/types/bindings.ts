@@ -21,6 +21,7 @@ export const commands = {
 	runAgentTask: (agentType: AgentType, payloadJson: string) => typedError<string, string>(__TAURI_INVOKE("run_agent_task", { agentType, payloadJson })),
 	startSegmentation: () => typedError<null, string>(__TAURI_INVOKE("start_segmentation")),
 	startRubyAnnotation: () => typedError<null, string>(__TAURI_INVOKE("start_ruby_annotation")),
+	startProofread: () => typedError<null, string>(__TAURI_INVOKE("start_proofread")),
 	getAppState: () => typedError<ProjectState, string>(__TAURI_INVOKE("get_app_state")),
 	setVideoPath: (path: string) => typedError<null, string>(__TAURI_INVOKE("set_video_path", { path })),
 	exportMssStems: (exportPath: string) => typedError<null, string>(__TAURI_INVOKE("export_mss_stems", { exportPath })),
@@ -28,7 +29,7 @@ export const commands = {
 };
 
 /* Types */
-export type AgentType = "TranslatorAgent" | "SegmenterAgent" | "RubyAnnotatorAgent";
+export type AgentType = "TranslatorAgent" | "SegmenterAgent" | "RubyAnnotatorAgent" | "ProofreaderAgent";
 
 export type DictionaryEntry = {
 	id: string,
@@ -67,6 +68,7 @@ export type PipelineConfig = {
 	faModel: string,
 	useBatch: boolean,
 	batchSize: number,
+	enableProofread: boolean,
 	enableSegmentation: boolean,
 	enableTranslation: boolean,
 	targetLanguage: string,
@@ -125,7 +127,7 @@ export type STTResult = {
 
 export type TaskStatus = "pending" | "running" | "completed" | "error" | "cancelled" | "outdated";
 
-export type TaskType = "preprocess" | "mss" | "vad" | "stt" | "forced_alignment" | "segmentation" | "ruby_annotation" | "translation";
+export type TaskType = "preprocess" | "mss" | "vad" | "stt" | "proofread" | "forced_alignment" | "segmentation" | "ruby_annotation" | "translation";
 
 export type VadSegment = {
 	start: number | null,

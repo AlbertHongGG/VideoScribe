@@ -25,6 +25,7 @@ pub enum TaskType {
     Mss,
     Vad,
     Stt,
+    Proofread,
     ForcedAlignment,
     Segmentation,
     RubyAnnotation,
@@ -38,10 +39,11 @@ impl TaskType {
             TaskType::Mss => 1,
             TaskType::Vad => 2,
             TaskType::Stt => 3,
-            TaskType::ForcedAlignment => 4,
-            TaskType::Segmentation => 5,
-            TaskType::RubyAnnotation => 6,
-            TaskType::Translation => 7,
+            TaskType::Proofread => 4,
+            TaskType::ForcedAlignment => 5,
+            TaskType::Segmentation => 6,
+            TaskType::RubyAnnotation => 7,
+            TaskType::Translation => 8,
         }
     }
 
@@ -51,6 +53,7 @@ impl TaskType {
             TaskType::Mss => "Separating Audio Sources",
             TaskType::Vad => "Detecting Voice Activity",
             TaskType::Stt => "Transcribing Speech",
+            TaskType::Proofread => "Proofreading Subtitles",
             TaskType::ForcedAlignment => "Aligning Subtitles",
             TaskType::Segmentation => "Segmenting Content",
             TaskType::RubyAnnotation => "Annotating Furigana",

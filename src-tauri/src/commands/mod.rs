@@ -4,6 +4,7 @@ pub mod translation;
 pub mod project;
 pub mod segmentation;
 pub mod ruby_annotation;
+pub mod proofread;
 pub mod agent;
 
 
@@ -21,6 +22,7 @@ pub fn create_builder() -> tauri_specta::Builder<tauri::Wry> {
             agent::run_agent_task,
             segmentation::start_segmentation,
             ruby_annotation::start_ruby_annotation,
+            proofread::start_proofread,
             project::get_app_state,
             project::set_video_path,
             project::export_mss_stems,
