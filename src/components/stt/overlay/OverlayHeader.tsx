@@ -1,5 +1,5 @@
 import React from "react";
-import { ThinkingOrb } from "thinking-orbs";
+import { ThinkingOrb } from "../../ui/ThinkingOrb";
 import { Job } from "../../../types/bindings";
 
 interface Props {
@@ -13,8 +13,8 @@ export const OverlayHeader: React.FC<Props> = ({ currentJob }) => {
   if (isTerminal) return null;
 
   return (
-    <div className="flex justify-center mb-12 relative">
-      <ThinkingOrb state="composing" size={64} theme="dark" />
+    <div className="flex justify-center mb-8 relative">
+      <ThinkingOrb state="composing" size={120} theme="dark" />
     </div>
   );
 };
