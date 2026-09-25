@@ -28,7 +28,7 @@ impl PluginManager {
     }
 
     /// Generic service registration API.
-    /// `T` is the Trait Object type, e.g. `dyn FuriganaProvider`.
+    /// `T` is the Trait Object type, e.g. `dyn RubyAnnotationProvider`.
     pub fn register_service<T: ?Sized + 'static>(&mut self, key: &str, service: Arc<T>)
     where
         Arc<T>: Send + Sync + 'static,
@@ -38,7 +38,7 @@ impl PluginManager {
     }
 
     /// Generic service lookup API.
-    /// `T` is the Trait Object type, e.g. `dyn FuriganaProvider`.
+    /// `T` is the Trait Object type, e.g. `dyn RubyAnnotationProvider`.
     pub fn get_service<T: ?Sized + 'static>(&self, key: &str) -> Option<Arc<T>>
     where
         Arc<T>: Send + Sync + 'static,

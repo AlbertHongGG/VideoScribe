@@ -1,11 +1,10 @@
-import { commands } from "../../../types/bindings";
-import { STTResult, WordTiming } from "../../../types/bindings";
-import { RenderableToken, ProcessedSubtitle, SubtitleRenderContext, FuriganaChunk } from "./SubtitleModels";
+import { commands, STTResult, WordTiming, RubySegment } from "../../../types/bindings";
+import { RenderableToken, ProcessedSubtitle, SubtitleRenderContext } from "./SubtitleModels";
 
 export class SubtitleProcessor {
   /**
    * Processes the raw STTResult into a ProcessedSubtitle ready for rendering.
-   * KTV tokens and Furigana chunks are strictly decoupled in this architecture.
+   * KTV tokens and Ruby annotation segments are strictly decoupled in this architecture.
    */
   static async process(
     subtitle: STTResult,
@@ -26,29 +25,26 @@ export class SubtitleProcessor {
       tokens = [{ text: subtitle.text }];
     }
 
-    // 2. Morphological Analysis (Furigana Layer - Full Context Truth)
-    let furigana: FuriganaChunk[] | undefined = undefined;
+    // 2. Morphological Analysis (Ruby Layer - Full Context Truth)
+    let rubySegments: RubySegment[] | undefined = undefined;
     const isJapanese = context.language === "ja" || /[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/.test(subtitle.text);
     
     if (isJapanese && (context.enableFurigana || context.enableDictionary)) {
       try {
-        // Fetch reading based on the COMPLETE sentence context for 100% accuracy
-        const fRes = await commands.getFurigana(subtitle.text);
-        if (fRes.status === "ok") {
-          furigana = fRes.data.map((f: any) => ({
-            surface: f.surface,
-            reading: f.reading
-          }));
+        // Fetch ruby annotations based on the COMPLETE sentence context
+        const res = await commands.getRubyAnnotations(subtitle.text);
+        if (res.status === "ok") {
+          rubySegments = res.data;
         }
       } catch (e) {
-        console.error("Failed to fetch Furigana:", e);
+        console.error("Failed to fetch Ruby annotations:", e);
       }
     }
 
     return {
       original: subtitle,
       tokens,
-      furigana
+      rubySegments
     };
   }
 }

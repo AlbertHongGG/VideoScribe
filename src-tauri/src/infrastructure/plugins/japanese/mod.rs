@@ -5,7 +5,7 @@ pub mod ruby_aligner;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
-use crate::domain::language::{LookupResult, FuriganaToken, DictionaryLookup, FuriganaProvider};
+use crate::domain::language::{LookupResult, RubySegment, DictionaryLookup, RubyAnnotationProvider};
 use crate::infrastructure::plugins::manager::PluginManager;
 use tokenizer::JapaneseTokenizer;
 use dictionary::JMDictService;
@@ -48,8 +48,8 @@ impl JapanesePlugin {
         // Register dictionary lookup capability for Japanese
         manager.register_service::<dyn DictionaryLookup>("japanese", plugin.clone());
 
-        // Register furigana provider capability for Japanese
-        manager.register_service::<dyn FuriganaProvider>("japanese", plugin.clone());
+        // Register ruby annotation provider capability for Japanese
+        manager.register_service::<dyn RubyAnnotationProvider>("japanese", plugin.clone());
 
         Ok(())
     }
@@ -109,11 +109,11 @@ impl DictionaryLookup for JapanesePlugin {
     }
 }
 
-impl FuriganaProvider for JapanesePlugin {
-    fn get_furigana(&self, text: &str) -> Result<Vec<FuriganaToken>, String> {
+impl RubyAnnotationProvider for JapanesePlugin {
+    fn annotate(&self, text: &str) -> Result<Vec<RubySegment>, String> {
         let token_infos = self.tokenizer.tokenize_all(text)?;
         
-        let mut furigana_tokens = Vec::new();
+        let mut segments = Vec::new();
         for info in token_infos {
             let surface = info.token_text;
             
@@ -121,22 +121,16 @@ impl FuriganaProvider for JapanesePlugin {
                 if let Some(r) = info.reading {
                     let hiragana = tokenizer::katakana_to_hiragana(&r);
                     let aligned = ruby_aligner::RubyAligner::align(&surface, &hiragana);
-                    furigana_tokens.extend(aligned);
+                    segments.extend(aligned);
                 } else {
-                    furigana_tokens.push(FuriganaToken {
-                        surface,
-                        reading: None,
-                    });
+                    segments.push(RubySegment::text(surface));
                 }
             } else {
-                furigana_tokens.push(FuriganaToken {
-                    surface,
-                    reading: None,
-                });
+                segments.push(RubySegment::text(surface));
             }
         }
         
-        Ok(furigana_tokens)
+        Ok(segments)
     }
 }
 
@@ -145,7 +139,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_furigana_provider() {
+    fn test_ruby_annotation_provider() {
         let tokenizer = JapaneseTokenizer::new().unwrap();
         let cases = vec![
             "フリーサイトで明日まで一泊ですね。",
@@ -156,30 +150,33 @@ mod tests {
 
         for text in cases {
             let token_infos = tokenizer.tokenize_all(text).unwrap();
-            let mut furigana_tokens = Vec::new();
+            let mut segments = Vec::new();
             for info in token_infos {
                 let surface = info.token_text;
                 if ruby_aligner::RubyAligner::has_kanji(&surface) {
                     if let Some(r) = info.reading {
                         let hiragana = tokenizer::katakana_to_hiragana(&r);
                         let aligned = ruby_aligner::RubyAligner::align(&surface, &hiragana);
-                        furigana_tokens.extend(aligned);
+                        segments.extend(aligned);
                     } else {
-                        furigana_tokens.push(FuriganaToken { surface, reading: None });
+                        segments.push(RubySegment::text(surface));
                     }
                 } else {
-                    furigana_tokens.push(FuriganaToken { surface, reading: None });
+                    segments.push(RubySegment::text(surface));
                 }
             }
 
-            let reconstructed: String = furigana_tokens.iter().map(|t| t.surface.as_str()).collect();
+            let reconstructed: String = segments.iter().map(|s| s.text_content()).collect();
             println!("\n=== INPUT: {} ===", text);
             println!("RECONSTRUCTED: {}", reconstructed);
-            for t in &furigana_tokens {
-                if let Some(r) = &t.reading {
-                    println!("  [KANJI] {} -> {}", t.surface, r);
-                } else {
-                    println!("  [PLAIN] {}", t.surface);
+            for s in &segments {
+                match s {
+                    RubySegment::Ruby { base, ruby } => {
+                        println!("  [RUBY] {} -> {}", base, ruby);
+                    }
+                    RubySegment::Text { text } => {
+                        println!("  [TEXT] {}", text);
+                    }
                 }
             }
             assert_eq!(reconstructed, text);

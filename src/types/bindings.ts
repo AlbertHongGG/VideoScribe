@@ -5,7 +5,7 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	lookupWord: (text: string, index: number) => typedError<LookupResult[], string>(__TAURI_INVOKE("lookup_word", { text, index })),
-	getFurigana: (text: string) => typedError<FuriganaToken[], string>(__TAURI_INVOKE("get_furigana", { text })),
+	getRubyAnnotations: (text: string) => typedError<RubySegment[], string>(__TAURI_INVOKE("get_ruby_annotations", { text })),
 	triggerPipeline: (args: PipelineConfig) => typedError<string, string>(__TAURI_INVOKE("trigger_pipeline", { args })),
 	cancelPipeline: () => typedError<null, string>(__TAURI_INVOKE("cancel_pipeline")),
 	importPipelineResults: (results: STTResult[]) => typedError<null, string>(__TAURI_INVOKE("import_pipeline_results", { results })),
@@ -21,6 +21,9 @@ export const commands = {
 	runAgentTask: (agentType: AgentType, payloadJson: string) => typedError<string, string>(__TAURI_INVOKE("run_agent_task", { agentType, payloadJson })),
 	startSegmentation: () => typedError<null, string>(__TAURI_INVOKE("start_segmentation")),
 	getAppState: () => typedError<ProjectState, string>(__TAURI_INVOKE("get_app_state")),
+	setVideoPath: (path: string) => typedError<null, string>(__TAURI_INVOKE("set_video_path", { path })),
+	exportMssStems: (exportPath: string) => typedError<null, string>(__TAURI_INVOKE("export_mss_stems", { exportPath })),
+	importMssStems: (importPath: string) => typedError<null, string>(__TAURI_INVOKE("import_mss_stems", { importPath })),
 };
 
 /* Types */
@@ -32,11 +35,6 @@ export type DictionaryEntry = {
 	pronunciations: string[],
 	tags: string[],
 	glossary: string[],
-};
-
-export type FuriganaToken = {
-	surface: string,
-	reading: string | null,
 };
 
 export type Job = {
@@ -81,6 +79,7 @@ export type PipelineTask = {
 };
 
 export type ProjectState = {
+	workspace_dir: string | null,
 	video_path: string | null,
 	extracted_audio_path: string | null,
 	results: STTResult[],
@@ -96,7 +95,20 @@ export type ProjectState = {
 	fa_model: string | null,
 	use_batch: boolean,
 	batch_size: number,
+	vad_segments: VadSegment[] | null,
 };
+
+export type RubySegment = 
+/**
+ *  Non-ruby text segment (e.g. Kana, punctuation, whitespace).
+ *  Functions as pure text without annotations.
+ */
+{ kind: "text"; text: string } | 
+/**
+ *  Ruby annotated segment (e.g. Kanji with Furigana, Hanzi with Pinyin).
+ *  Guaranteed to possess non-null base text and ruby annotation.
+ */
+{ kind: "ruby"; base: string; ruby: string };
 
 export type STTResult = {
 	start: number | null,
@@ -109,6 +121,11 @@ export type STTResult = {
 export type TaskStatus = "pending" | "running" | "completed" | "error" | "cancelled" | "outdated";
 
 export type TaskType = "preprocess" | "mss" | "vad" | "stt" | "forced_alignment" | "translation" | "segmentation";
+
+export type VadSegment = {
+	start: number | null,
+	end: number | null,
+};
 
 export type WordTiming = {
 	text: string,

@@ -1,5 +1,5 @@
 use tauri::State;
-use crate::domain::language::{LookupResult, FuriganaToken, DictionaryLookup, FuriganaProvider};
+use crate::domain::language::{LookupResult, RubySegment, DictionaryLookup, RubyAnnotationProvider};
 use crate::infrastructure::state::AppState;
 
 #[tauri::command]
@@ -14,10 +14,10 @@ pub fn lookup_word(text: String, index: u32, state: State<'_, AppState>) -> Resu
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_furigana(text: String, state: State<'_, AppState>) -> Result<Vec<FuriganaToken>, String> {
+pub fn get_ruby_annotations(text: String, state: State<'_, AppState>) -> Result<Vec<RubySegment>, String> {
     let provider = state.plugin_manager
-        .get_service::<dyn FuriganaProvider>("japanese")
-        .ok_or_else(|| "Furigana provider for Japanese not found".to_string())?;
+        .get_service::<dyn RubyAnnotationProvider>("japanese")
+        .ok_or_else(|| "Ruby annotation provider for Japanese not found".to_string())?;
 
-    provider.get_furigana(&text)
+    provider.annotate(&text)
 }

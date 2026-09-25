@@ -1,4 +1,4 @@
-use crate::domain::language::FuriganaToken;
+use crate::domain::language::RubySegment;
 
 pub struct RubyAligner;
 
@@ -11,14 +11,11 @@ impl RubyAligner {
         })
     }
 
-    /// 將包含漢字與送假名的單詞 (如「食べる」與「たべる」) 精準對齊為 FuriganaToken 列表
-    pub fn align(surface: &str, reading_hiragana: &str) -> Vec<FuriganaToken> {
-        // 若表面無漢字，直接輸出單一 token，無須注音
+    /// 將包含漢字與送假名的單詞 (如「食べる」與「たべる」) 精準對齊為 RubySegment 列表
+    pub fn align(surface: &str, reading_hiragana: &str) -> Vec<RubySegment> {
+        // 若表面無漢字，直接輸出單一 Text 段落，無須注音
         if !Self::has_kanji(surface) {
-            return vec![FuriganaToken {
-                surface: surface.to_string(),
-                reading: None,
-            }];
+            return vec![RubySegment::text(surface)];
         }
 
         let surface_chars: Vec<char> = surface.chars().collect();
@@ -44,15 +41,12 @@ impl RubyAligner {
             suffix_len += 1;
         }
 
-        let mut tokens = Vec::new();
+        let mut segments = Vec::new();
 
         // 前綴平假名 (如「お茶」的「お」)
         if prefix_len > 0 {
             let prefix_surface: String = surface_chars[..prefix_len].iter().collect();
-            tokens.push(FuriganaToken {
-                surface: prefix_surface,
-                reading: None,
-            });
+            segments.push(RubySegment::text(prefix_surface));
         }
 
         // 漢字核心部分 (如「食べる」的「食」對應「た」，「一泊」對應「いっぱく」)
@@ -64,15 +58,11 @@ impl RubyAligner {
             .collect();
 
         if !kanji_surface.is_empty() {
-            let reading = if Self::has_kanji(&kanji_surface) {
-                Some(kanji_reading)
+            if Self::has_kanji(&kanji_surface) {
+                segments.push(RubySegment::ruby(kanji_surface, kanji_reading));
             } else {
-                None
-            };
-            tokens.push(FuriganaToken {
-                surface: kanji_surface,
-                reading,
-            });
+                segments.push(RubySegment::text(kanji_surface));
+            }
         }
 
         // 後綴送假名 (如「食べる」的「べる」)
@@ -80,13 +70,10 @@ impl RubyAligner {
             let suffix_surface: String = surface_chars[surface_chars.len() - suffix_len..]
                 .iter()
                 .collect();
-            tokens.push(FuriganaToken {
-                surface: suffix_surface,
-                reading: None,
-            });
+            segments.push(RubySegment::text(suffix_surface));
         }
 
-        tokens
+        segments
     }
 
     fn is_kanji(c: char) -> bool {
@@ -104,29 +91,23 @@ mod tests {
         // 1. 完全漢字詞 (一泊 -> いっぱく)
         let res = RubyAligner::align("一泊", "いっぱく");
         assert_eq!(res.len(), 1);
-        assert_eq!(res[0].surface, "一泊");
-        assert_eq!(res[0].reading, Some("いっぱく".into()));
+        assert_eq!(res[0], RubySegment::ruby("一泊", "いっぱく"));
 
         // 2. 帶送假名動詞 (食べる -> 食[た] + べる)
         let res = RubyAligner::align("食べる", "たべる");
         assert_eq!(res.len(), 2);
-        assert_eq!(res[0].surface, "食");
-        assert_eq!(res[0].reading, Some("た".into()));
-        assert_eq!(res[1].surface, "べる");
-        assert_eq!(res[1].reading, None);
+        assert_eq!(res[0], RubySegment::ruby("食", "た"));
+        assert_eq!(res[1], RubySegment::text("べる"));
 
         // 3. 帶送假名形容詞 (美味しく -> 美味[おい] + しく)
         let res = RubyAligner::align("美味しく", "おいしく");
         assert_eq!(res.len(), 2);
-        assert_eq!(res[0].surface, "美味");
-        assert_eq!(res[0].reading, Some("おい".into()));
-        assert_eq!(res[1].surface, "しく");
-        assert_eq!(res[1].reading, None);
+        assert_eq!(res[0], RubySegment::ruby("美味", "おい"));
+        assert_eq!(res[1], RubySegment::text("しく"));
 
         // 4. 無漢字 (フリーサイト)
         let res = RubyAligner::align("フリーサイト", "ふりーさいと");
         assert_eq!(res.len(), 1);
-        assert_eq!(res[0].surface, "フリーサイト");
-        assert_eq!(res[0].reading, None);
+        assert_eq!(res[0], RubySegment::text("フリーサイト"));
     }
 }

@@ -10,7 +10,7 @@ pub fn create_builder() -> tauri_specta::Builder<tauri::Wry> {
     tauri_specta::Builder::<tauri::Wry>::new()
         .commands(tauri_specta::collect_commands![
             language::japanese::lookup_word,
-            language::japanese::get_furigana,
+            language::japanese::get_ruby_annotations,
             pipeline::trigger_pipeline,
             pipeline::cancel_pipeline,
             pipeline::import_pipeline_results,

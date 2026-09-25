@@ -1,4 +1,4 @@
-import { STTResult } from "../../../types/bindings";
+import { STTResult, RubySegment } from "../../../types/bindings";
 
 export interface RenderableToken {
   /** The text content of the token (can be a word or a single character) */
@@ -10,16 +10,8 @@ export interface RenderableToken {
   /** End time in seconds (if available) */
   end?: number;
   
-  /** Furigana reading for Japanese (if fetched and available) */
-  reading?: string;
-  
   /** Whether the token matches a dictionary term (can be expanded later) */
   isDictionaryWord?: boolean;
-}
-
-export interface FuriganaChunk {
-  surface: string;
-  reading?: string;
 }
 
 export interface ProcessedSubtitle {
@@ -29,8 +21,8 @@ export interface ProcessedSubtitle {
   /** The processed tokens ready for deterministic rendering (KTV Layer) */
   tokens: RenderableToken[];
 
-  /** Independent Furigana chunks generated from the full sentence (Furigana Layer) */
-  furigana?: FuriganaChunk[];
+  /** Strongly typed Ruby annotation segments generated from full sentence context (Ruby Overlay Layer) */
+  rubySegments?: RubySegment[];
 }
 
 /** 
