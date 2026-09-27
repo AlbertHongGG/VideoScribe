@@ -74,8 +74,24 @@ impl DictionaryLookup for JapanesePlugin {
         for len in 1..=target_len {
             let prefix: String = chars[index..index + len].iter().collect();
             
-            // Tokenize the prefix. We only care about the FIRST token returned, 
-            // as we are building prefixes starting from the hovered character.
+            // 1. Direct dictionary query (captures compound words & full surfaces like 'お世話' or Katakana compounds)
+            if !seen_base_forms.contains(&prefix) {
+                if let Ok(entries) = self.dict_service.query_word(&prefix) {
+                    if !entries.is_empty() {
+                        seen_base_forms.insert(prefix.clone());
+                        let reading = entries.first().and_then(|e| e.pronunciations.first().cloned());
+                        results.push(LookupResult {
+                            original_text: prefix.clone(),
+                            token: prefix.clone(),
+                            base_form: prefix.clone(),
+                            reading,
+                            entries,
+                        });
+                    }
+                }
+            }
+
+            // 2. Tokenize the prefix to handle inflections / base forms (e.g. 食べた -> 食べる)
             if let Ok(token_info) = self.tokenizer.tokenize(&prefix) {
                 let target_word = if token_info.base_form == "*" {
                     token_info.surface.clone()
@@ -147,24 +163,16 @@ impl RubyAnnotationProvider for JapanesePlugin {
             raw_segments.push(RubySegment::text(&text[cursor..]));
         }
 
-        // Merge adjacent Text segments for optimal compactness and DOM performance
-        let mut merged = Vec::with_capacity(raw_segments.len());
-        for seg in raw_segments {
-            match seg {
-                RubySegment::Text { text } => {
-                    if let Some(RubySegment::Text { text: prev_text }) = merged.last_mut() {
-                        prev_text.push_str(&text);
-                    } else {
-                        merged.push(RubySegment::Text { text });
-                    }
-                }
-                ruby_seg @ RubySegment::Ruby { .. } => {
-                    merged.push(ruby_seg);
-                }
-            }
-        }
+        // Preserve individual morphological token boundaries for precise word-level interaction and dictionary lookup
+        let segments: Vec<RubySegment> = raw_segments
+            .into_iter()
+            .filter(|s| match s {
+                RubySegment::Text { text } => !text.is_empty(),
+                RubySegment::Ruby { base, .. } => !base.is_empty(),
+            })
+            .collect();
         
-        Ok(merged)
+        Ok(segments)
     }
 }
 
@@ -213,5 +221,47 @@ mod tests {
             }
             assert_eq!(reconstructed, text);
         }
+    }
+
+    #[test]
+    fn test_lookup_word() {
+        let tokenizer = JapaneseTokenizer::new().unwrap();
+        let plugin = JapanesePlugin {
+            tokenizer,
+            dict_service: JMDictService::new(PathBuf::from("jmdict.db")),
+        };
+
+        let text = "女子ソロキャンパーのリンちゃんみたいなローチェア";
+        // 1. Hover at char index 0: '女'
+        let res_0 = plugin.lookup_word(text, 0).unwrap();
+        assert!(!res_0.is_empty(), "Should find 女子 at index 0");
+        assert!(res_0.iter().any(|r| r.token == "女子"));
+
+        // 2. Hover at index 2: 'ソ' (ソロ)
+        let res_solo = plugin.lookup_word(text, 2).unwrap();
+        assert!(!res_solo.is_empty(), "Should find ソロ at index 2");
+        assert!(res_solo.iter().any(|r| r.token == "ソロ"));
+
+        // 3. Hover at index 4: 'キ' (キャンパー)
+        let res_camper = plugin.lookup_word(text, 4).unwrap();
+        assert!(!res_camper.is_empty(), "Should find キャンパー at index 4");
+        assert!(res_camper.iter().any(|r| r.token == "キャンパー"));
+
+        // 4. Hover at index 19: 'ロ' (ロー)
+        let res_ro = plugin.lookup_word(text, 19).unwrap();
+        assert!(!res_ro.is_empty(), "Should find ロー at index 19");
+        assert!(res_ro.iter().any(|r| r.token == "ロー"));
+
+        // 5. Hover at index 21: 'チ' (チェア)
+        let res_chair = plugin.lookup_word(text, 21).unwrap();
+        assert!(!res_chair.is_empty(), "Should find チェア at index 21");
+        assert!(res_chair.iter().any(|r| r.token == "チェア"));
+
+        // 6. Compound expression lookup: お世話
+        let text_osewa = "あ… お世話になります";
+        let osewa_idx = text_osewa.chars().position(|c| c == 'お').unwrap();
+        let res_osewa = plugin.lookup_word(text_osewa, osewa_idx).unwrap();
+        assert!(!res_osewa.is_empty(), "Should find お世話");
+        assert!(res_osewa.iter().any(|r| r.token == "お世話"));
     }
 }

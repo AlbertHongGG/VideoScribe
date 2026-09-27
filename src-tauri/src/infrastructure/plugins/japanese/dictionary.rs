@@ -1,21 +1,31 @@
 use crate::domain::language::DictionaryEntry;
 use rusqlite::{Connection, OpenFlags};
 use std::path::PathBuf;
+use std::sync::Mutex;
 
 pub struct JMDictService {
     db_path: PathBuf,
+    conn: Mutex<Option<Connection>>,
 }
 
 impl JMDictService {
     pub fn new(db_path: PathBuf) -> Self {
-        Self { db_path }
+        Self {
+            db_path,
+            conn: Mutex::new(None),
+        }
     }
 
     pub fn query_word(&self, target_word: &str) -> Result<Vec<DictionaryEntry>, String> {
-        let conn = Connection::open_with_flags(&self.db_path, OpenFlags::SQLITE_OPEN_READ_ONLY)
-            .map_err(|e| format!("DB open error: {}", e))?;
+        let mut conn_guard = self.conn.lock().map_err(|e| format!("Mutex lock error: {}", e))?;
+        if conn_guard.is_none() {
+            let c = Connection::open_with_flags(&self.db_path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+                .map_err(|e| format!("DB open error: {}", e))?;
+            *conn_guard = Some(c);
+        }
+        let conn = conn_guard.as_ref().unwrap();
 
-        let mut stmt = conn.prepare(r#"
+        let mut stmt = conn.prepare_cached(r#"
             SELECT DISTINCT e.id, e.kanji, e.kana, e.glossary 
             FROM entries e
             LEFT JOIN search_kanji sk ON e.id = sk.id

@@ -72,9 +72,11 @@ export const SubtitleTokenRenderer: React.FC<SubtitleTokenRendererProps> = ({ to
     return <span>{token.text}</span>;
   };
 
-  // Interactive events for dictionary hover
-  const isHovered = context.hoverText?.startIndex === index;
-  const hoverEvents = context.enableDictionary ? {
+  // Interactive events for dictionary hover: only active for words or ruby tokens
+  const isWordToken = Boolean(token.ruby || /[\p{L}\p{N}]/u.test(token.text));
+  const isInteractive = context.enableDictionary && isWordToken;
+  const isHovered = isInteractive && context.hoverText?.startIndex === index;
+  const hoverEvents = isInteractive ? {
     onMouseEnter: (e: React.MouseEvent) => {
       if (!context.setHoverText) return;
       if (context.hoverTimeoutRef?.current) {
@@ -92,7 +94,7 @@ export const SubtitleTokenRenderer: React.FC<SubtitleTokenRendererProps> = ({ to
     }
   } : {};
 
-  const dictionaryHoverClass = context.enableDictionary ? `rounded cursor-pointer transition-colors ${
+  const dictionaryHoverClass = isInteractive ? `rounded cursor-pointer transition-colors ${
     isHovered 
       ? "text-yellow-400 bg-yellow-500/20" 
       : "hover:text-yellow-400 hover:bg-white/10"

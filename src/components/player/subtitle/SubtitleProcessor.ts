@@ -1,5 +1,6 @@
 import { commands, STTResult, RubySegment } from "../../../types/bindings";
 import { RichSubtitleToken, ProcessedSubtitle, SubtitleRenderContext } from "./SubtitleModels";
+import { TextSegmenter } from "./TextSegmenter";
 
 export class SubtitleProcessor {
   /**
@@ -85,27 +86,52 @@ export class SubtitleProcessor {
 
     // 3. Construct Unified RichSubtitleToken[]
     const tokens: RichSubtitleToken[] = [];
+    const languageLocale = isJapanese ? "ja" : (context.language || "auto");
 
     if (rubySegments && rubySegments.length > 0) {
       // Build tokens from ruby segments
       let charAcc = 0;
       for (const seg of rubySegments) {
-        const segText = seg.kind === "ruby" ? seg.base : seg.text;
-        const segLen = segText.length;
-        if (segLen === 0) continue;
+        if (seg.kind === "ruby") {
+          const segText = seg.base;
+          const segLen = segText.length;
+          if (segLen === 0) continue;
 
-        const firstCharTime = charTimings[charAcc] || { start: sentenceStart, end: sentenceEnd };
-        const lastCharTime = charTimings[Math.min(charAcc + segLen - 1, charCount - 1)] || firstCharTime;
+          const firstCharTime = charTimings[charAcc] || { start: sentenceStart, end: sentenceEnd };
+          const lastCharTime = charTimings[Math.min(charAcc + segLen - 1, charCount - 1)] || firstCharTime;
 
-        tokens.push({
-          text: segText,
-          ruby: seg.kind === "ruby" ? seg.ruby : undefined,
-          start: firstCharTime.start,
-          end: lastCharTime.end,
-          charIndex: charAcc,
-        });
+          tokens.push({
+            text: segText,
+            ruby: seg.ruby,
+            start: firstCharTime.start,
+            end: lastCharTime.end,
+            charIndex: charAcc,
+          });
 
-        charAcc += segLen;
+          charAcc += segLen;
+        } else {
+          // Plain text segment: decompose into morphological word tokens
+          const rawText = seg.text;
+          if (!rawText) continue;
+
+          const words = TextSegmenter.segment(rawText, languageLocale);
+          for (const word of words) {
+            const wLen = word.length;
+            if (wLen === 0) continue;
+
+            const firstCharTime = charTimings[charAcc] || { start: sentenceStart, end: sentenceEnd };
+            const lastCharTime = charTimings[Math.min(charAcc + wLen - 1, charCount - 1)] || firstCharTime;
+
+            tokens.push({
+              text: word,
+              start: firstCharTime.start,
+              end: lastCharTime.end,
+              charIndex: charAcc,
+            });
+
+            charAcc += wLen;
+          }
+        }
       }
     } else if (wordsMatchCanonical && subtitle.words) {
       // If no ruby, but words match, use words
@@ -119,30 +145,26 @@ export class SubtitleProcessor {
         });
         charAcc += word.text.length;
       }
-    } else if (canonicalText.includes(" ")) {
-      // Western/spaced languages: split on word boundaries
-      const words = canonicalText.split(/(\s+)/);
+    } else {
+      // Fallback: segment canonical text into words using TextSegmenter
+      const words = TextSegmenter.segment(canonicalText, languageLocale);
       let charAcc = 0;
-      for (const w of words) {
-        if (!w) continue;
-        const firstTime = charTimings[charAcc] || { start: sentenceStart, end: sentenceEnd };
-        const lastTime = charTimings[Math.min(charAcc + w.length - 1, charCount - 1)] || firstTime;
+      for (const word of words) {
+        const wLen = word.length;
+        if (wLen === 0) continue;
+
+        const firstCharTime = charTimings[charAcc] || { start: sentenceStart, end: sentenceEnd };
+        const lastCharTime = charTimings[Math.min(charAcc + wLen - 1, charCount - 1)] || firstCharTime;
+
         tokens.push({
-          text: w,
-          start: firstTime.start,
-          end: lastTime.end,
+          text: word,
+          start: firstCharTime.start,
+          end: lastCharTime.end,
           charIndex: charAcc,
         });
-        charAcc += w.length;
+
+        charAcc += wLen;
       }
-    } else {
-      // Single token fallback
-      tokens.push({
-        text: canonicalText,
-        start: sentenceStart,
-        end: sentenceEnd,
-        charIndex: 0,
-      });
     }
 
     return {
