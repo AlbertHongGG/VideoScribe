@@ -17,7 +17,13 @@ export class TimelinePreviewService {
 
   private constructor() {
     this.cache = new ThumbnailLRUCache(150);
-    this.provider = new Html5VideoThumbnailEngine({ width: 160, quality: 0.75 });
+    const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+    this.provider = new Html5VideoThumbnailEngine({
+      width: 160,
+      renderScale: Math.max(2.0, dpr),
+      format: "image/webp",
+      quality: 0.92,
+    });
     this.scheduler = new PreviewScheduler(this.provider, this.cache, { quantizeInterval: 0.5 });
   }
 

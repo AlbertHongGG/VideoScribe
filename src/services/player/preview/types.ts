@@ -6,9 +6,11 @@ export interface ThumbnailFrame {
 }
 
 export interface ThumbnailOptions {
-  width?: number;
-  quality?: number;
-  quantizeInterval?: number;
+  width?: number; // Target CSS display width (default: 160)
+  renderScale?: number; // Physical pixel multiplier for HiDPI/Retina (default: dynamic DPR >= 2)
+  format?: "image/webp" | "image/jpeg"; // Image encoding format (default: "image/webp")
+  quality?: number; // Image quality 0.0 - 1.0 (default: 0.92)
+  quantizeInterval?: number; // Timestamp quantization bucket in seconds (default: 0.5)
 }
 
 export interface IThumbnailProvider {

@@ -1,25 +1,37 @@
 import { IThumbnailProvider, ThumbnailFrame, ThumbnailOptions } from "./types";
 
 /**
- * Headless HTML5 Video Thumbnail Extraction Engine.
- * Extracts video frames off-screen using hardware-accelerated video decoding and canvas capture.
- * Completely isolates audio (forced muted) and provides cooperative seek cancellation.
+ * High-Fidelity Headless HTML5 Video Thumbnail Extraction Engine.
+ * Features:
+ * 1. HiDPI / Retina-aware Super-Sampling (defaults to 2x physical resolution).
+ * 2. High-precision Bicubic Canvas Downsampling (`imageSmoothingQuality: "high"`).
+ * 3. Artifact-free modern WebP encoding (quality: 0.92) eliminating JPEG 8x8 DCT macroblocks.
+ * 4. Chromium `requestVideoFrameCallback` synchronization to guarantee GPU texture presentation.
+ * 5. Cooperative seek cancellation.
  */
 export class Html5VideoThumbnailEngine implements IThumbnailProvider {
   private video: HTMLVideoElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private isInitialized = false;
   private videoUrl: string | null = null;
-  private defaultWidth: number;
+  private renderWidth: number;
+  private format: string;
   private quality: number;
 
   // Active seek tracking for cooperative cancellation
   private pendingSeekReject: ((reason?: any) => void) | null = null;
   private pendingSeekListener: (() => void) | null = null;
+  private activeRvfcHandle: number | null = null;
+  private activeFallbackTimer: number | null = null;
 
   constructor(options?: ThumbnailOptions) {
-    this.defaultWidth = options?.width || 160;
-    this.quality = options?.quality || 0.75;
+    const baseWidth = options?.width || 160;
+    const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+    // Calculate physical render width: at least 2x supersampling for razor-sharp Retina/HiDPI display
+    const scale = options?.renderScale ?? Math.min(2.5, Math.max(2.0, dpr));
+    this.renderWidth = Math.round(baseWidth * scale); // typically 320px - 360px
+    this.format = options?.format || "image/webp";
+    this.quality = options?.quality || 0.92;
   }
 
   public async initialize(videoUrl: string): Promise<void> {
@@ -36,7 +48,7 @@ export class Html5VideoThumbnailEngine implements IThumbnailProvider {
     video.preload = "auto";
     video.playsInline = true;
     video.crossOrigin = "anonymous";
-    // Keep offscreen styles
+    // Offscreen placement
     video.style.position = "fixed";
     video.style.left = "-9999px";
     video.style.top = "-9999px";
@@ -82,12 +94,7 @@ export class Html5VideoThumbnailEngine implements IThumbnailProvider {
     }
 
     // Cancel any ongoing seek operation cleanly
-    if (this.pendingSeekReject && this.pendingSeekListener && this.video) {
-      this.video.removeEventListener("seeked", this.pendingSeekListener);
-      this.pendingSeekReject(new DOMException("Aborted superseded seek", "AbortError"));
-      this.pendingSeekReject = null;
-      this.pendingSeekListener = null;
-    }
+    this.cleanupActiveSeek();
 
     const video = this.video;
     const duration = video.duration || 0;
@@ -111,6 +118,14 @@ export class Html5VideoThumbnailEngine implements IThumbnailProvider {
         if (this.pendingSeekListener && video) {
           video.removeEventListener("seeked", this.pendingSeekListener);
         }
+        if (this.activeRvfcHandle !== null && "cancelVideoFrameCallback" in video) {
+          (video as any).cancelVideoFrameCallback(this.activeRvfcHandle);
+          this.activeRvfcHandle = null;
+        }
+        if (this.activeFallbackTimer !== null) {
+          clearTimeout(this.activeFallbackTimer);
+          this.activeFallbackTimer = null;
+        }
         if (signal) {
           signal.removeEventListener("abort", onAbort);
         }
@@ -118,17 +133,35 @@ export class Html5VideoThumbnailEngine implements IThumbnailProvider {
         this.pendingSeekListener = null;
       };
 
-      const onSeeked = () => {
+      const executeCapture = () => {
         if (isSettled) return;
         isSettled = true;
         cleanup();
 
         try {
-          const frame = this.drawFrameToCanvas(clampedTime);
-          resolve(frame);
+          this.drawFrameToCanvas(clampedTime).then(resolve);
         } catch (err) {
           console.warn("[Html5VideoThumbnailEngine] Canvas capture failed:", err);
           resolve(null);
+        }
+      };
+
+      const onSeeked = () => {
+        if (isSettled) return;
+
+        // Synchronize with Chromium GPU presentation buffer when available
+        if ("requestVideoFrameCallback" in video) {
+          this.activeRvfcHandle = (video as any).requestVideoFrameCallback(() => {
+            this.activeRvfcHandle = null;
+            executeCapture();
+          });
+          // Fallback timer (35ms) in case background compositor throttles off-screen RVFC
+          this.activeFallbackTimer = window.setTimeout(() => {
+            this.activeFallbackTimer = null;
+            executeCapture();
+          }, 35);
+        } else {
+          executeCapture();
         }
       };
 
@@ -161,17 +194,27 @@ export class Html5VideoThumbnailEngine implements IThumbnailProvider {
       const originalHeight = video.videoHeight || 9;
       const aspectRatio = originalHeight / originalWidth;
 
-      const targetWidth = this.defaultWidth;
+      // High-resolution physical dimensions for HiDPI/Retina screens
+      const targetWidth = this.renderWidth;
       const targetHeight = Math.round(targetWidth * aspectRatio);
 
       this.canvas.width = targetWidth;
       this.canvas.height = targetHeight;
 
-      const ctx = this.canvas.getContext("2d", { alpha: false });
+      const ctx = this.canvas.getContext("2d", { 
+        alpha: false,
+        desynchronized: true,
+        willReadFrequently: false 
+      });
+
       if (!ctx) {
         resolve(null);
         return;
       }
+
+      // Force high-order bicubic filtering for pristine downscaling
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
 
       ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
 
@@ -189,19 +232,31 @@ export class Html5VideoThumbnailEngine implements IThumbnailProvider {
             height: targetHeight,
           });
         },
-        "image/jpeg",
+        this.format,
         this.quality
       );
     });
   }
 
-  public dispose(): void {
+  private cleanupActiveSeek(): void {
     if (this.pendingSeekReject && this.pendingSeekListener && this.video) {
       this.video.removeEventListener("seeked", this.pendingSeekListener);
-      this.pendingSeekReject(new DOMException("Disposed", "AbortError"));
-      this.pendingSeekReject = null;
-      this.pendingSeekListener = null;
+      this.pendingSeekReject(new DOMException("Aborted superseded seek", "AbortError"));
     }
+    if (this.activeRvfcHandle !== null && this.video && "cancelVideoFrameCallback" in this.video) {
+      (this.video as any).cancelVideoFrameCallback(this.activeRvfcHandle);
+      this.activeRvfcHandle = null;
+    }
+    if (this.activeFallbackTimer !== null) {
+      clearTimeout(this.activeFallbackTimer);
+      this.activeFallbackTimer = null;
+    }
+    this.pendingSeekReject = null;
+    this.pendingSeekListener = null;
+  }
+
+  public dispose(): void {
+    this.cleanupActiveSeek();
 
     if (this.video) {
       this.video.pause();
