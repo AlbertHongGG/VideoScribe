@@ -57,6 +57,16 @@ impl JapanesePlugin {
     }
 }
 
+fn is_japanese_delimiter(c: char) -> bool {
+    c.is_whitespace() || matches!(
+        c,
+        '、' | '。' | '，' | '．' | '！' | '？' | '!' | '?' | '・' | '…'
+        | '：' | '；' | ':' | ';' | '「' | '」' | '『' | '』'
+        | '（' | '）' | '(' | ')' | '【' | '】' | '〔' | '〕'
+        | '～' | '〜' | '~' | '―' | '—' | '–' | '-'
+    )
+}
+
 impl DictionaryLookup for JapanesePlugin {
     fn lookup_word(&self, text: &str, index: usize) -> Result<Vec<LookupResult>, String> {
         let chars: Vec<char> = text.chars().collect();
@@ -72,6 +82,12 @@ impl DictionaryLookup for JapanesePlugin {
 
         // Check shortest prefix first so original_text is concise, then reverse later
         for len in 1..=target_len {
+            let next_char = chars[index + len - 1];
+            // Syntactic early exit: stop scanning if encountering whitespace or punctuation
+            if is_japanese_delimiter(next_char) {
+                break;
+            }
+
             let prefix: String = chars[index..index + len].iter().collect();
             
             // 1. Direct dictionary query (captures compound words & full surfaces like 'お世話' or Katakana compounds)
@@ -263,5 +279,14 @@ mod tests {
         let res_osewa = plugin.lookup_word(text_osewa, osewa_idx).unwrap();
         assert!(!res_osewa.is_empty(), "Should find お世話");
         assert!(res_osewa.iter().any(|r| r.token == "お世話"));
+
+        // 7. User's exact screenshot sentence: 良さそうな 求人があっても、豊富の方は
+        let text_user = "良さそうな 求人があっても、豊富の方は";
+        let start = std::time::Instant::now();
+        let res_yo = plugin.lookup_word(text_user, 0).unwrap();
+        let elapsed = start.elapsed();
+        println!("User sentence lookup at 0 took: {:?}", elapsed);
+        assert!(!res_yo.is_empty(), "Should find results for 良/良さそう at index 0");
+        assert!(elapsed.as_millis() < 50, "Lookup MUST be under 50ms (was {:?})", elapsed);
     }
 }

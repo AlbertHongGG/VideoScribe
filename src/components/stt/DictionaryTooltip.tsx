@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { commands } from "../../types/bindings";
 import { LookupResult } from "../../types/bindings";
+import { DictionaryService } from "../../services/dictionary/DictionaryService";
 
 interface Props {
-  text: string; // Now acts as fullText
+  text: string; // Acts as fullText
   charIndex?: number;
   x: number;
   y: number;
@@ -13,18 +13,30 @@ interface Props {
 }
 
 export const DictionaryTooltip: React.FC<Props> = ({ text, charIndex = 0, x, y, onClose, onMouseEnter, onMouseLeave }) => {
-  const [results, setResults] = useState<LookupResult[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const dictionaryService = DictionaryService.getInstance();
+  const cachedInitial = dictionaryService.getCached(text, charIndex);
+
+  const [results, setResults] = useState<LookupResult[] | null>(cachedInitial || null);
+  const [loading, setLoading] = useState(!cachedInitial);
 
   useEffect(() => {
     let active = true;
 
+    // Check if result is already in memory cache
+    const cached = dictionaryService.getCached(text, charIndex);
+    if (cached) {
+      setResults(cached);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
     const lookup = async () => {
-      setLoading(true);
       try {
-        const res = await commands.lookupWord(text, charIndex);
-        if (active && res.status === "ok") {
-          setResults(res.data);
+        const data = await dictionaryService.lookup(text, charIndex);
+        if (active) {
+          setResults(data);
         }
       } catch (e) {
         console.error("Dictionary lookup failed:", e);
@@ -35,15 +47,16 @@ export const DictionaryTooltip: React.FC<Props> = ({ text, charIndex = 0, x, y, 
       }
     };
 
+    // Sub-100ms debounce to avoid spamming IPC on fast cursor sweeps
     const debounce = setTimeout(() => {
       lookup();
-    }, 150);
+    }, 80);
 
     return () => {
       active = false;
       clearTimeout(debounce);
     };
-  }, [text, charIndex]);
+  }, [text, charIndex, dictionaryService]);
 
   if (!loading && (!results || results.length === 0)) {
     return null;

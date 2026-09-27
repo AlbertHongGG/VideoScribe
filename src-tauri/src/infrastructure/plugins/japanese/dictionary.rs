@@ -16,21 +16,42 @@ impl JMDictService {
         }
     }
 
-    pub fn query_word(&self, target_word: &str) -> Result<Vec<DictionaryEntry>, String> {
+    fn get_or_init_connection(&self) -> Result<std::sync::MutexGuard<'_, Option<Connection>>, String> {
         let mut conn_guard = self.conn.lock().map_err(|e| format!("Mutex lock error: {}", e))?;
         if conn_guard.is_none() {
-            let c = Connection::open_with_flags(&self.db_path, OpenFlags::SQLITE_OPEN_READ_ONLY)
-                .map_err(|e| format!("DB open error: {}", e))?;
-            *conn_guard = Some(c);
+            let conn = Connection::open_with_flags(&self.db_path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+                .map_err(|e| format!("DB open error at {:?}: {}", self.db_path, e))?;
+
+            // Configure SQLite for blazing-fast, read-only in-memory queries
+            let _ = conn.execute_batch(
+                r#"
+                PRAGMA mmap_size = 268435456;
+                PRAGMA cache_size = -64000;
+                PRAGMA temp_store = MEMORY;
+                PRAGMA query_only = ON;
+                "#
+            );
+
+            *conn_guard = Some(conn);
         }
+        Ok(conn_guard)
+    }
+
+    pub fn query_word(&self, target_word: &str) -> Result<Vec<DictionaryEntry>, String> {
+        let conn_guard = self.get_or_init_connection()?;
         let conn = conn_guard.as_ref().unwrap();
 
+        // High-performance index-seek subquery pattern:
+        // Uses idx_search_kanji and idx_search_kana B-tree indexes directly,
+        // eliminating full table scans on entries.
         let mut stmt = conn.prepare_cached(r#"
-            SELECT DISTINCT e.id, e.kanji, e.kana, e.glossary 
+            SELECT e.id, e.kanji, e.kana, e.glossary 
             FROM entries e
-            LEFT JOIN search_kanji sk ON e.id = sk.id
-            LEFT JOIN search_kana ska ON e.id = ska.id
-            WHERE sk.kanji = ?1 OR ska.kana = ?1
+            WHERE e.id IN (
+                SELECT id FROM search_kanji WHERE kanji = ?1
+                UNION
+                SELECT id FROM search_kana WHERE kana = ?1
+            )
         "#).map_err(|e| format!("Prepare error: {}", e))?;
 
         let rows = stmt.query_map([target_word], |row| {
