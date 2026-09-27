@@ -28,7 +28,6 @@ export const VideoControls: React.FC = () => {
     hoverTime,
     anchorX,
     previewFrame,
-    isLoading,
     isEnabled,
     handlers,
   } = useTimelinePreview({ videoUrl, duration });
@@ -64,7 +63,6 @@ export const VideoControls: React.FC = () => {
           time={hoverTime}
           anchorX={anchorX}
           frame={previewFrame}
-          isLoading={isLoading}
           showThumbnail={isEnabled}
         />
 

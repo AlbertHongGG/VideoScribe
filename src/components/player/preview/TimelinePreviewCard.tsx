@@ -8,21 +8,21 @@ interface TimelinePreviewCardProps {
   time: number;
   anchorX: number;
   frame: ThumbnailFrame | null;
-  isLoading: boolean;
   showThumbnail?: boolean;
 }
 
 /**
  * YouTube-style Minimalist Timeline Hover Preview.
- * Renders the clean thumbnail frame and centered time code directly without bulky outer containers or arrows.
- * Decouples spatial translation from animation to guarantee rock-solid center alignment.
+ * Pure presentation view implementing zero-distraction aesthetics:
+ * - Direct crystal-clear video thumbnail frame (no outer container, no loading spinners, no yellow dots).
+ * - Instant 60fps time label centered directly below the thumbnail.
+ * - Decoupled spatial translation from entry animation for rock-solid center alignment.
  */
 export const TimelinePreviewCard: React.FC<TimelinePreviewCardProps> = ({
   isVisible,
   time,
   anchorX,
   frame,
-  isLoading,
   showThumbnail = true,
 }) => {
   return (
@@ -44,7 +44,7 @@ export const TimelinePreviewCard: React.FC<TimelinePreviewCardProps> = ({
           >
             {showThumbnail ? (
               <>
-                {/* 1. Pure YouTube-Style Thumbnail Frame (No outer background card) */}
+                {/* 1. Pure YouTube-Style Thumbnail Frame (No outer background card, zero distraction) */}
                 <div className="w-[160px] h-[90px] bg-black rounded-[4px] overflow-hidden relative border border-white/30 shadow-[0_8px_24px_rgba(0,0,0,0.85)]">
                   {frame ? (
                     <img
@@ -53,17 +53,11 @@ export const TimelinePreviewCard: React.FC<TimelinePreviewCardProps> = ({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-neutral-900/90 animate-pulse flex items-center justify-center text-white/30 text-[11px] font-mono">
-                      Loading...
-                    </div>
-                  )}
-
-                  {isLoading && (
-                    <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#facc15] animate-ping" />
+                    <div className="w-full h-full bg-black flex items-center justify-center" />
                   )}
                 </div>
 
-                {/* 2. Direct Centered Timestamp Badge (Zero bulky padding) */}
+                {/* 2. Direct Centered Timestamp Badge */}
                 <div className="mt-1.5 px-2 py-0.5 rounded bg-black/75 backdrop-blur-xs text-white font-mono text-[11px] font-medium tracking-wider shadow-md">
                   {formatTime(time)}
                 </div>
