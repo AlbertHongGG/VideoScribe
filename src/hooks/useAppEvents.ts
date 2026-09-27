@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useSTTSettingsStore } from "../store/sttSettingsStore";
+import { usePlayerPreferencesStore } from "../store/playerPreferencesStore";
 import { useSTTJobStore } from "../store/sttJobStore";
 import { commands } from "../types/bindings";
 
@@ -22,10 +23,16 @@ export const useAppEvents = () => {
 
       const u1 = await listen("setting-changed", (event: any) => {
         const { key, value } = event.payload;
-        const store = useSTTSettingsStore.getState() as any;
         const setterName = `set${key.charAt(0).toUpperCase()}${key.slice(1)}`;
-        if (typeof store[setterName] === 'function') {
-          store[setterName](value);
+        
+        const sttStore = useSTTSettingsStore.getState() as any;
+        if (typeof sttStore[setterName] === 'function') {
+          sttStore[setterName](value);
+        }
+
+        const playerPrefStore = usePlayerPreferencesStore.getState() as any;
+        if (typeof playerPrefStore[setterName] === 'function') {
+          playerPrefStore[setterName](value);
         }
       });
       if (isMounted) unlistenFunctions.push(u1); else u1();

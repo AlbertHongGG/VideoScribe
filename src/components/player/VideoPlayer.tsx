@@ -236,7 +236,7 @@ export const VideoPlayer: React.FC = () => {
           </div>
 
           {isFullscreen ? (
-            <div className="absolute bottom-0 left-0 w-full h-[150px] z-50 flex flex-col justify-end overflow-hidden group/controls">
+            <div className="absolute bottom-0 left-0 w-full h-[210px] z-50 flex flex-col justify-end overflow-hidden group/controls">
               <div className="transform translate-y-full group-hover/controls:translate-y-0 transition-transform duration-300 ease-out">
                 <VideoControls />
               </div>

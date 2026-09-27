@@ -1,4 +1,5 @@
 import { useSTTSettingsStore } from "../../store/sttSettingsStore";
+import { usePlayerPreferencesStore } from "../../store/playerPreferencesStore";
 import { SettingSection } from "../settings/SettingSection";
 import { SettingRow, SettingDivider, SettingGroup } from "../settings/SettingRow";
 import { SettingSelect, SettingToggle, SettingSlider } from "../settings/SettingControls";
@@ -120,6 +121,7 @@ const MssStemActions = () => {
 
 export const SettingsPanel: React.FC = () => {
   const store = useSTTSettingsStore();
+  const playerPrefs = usePlayerPreferencesStore();
 
 
   return (
@@ -200,6 +202,14 @@ export const SettingsPanel: React.FC = () => {
           </SettingSection>
 
           <SettingSection title="Display">
+            <SettingRow label="Timeline Hover Preview" description="Show video thumbnail preview when hovering over the playback progress bar">
+              <SettingToggle
+                settingKey="enableTimelineHoverPreview"
+                checked={playerPrefs.enableTimelineHoverPreview}
+                setter={playerPrefs.setEnableTimelineHoverPreview}
+              />
+            </SettingRow>
+            <SettingDivider />
             <SettingRow label="Subtitle Overlay" description="Show generated subtitles directly on the video player">
               <SettingToggle settingKey="showSubtitles" checked={store.showSubtitles} setter={store.setShowSubtitles} />
             </SettingRow>
