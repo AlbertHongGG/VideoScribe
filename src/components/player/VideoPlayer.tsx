@@ -9,7 +9,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { DictionaryTooltip } from "../stt/DictionaryTooltip";
 import { VideoEmptyState } from "./VideoEmptyState";
 import { SubtitleRenderer } from "./subtitle/SubtitleRenderer";
-import { SubtitleRenderContext } from "./subtitle/SubtitleModels";
+import { SubtitleRenderContext, HoverState } from "./subtitle/SubtitleModels";
 import { STTResult } from "../../types/bindings";
 import { PlayerCommandService } from "../../services/commands/playerCommandService";
 
@@ -72,7 +72,7 @@ export const VideoPlayer: React.FC = () => {
   });
 
   const [activeSubtitle, setActiveSubtitle] = useState<STTResult | null>(null);
-  const [hoverText, setHoverText] = useState<{ text: string; fullText?: string; x: number; y: number; startIndex: number; charIndex?: number } | null>(null);
+  const [hoverText, setHoverText] = useState<HoverState | null>(null);
   const hoverTimeoutRef = useRef<number | null>(null);
 
   // Memoize results to prevent unnecessary scans if results haven't changed
@@ -188,6 +188,9 @@ export const VideoPlayer: React.FC = () => {
                 }}
                 onMouseLeave={() => {
                   hoverTimeoutRef.current = window.setTimeout(() => setHoverText(null), 150);
+                }}
+                onMatch={(matchLength) => {
+                  setHoverText((prev) => (prev ? { ...prev, matchLength } : null));
                 }}
               />
             )}

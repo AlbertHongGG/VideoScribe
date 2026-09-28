@@ -31,6 +31,16 @@ export interface ProcessedSubtitle {
   rubySegments?: RubySegment[];
 }
 
+export interface HoverState {
+  text: string;
+  fullText?: string;
+  x: number;
+  y: number;
+  startIndex?: number;
+  charIndex?: number;
+  matchLength?: number;
+}
+
 /** 
  * Context configuration passed down to renderers 
  */
@@ -45,8 +55,8 @@ export interface SubtitleRenderContext {
   enableKaraokeMode: boolean;
   
   // Interactive states
-  hoverText?: { text: string; fullText?: string; x: number; y: number; startIndex: number; charIndex?: number } | null;
-  setHoverText?: (hover: { text: string; fullText?: string; x: number; y: number; startIndex: number; charIndex?: number } | null) => void;
+  hoverText?: HoverState | null;
+  setHoverText?: (hover: HoverState | null) => void;
   hoverTimeoutRef?: React.MutableRefObject<number | null>;
 
   // High-performance KTV rendering hooks

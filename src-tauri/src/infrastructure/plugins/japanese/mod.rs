@@ -67,6 +67,11 @@ fn is_japanese_delimiter(c: char) -> bool {
     )
 }
 
+fn is_kanji(c: char) -> bool {
+    let code = c as u32;
+    (0x4E00..=0x9FAF).contains(&code)
+}
+
 impl DictionaryLookup for JapanesePlugin {
     fn lookup_word(&self, text: &str, index: usize) -> Result<Vec<LookupResult>, String> {
         let chars: Vec<char> = text.chars().collect();
@@ -138,6 +143,35 @@ impl DictionaryLookup for JapanesePlugin {
 
         // Reverse so longest matches appear first
         results.reverse();
+
+        // Sub-morphemic constituent kanji breakdown:
+        // If the top match is a single kanji (e.g. '平'), but is followed immediately by another kanji (e.g. '湯'),
+        // and the compound as a whole was not found in JMDict, also append the definitions of the constituent kanji.
+        if let Some(first_match) = results.first() {
+            let match_char_count = first_match.original_text.chars().count();
+            if match_char_count == 1 && is_kanji(chars[index]) {
+                let mut offset = 1;
+                while index + offset < chars.len() && is_kanji(chars[index + offset]) && offset < 4 {
+                    let next_ch: String = chars[index + offset..index + offset + 1].iter().collect();
+                    if !seen_base_forms.contains(&next_ch) {
+                        if let Ok(entries) = self.dict_service.query_word(&next_ch) {
+                            if !entries.is_empty() {
+                                seen_base_forms.insert(next_ch.clone());
+                                let reading = entries.first().and_then(|e| e.pronunciations.first().cloned());
+                                results.push(LookupResult {
+                                    original_text: next_ch.clone(),
+                                    token: next_ch.clone(),
+                                    base_form: next_ch.clone(),
+                                    reading,
+                                    entries,
+                                });
+                            }
+                        }
+                    }
+                    offset += 1;
+                }
+            }
+        }
 
         Ok(results)
     }
@@ -218,6 +252,7 @@ mod tests {
             "全角　スペースと　複数   スペース",
             "りんちゃんみたいに頑張って原付きでさ",
             "このままただ今",
+            "平湯 温泉で雪見露天入ってきたわー",
         ];
 
         for text in cases {
@@ -288,5 +323,19 @@ mod tests {
         println!("User sentence lookup at 0 took: {:?}", elapsed);
         assert!(!res_yo.is_empty(), "Should find results for 良/良さそう at index 0");
         assert!(elapsed.as_millis() < 50, "Lookup MUST be under 50ms (was {:?})", elapsed);
+
+        // 8. User's exact screenshot sentence: 平湯 温泉で雪見露天入ってきたわー
+        let text_onsen = "平湯 温泉で雪見露天入ってきたわー";
+        // 8a: Hover at index 0: '平' -> should decompose and find both 平 and 湯!
+        let res_hirayu = plugin.lookup_word(text_onsen, 0).unwrap();
+        assert!(!res_hirayu.is_empty(), "Should find 平 at index 0");
+        assert!(res_hirayu.iter().any(|r| r.token == "平"), "Should contain 平");
+        assert!(res_hirayu.iter().any(|r| r.token == "湯"), "Should contain constituent 湯 when hovering 平湯 at index 0");
+
+        // 8b: Hover at index 1: '湯' -> must independently find 湯, and NOT 平!
+        let res_yu = plugin.lookup_word(text_onsen, 1).unwrap();
+        assert!(!res_yu.is_empty(), "Should find 湯 at index 1");
+        assert!(res_yu.iter().any(|r| r.token == "湯"), "Should find 湯");
+        assert!(!res_yu.iter().any(|r| r.token == "平"), "Hovering on 湯 must NOT return 平!");
     }
 }

@@ -10,9 +10,10 @@ interface Props {
   onClose?: () => void;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
+  onMatch?: (matchLength: number) => void;
 }
 
-export const DictionaryTooltip: React.FC<Props> = ({ text, charIndex = 0, x, y, onClose, onMouseEnter, onMouseLeave }) => {
+export const DictionaryTooltip: React.FC<Props> = ({ text, charIndex = 0, x, y, onClose, onMouseEnter, onMouseLeave, onMatch }) => {
   const dictionaryService = DictionaryService.getInstance();
   const cachedInitial = dictionaryService.getCached(text, charIndex);
 
@@ -27,6 +28,10 @@ export const DictionaryTooltip: React.FC<Props> = ({ text, charIndex = 0, x, y, 
     if (cached) {
       setResults(cached);
       setLoading(false);
+      if (cached.length > 0) {
+        const matchLen = cached[0] ? Array.from(cached[0].original_text).length : 1;
+        onMatch?.(matchLen);
+      }
       return;
     }
 
@@ -37,6 +42,10 @@ export const DictionaryTooltip: React.FC<Props> = ({ text, charIndex = 0, x, y, 
         const data = await dictionaryService.lookup(text, charIndex);
         if (active) {
           setResults(data);
+          if (data && data.length > 0) {
+            const matchLen = data[0] ? Array.from(data[0].original_text).length : 1;
+            onMatch?.(matchLen);
+          }
         }
       } catch (e) {
         console.error("Dictionary lookup failed:", e);
