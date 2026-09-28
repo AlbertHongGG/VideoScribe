@@ -13,6 +13,7 @@ export class STTService {
     try {
       const triggerRes = await commands.triggerPipeline({
         videoPath, 
+        sttEngine: settingsStore.sttEngine || "faster_whisper",
         modelSize, 
         language: settingsStore.language || "auto",
         vadEngine: settingsStore.vadEngine,

@@ -81,6 +81,7 @@ impl PipelineEngine {
                     if let Some(client) = app.try_state::<Arc<PythonWorkerClient>>() {
                         let payload = SttPayload {
                             audio_path: project_clone.vocals_audio_path.clone().or(project_clone.extracted_audio_path.clone()).or(project_clone.video_path.clone()).unwrap_or_default(),
+                            stt_engine: project_clone.stt_engine.clone().unwrap_or_else(|| "faster_whisper".to_string()),
                             model: project_clone.stt_model_size.clone().unwrap_or_default(),
                             language: project_clone.source_language.clone().unwrap_or_else(|| "auto".to_string()),
                             use_batch: project_clone.use_batch,

@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 
 interface STTSettingsStore {
   isPanelOpen: boolean;
+  sttEngine: string;
   model: string;
   language: string | null;
   showSubtitles: boolean;
@@ -31,6 +32,7 @@ interface STTSettingsStore {
   
   togglePanel: () => void;
   setPanelOpen: (isOpen: boolean) => void;
+  setSttEngine: (engine: string) => void;
   setModel: (model: string) => void;
   setLanguage: (language: string | null) => void;
   setShowSubtitles: (show: boolean) => void;
@@ -62,6 +64,7 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
   persist(
     (set) => ({
       isPanelOpen: false,
+      sttEngine: 'faster_whisper',
       model: 'medium',
       language: 'auto',
       showSubtitles: true,
@@ -90,6 +93,7 @@ export const useSTTSettingsStore = create<STTSettingsStore>()(
 
       togglePanel: () => set((state) => ({ isPanelOpen: !state.isPanelOpen })),
       setPanelOpen: (isOpen) => set({ isPanelOpen: isOpen }),
+      setSttEngine: (sttEngine) => set({ sttEngine }),
       setModel: (model) => set({ model }),
       setLanguage: (language) => set({ language }),
       setShowSubtitles: (showSubtitles) => set({ showSubtitles }),

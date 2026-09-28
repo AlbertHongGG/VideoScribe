@@ -25,6 +25,7 @@ pub struct VadPayload {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SttPayload {
     pub audio_path: String,
+    pub stt_engine: String,
     pub model: String,
     pub language: String,
     pub use_batch: bool,

@@ -6,23 +6,29 @@ from videoscribe.domain.ipc_models import SttPayload
 from videoscribe.infrastructure.reporters.ipc_reporter import IpcReporter
 from videoscribe.infrastructure.utils import get_device, get_ai_audio_path, clean_memory
 from videoscribe.domain.models import TaskType, TaskStatus, VADResult, SpeechSegment
-from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType
+from videoscribe.domain.transcription_options import TranscriptionOptions, VADEngineType, STTEngineType
+from videoscribe.infrastructure.recognizers import STTFactory
 
 class SttHandler(BaseHandler):
     def __init__(self):
         self._recognizer = None
+        self._current_engine_type = None
 
-    @property
-    def recognizer(self):
-        if self._recognizer is None:
-            from videoscribe.infrastructure.recognizers.faster_whisper_engine import FasterWhisperEngine
-            self._recognizer = FasterWhisperEngine()
+    def get_recognizer(self, options: TranscriptionOptions):
+        if self._recognizer is None or self._current_engine_type != options.stt_engine:
+            if self._recognizer is not None:
+                del self._recognizer
+                self._recognizer = None
+                clean_memory()
+            self._recognizer = STTFactory.create(options)
+            self._current_engine_type = options.stt_engine
         return self._recognizer
         
     def cleanup(self):
         if self._recognizer is not None:
             del self._recognizer
             self._recognizer = None
+            self._current_engine_type = None
         clean_memory()
 
     def handle(self, job_id: str, payload_data: Dict[str, Any], cancel_token: Optional[CancellationToken], cached_vad_segments: Optional[List[Dict[str, Any]]] = None):
@@ -33,7 +39,6 @@ class SttHandler(BaseHandler):
             return
             
         reporter = IpcReporter(job_id)
-        
         
         device = get_device()
         is_gpu = device == "cuda"
@@ -46,9 +51,12 @@ class SttHandler(BaseHandler):
         reporter.report_task_progress(TaskType.STT, TaskStatus.RUNNING, 0.0, runtime_device=device, runtime_compute_type=compute_type, language=lang)
         
         vad_engine_enum = VADEngineType(payload.vad_engine) if payload.vad_engine in ["off", "native", "silero_v6", "firered_vad"] else VADEngineType.OFF
+        raw_stt_engine = getattr(payload, "stt_engine", "faster_whisper")
+        stt_engine_enum = STTEngineType(raw_stt_engine) if raw_stt_engine in [e.value for e in STTEngineType] else STTEngineType.FASTER_WHISPER
         
         try:
             options = TranscriptionOptions(
+                stt_engine=stt_engine_enum,
                 model_size=payload.model,
                 device=device,
                 compute_type=compute_type,
@@ -71,12 +79,16 @@ class SttHandler(BaseHandler):
                     elif isinstance(cached_vad_segments, list):
                         vad_result_obj = VADResult(segments=[SpeechSegment(start_time=s["start"], end_time=s["end"]) for s in cached_vad_segments])
             
-            self.recognizer.load_model(options)
+            recognizer = self.get_recognizer(options)
+            if not recognizer:
+                raise RuntimeError(f"Unsupported STT engine: {options.stt_engine}")
+
+            recognizer.load_model(options)
             
             # Convention over Configuration: Intercept with AI track if exists
             audio_to_process = get_ai_audio_path(payload.audio_path)
             
-            results, info = self.recognizer.transcribe_file(
+            results, info = recognizer.transcribe_file(
                 audio_to_process,
                 options,
                 cancel_token,

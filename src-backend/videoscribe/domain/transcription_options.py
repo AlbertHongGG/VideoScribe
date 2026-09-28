@@ -2,6 +2,9 @@ from dataclasses import dataclass, field
 from typing import Optional
 from enum import Enum
 
+class STTEngineType(str, Enum):
+    FASTER_WHISPER = "faster_whisper"
+
 class VADEngineType(Enum):
     OFF = "off"
     NATIVE = "native"
@@ -25,6 +28,7 @@ class CuePolicy:
 @dataclass
 class TranscriptionOptions:
     """Configuration options for the STT engine and workflow."""
+    stt_engine: STTEngineType = STTEngineType.FASTER_WHISPER
     model_size: str = "tiny"
     device: str = "cpu"
     compute_type: str = "float32"

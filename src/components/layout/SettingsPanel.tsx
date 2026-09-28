@@ -9,6 +9,10 @@ import { save, open } from "@tauri-apps/plugin-dialog";
 import { Tooltip } from "../ui/Tooltip";
 import { useNotifyStore } from "../../store/notifyStore";
 
+const STT_ENGINE_OPTIONS = [
+  { value: "faster_whisper", label: "Faster-Whisper (Local)" },
+];
+
 const MODEL_OPTIONS = [
   { value: "tiny", label: "Tiny (Fastest, least accurate)" },
   { value: "base", label: "Base" },
@@ -130,6 +134,15 @@ export const SettingsPanel: React.FC = () => {
         <div className="space-y-8">
 
           <SettingSection title="Speech-to-Text (STT) Engine">
+            <SettingRow label="Engine" layout="grid">
+              <SettingSelect
+                settingKey="sttEngine"
+                value={store.sttEngine || "faster_whisper"}
+                options={STT_ENGINE_OPTIONS}
+                setter={store.setSttEngine}
+              />
+            </SettingRow>
+            <SettingDivider />
             <SettingRow label="Model Size" layout="grid">
               <SettingSelect settingKey="model" value={store.model} options={MODEL_OPTIONS} setter={store.setModel} />
             </SettingRow>

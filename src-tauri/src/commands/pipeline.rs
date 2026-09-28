@@ -15,6 +15,7 @@ use specta::Type;
 #[serde(rename_all = "camelCase")]
 pub struct PipelineConfig {
     pub video_path: String,
+    pub stt_engine: String,
     pub model_size: String,
     pub language: String,
     pub vad_engine: String,
@@ -100,6 +101,7 @@ pub fn trigger_pipeline(
         proj.target_language = args.target_language.clone();
         proj.source_language = Some(args.language.clone());
         proj.video_path = Some(args.video_path.clone());
+        proj.stt_engine = Some(args.stt_engine.clone());
         proj.stt_model_size = Some(args.model_size.clone());
         proj.vad_engine = Some(args.vad_engine.clone());
         proj.mss_engine = Some(args.mss_engine.clone());

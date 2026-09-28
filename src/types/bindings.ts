@@ -59,6 +59,7 @@ export type LookupResult = {
 
 export type PipelineConfig = {
 	videoPath: string,
+	sttEngine: string,
 	modelSize: string,
 	language: string,
 	vadEngine: string,
@@ -92,6 +93,7 @@ export type ProjectState = {
 	source_language: string | null,
 	vocals_audio_path: string | null,
 	background_audio_path: string | null,
+	stt_engine: string | null,
 	stt_model_size: string | null,
 	vad_engine: string | null,
 	mss_engine: string | null,

@@ -50,8 +50,8 @@ class SpeechRecognizer(Protocol):
         """Load the STT model using the provided options."""
         ...
         
-    def transcribe_file(self, audio_path: str, options: TranscriptionOptions, cancel_token: Optional['CancellationToken'] = None, vad_result: Optional['VADResult'] = None) -> Tuple[Iterator[Any], Optional[TranscriptionInfo]]:
-        """Transcribe an audio file and yield segments."""
+    def transcribe_file(self, audio_path: str, options: TranscriptionOptions, cancel_token: Optional['CancellationToken'] = None, vad_result: Optional['VADResult'] = None) -> Tuple[Iterator[TranscriptionSegment], Optional[TranscriptionInfo]]:
+        """Transcribe an audio file and yield standardized TranscriptionSegments."""
         ...
 
 class ProgressReporter(Protocol):

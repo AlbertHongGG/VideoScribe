@@ -29,6 +29,7 @@ class SttPayload:
     batch_size: int
     vad_engine: str
     workspace_dir: str
+    stt_engine: str = "faster_whisper"
     vad_segments: Optional[List[Dict[str, Any]]] = None
 
 @dataclass
