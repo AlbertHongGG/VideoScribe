@@ -39,9 +39,7 @@ class PreprocessHandler(BaseHandler):
             wav_path = self.analyzer.extract_audio(video_path, job_workspace)
             logger.info("FFmpeg extraction complete")
 
-            # We pass the resulting wav path back as vocals_path for now
-            # since vocals_path is an Optional<String> in TaskProgressData
-            reporter.report_task_progress(TaskType.PREPROCESS, TaskStatus.COMPLETED, 100.0, vocals_path=wav_path)
+            reporter.report_task_progress(TaskType.PREPROCESS, TaskStatus.COMPLETED, 100.0, extracted_audio_path=wav_path)
             logger.info("PreprocessHandler completed successfully")
             
         except Exception as e:

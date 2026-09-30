@@ -88,6 +88,8 @@ pub struct TaskProgressData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub runtime_compute_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub extracted_audio_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub vocals_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub instrumental_path: Option<String>,

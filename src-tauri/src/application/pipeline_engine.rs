@@ -49,9 +49,17 @@ impl PipelineEngine {
                     }
                 }
                 TaskType::Mss => {
+                    let audio_path = match project_clone.resolve_mss_input_audio_track() {
+                        Ok(p) => p,
+                        Err(err) => {
+                            let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
+                            job_manager_clone.fail_job(err, dispatcher);
+                            return;
+                        }
+                    };
                     if let Some(client) = app.try_state::<Arc<PythonWorkerClient>>() {
                         let payload = MssPayload {
-                            audio_path: project_clone.extracted_audio_path.clone().or(project_clone.video_path.clone()).unwrap_or_default(),
+                            audio_path,
                             mss_engine: project_clone.mss_engine.clone().unwrap_or_default(),
                             mss_model: project_clone.mss_model.clone().unwrap_or_default(),
                             workspace_dir: project_clone.workspace_dir.clone().unwrap_or_default(),
@@ -64,9 +72,17 @@ impl PipelineEngine {
                     }
                 }
                 TaskType::Vad => {
+                    let audio_path = match project_clone.resolve_analysis_audio_track() {
+                        Ok(p) => p,
+                        Err(err) => {
+                            let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
+                            job_manager_clone.fail_job(err, dispatcher);
+                            return;
+                        }
+                    };
                     if let Some(client) = app.try_state::<Arc<PythonWorkerClient>>() {
                         let payload = VadPayload {
-                            audio_path: project_clone.vocals_audio_path.clone().or(project_clone.extracted_audio_path.clone()).or(project_clone.video_path.clone()).unwrap_or_default(),
+                            audio_path,
                             vad_engine: project_clone.vad_engine.clone().unwrap_or_default(),
                             workspace_dir: project_clone.workspace_dir.clone().unwrap_or_default(),
                         };
@@ -78,9 +94,17 @@ impl PipelineEngine {
                     }
                 }
                 TaskType::Stt => {
+                    let audio_path = match project_clone.resolve_analysis_audio_track() {
+                        Ok(p) => p,
+                        Err(err) => {
+                            let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
+                            job_manager_clone.fail_job(err, dispatcher);
+                            return;
+                        }
+                    };
                     if let Some(client) = app.try_state::<Arc<PythonWorkerClient>>() {
                         let payload = SttPayload {
-                            audio_path: project_clone.vocals_audio_path.clone().or(project_clone.extracted_audio_path.clone()).or(project_clone.video_path.clone()).unwrap_or_default(),
+                            audio_path,
                             stt_engine: project_clone.stt_engine.clone().unwrap_or_else(|| "faster_whisper".to_string()),
                             model: project_clone.stt_model_size.clone().unwrap_or_default(),
                             language: project_clone.source_language.clone().unwrap_or_else(|| "auto".to_string()),
@@ -120,9 +144,17 @@ impl PipelineEngine {
                     }
                 }
                 TaskType::ForcedAlignment => {
+                    let audio_path = match project_clone.resolve_analysis_audio_track() {
+                        Ok(p) => p,
+                        Err(err) => {
+                            let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
+                            job_manager_clone.fail_job(err, dispatcher);
+                            return;
+                        }
+                    };
                     if let Some(client) = app.try_state::<Arc<PythonWorkerClient>>() {
                         let payload = FaPayload {
-                            audio_path: project_clone.vocals_audio_path.clone().or(project_clone.extracted_audio_path.clone()).or(project_clone.video_path.clone()).unwrap_or_default(),
+                            audio_path,
                             fa_engine: project_clone.fa_engine.clone().unwrap_or_default(),
                             fa_model: project_clone.fa_model.clone().unwrap_or_default(),
                             transcripts: project_clone.results.clone(),

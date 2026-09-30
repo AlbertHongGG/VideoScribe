@@ -7,8 +7,10 @@ export type { STTResult, Job, TaskType, JobStatus, TaskStatus };
 interface ActiveJobStore {
   currentJob: Job | null;
   results: STTResult[];
+  extractedAudioPath: string | null;
   vocalsAudioPath: string | null;
   backgroundAudioPath: string | null;
+  hasActiveStems: boolean;
   
   // Handlers for state syncing
   setResults: (results: STTResult[]) => void;
@@ -21,8 +23,10 @@ interface ActiveJobStore {
 export const useSTTJobStore = create<ActiveJobStore>((set, get) => ({
   currentJob: null,
   results: [],
+  extractedAudioPath: null,
   vocalsAudioPath: null,
   backgroundAudioPath: null,
+  hasActiveStems: false,
 
   setResults: (results) => set({ results }),
   
@@ -33,8 +37,10 @@ export const useSTTJobStore = create<ActiveJobStore>((set, get) => ({
   syncAppState: (state: ProjectState) => {
     set({
       results: [...state.results],
+      extractedAudioPath: state.extracted_audio_path || null,
       vocalsAudioPath: state.vocals_audio_path || null,
       backgroundAudioPath: state.background_audio_path || null,
+      hasActiveStems: Boolean(state.has_active_stems),
     });
     // Fire off async sync of current job
     get().syncCurrentJob();
@@ -52,8 +58,10 @@ export const useSTTJobStore = create<ActiveJobStore>((set, get) => ({
   reset: () => set(() => ({ 
     currentJob: null,
     results: [], 
+    extractedAudioPath: null,
     vocalsAudioPath: null,
     backgroundAudioPath: null,
+    hasActiveStems: false,
   })),
 }));
 

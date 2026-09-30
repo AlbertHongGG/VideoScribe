@@ -219,6 +219,8 @@ pub struct ProjectState {
     pub batch_size: i32,
     pub vad_segments: Option<Vec<VadSegment>>,
     pub enable_furigana: bool,
+    #[serde(default)]
+    pub has_active_stems: bool,
 }
 
 impl Default for ProjectState {
@@ -243,6 +245,7 @@ impl Default for ProjectState {
             batch_size: 1,
             vad_segments: None,
             enable_furigana: false,
+            has_active_stems: false,
         }
     }
 }
@@ -270,6 +273,56 @@ impl ProjectState {
 
     pub fn import_results(&mut self, results: Vec<STTResult>) {
         self.results = results;
+    }
+
+    pub fn sync_active_stems(&mut self) {
+        self.has_active_stems = self.mss_engine.as_deref().unwrap_or("off") != "off"
+            && self.vocals_audio_path.is_some()
+            && self.background_audio_path.is_some();
+    }
+
+    pub fn has_active_stems(&self) -> bool {
+        self.has_active_stems
+    }
+
+    pub fn reset_for_new_media(&mut self, video_path: String) {
+        self.video_path = Some(video_path);
+        self.workspace_dir = None;
+        self.extracted_audio_path = None;
+        self.vocals_audio_path = None;
+        self.background_audio_path = None;
+        self.vad_segments = None;
+        self.results.clear();
+        self.sync_active_stems();
+    }
+
+    /// Authoritative domain method to resolve the audio track to be consumed
+    /// by downstream analysis tasks (VAD, STT, Forced Alignment).
+    pub fn resolve_analysis_audio_track(&self) -> Result<String, String> {
+        if self.has_active_stems() {
+            if let Some(ref vocals) = self.vocals_audio_path {
+                return Ok(vocals.clone());
+            }
+        }
+        if let Some(ref extracted) = self.extracted_audio_path {
+            return Ok(extracted.clone());
+        }
+        if let Some(ref video) = self.video_path {
+            return Ok(video.clone());
+        }
+        Err("No valid audio or video track found in project state.".to_string())
+    }
+
+    /// Authoritative domain method to resolve the audio track to be consumed
+    /// by the MSS (Music Source Separation) task.
+    pub fn resolve_mss_input_audio_track(&self) -> Result<String, String> {
+        if let Some(ref extracted) = self.extracted_audio_path {
+            return Ok(extracted.clone());
+        }
+        if let Some(ref video) = self.video_path {
+            return Ok(video.clone());
+        }
+        Err("No input audio or video track available for music source separation.".to_string())
     }
 }
 
@@ -312,6 +365,78 @@ mod tests {
         for w in &new_words {
             assert!(w.start <= w.end);
         }
+    }
+
+    #[test]
+    fn test_has_active_stems_mutual_exclusion() {
+        let mut proj = ProjectState::default();
+        // 1. Fresh state: no stems
+        proj.sync_active_stems();
+        assert!(!proj.has_active_stems());
+
+        // 2. Preprocess extracted audio present, but MSS is off
+        proj.extracted_audio_path = Some("/path/to/extracted.wav".to_string());
+        proj.mss_engine = Some("off".to_string());
+        proj.sync_active_stems();
+        assert!(!proj.has_active_stems());
+
+        // 3. Stems present, but mss_engine is off: still no active stems!
+        proj.vocals_audio_path = Some("/path/to/vocals.wav".to_string());
+        proj.background_audio_path = Some("/path/to/instrumental.wav".to_string());
+        proj.sync_active_stems();
+        assert!(!proj.has_active_stems());
+
+        // 4. mss_engine is active and both stems present: active stems true!
+        proj.mss_engine = Some("htdemucs".to_string());
+        proj.sync_active_stems();
+        assert!(proj.has_active_stems());
+
+        // 5. One stem missing: active stems false
+        proj.background_audio_path = None;
+        proj.sync_active_stems();
+        assert!(!proj.has_active_stems());
+    }
+
+    #[test]
+    fn test_resolve_audio_tracks_priorities() {
+        let mut proj = ProjectState::default();
+        // 1. Initially, no tracks at all -> should error
+        assert!(proj.resolve_analysis_audio_track().is_err());
+        assert!(proj.resolve_mss_input_audio_track().is_err());
+
+        // 2. Video path set
+        proj.video_path = Some("/path/to/video.mp4".to_string());
+        assert_eq!(proj.resolve_analysis_audio_track().unwrap(), "/path/to/video.mp4");
+        assert_eq!(proj.resolve_mss_input_audio_track().unwrap(), "/path/to/video.mp4");
+
+        // 3. Extracted audio available -> preferred over video_path
+        proj.extracted_audio_path = Some("/path/to/extracted.wav".to_string());
+        assert_eq!(proj.resolve_analysis_audio_track().unwrap(), "/path/to/extracted.wav");
+        assert_eq!(proj.resolve_mss_input_audio_track().unwrap(), "/path/to/extracted.wav");
+
+        // 4. Vocals present but mss_engine is off -> still extracted audio!
+        proj.vocals_audio_path = Some("/path/to/vocals.wav".to_string());
+        proj.background_audio_path = Some("/path/to/bg.wav".to_string());
+        proj.mss_engine = Some("off".to_string());
+        proj.sync_active_stems();
+        assert_eq!(proj.resolve_analysis_audio_track().unwrap(), "/path/to/extracted.wav");
+
+        // 5. MSS engine active -> vocals audio preferred for analysis!
+        proj.mss_engine = Some("htdemucs".to_string());
+        proj.sync_active_stems();
+        assert_eq!(proj.resolve_analysis_audio_track().unwrap(), "/path/to/vocals.wav");
+        // MSS input should still be extracted audio, never vocals!
+        assert_eq!(proj.resolve_mss_input_audio_track().unwrap(), "/path/to/extracted.wav");
+
+        // 6. Reset for new media clears all derived audio tracks and stale workspace
+        proj.workspace_dir = Some("/old/workspace".to_string());
+        proj.reset_for_new_media("/path/to/video2.mp4".to_string());
+        assert_eq!(proj.video_path.as_deref(), Some("/path/to/video2.mp4"));
+        assert!(proj.workspace_dir.is_none());
+        assert!(proj.extracted_audio_path.is_none());
+        assert!(proj.vocals_audio_path.is_none());
+        assert!(proj.background_audio_path.is_none());
+        assert!(!proj.has_active_stems());
     }
 }
 

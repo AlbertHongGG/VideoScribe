@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState, useMemo } from "react";
 import { useVideoStore } from "../../store/videoStore";
 import { useSTTJobStore } from "../../store/sttJobStore";
 import { useSTTSettingsStore } from "../../store/sttSettingsStore";
-import { useAudioMixer } from "./useAudioMixer";
 import { VideoControls } from "./VideoControls";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -12,14 +11,13 @@ import { SubtitleRenderer } from "./subtitle/SubtitleRenderer";
 import { SubtitleRenderContext, HoverState } from "./subtitle/SubtitleModels";
 import { STTResult } from "../../types/bindings";
 import { PlayerCommandService } from "../../services/commands/playerCommandService";
+import { AudioPlaybackManager } from "../../services/audio";
 
 export const VideoPlayer: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const vocalsAudioRef = useRef<HTMLAudioElement>(null);
-  const backgroundAudioRef = useRef<HTMLAudioElement>(null);
-  
   const containerRef = useRef<HTMLDivElement>(null);
   const playerWrapperRef = useRef<HTMLDivElement>(null);
+
   const { 
     videoUrl, 
     isPlaying, 
@@ -37,7 +35,8 @@ export const VideoPlayer: React.FC = () => {
   const { 
     results,
     vocalsAudioPath,
-    backgroundAudioPath
+    backgroundAudioPath,
+    hasActiveStems,
   } = useSTTJobStore();
 
   const { 
@@ -52,24 +51,54 @@ export const VideoPlayer: React.FC = () => {
     enableFurigana,
     enableKaraokeMode,
     vocalVolume,
-    backgroundVolume
+    backgroundVolume,
   } = useSTTSettingsStore();
 
-  // Unified Logarithmic Audio Mixer Hook
-  const { vocalsUrl, backgroundUrl } = useAudioMixer({
-    videoRef,
-    vocalsAudioRef,
-    backgroundAudioRef,
+  // Synchronize AudioPlaybackManager configuration with current store state
+  useEffect(() => {
+    const audioManager = AudioPlaybackManager.getInstance();
+    audioManager.updateConfig({
+      videoElement: videoRef.current,
+      vocalsPath: vocalsAudioPath,
+      backgroundPath: backgroundAudioPath,
+      hasActiveStems,
+      masterVolume: volume,
+      vocalVolume,
+      backgroundVolume,
+      playbackRate,
+    });
+  }, [
     videoUrl,
     vocalsAudioPath,
     backgroundAudioPath,
-    isPlaying,
-    currentTime,
-    masterVolume: volume,
+    hasActiveStems,
+    volume,
     vocalVolume,
     backgroundVolume,
     playbackRate,
-  });
+  ]);
+
+  // Sync play/pause state
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const audioManager = AudioPlaybackManager.getInstance();
+
+    if (isPlaying) {
+      if (video.paused) {
+        video.play().catch((err) => {
+          if (err.name !== "AbortError") console.warn("Video play error:", err);
+        });
+      }
+      audioManager.play().catch(console.error);
+    } else {
+      if (!video.paused) {
+        video.pause();
+      }
+      audioManager.pause();
+    }
+  }, [isPlaying]);
 
   const [activeSubtitle, setActiveSubtitle] = useState<STTResult | null>(null);
   const [hoverText, setHoverText] = useState<HoverState | null>(null);
@@ -82,8 +111,7 @@ export const VideoPlayer: React.FC = () => {
   useEffect(() => {
     if (videoRef.current && seekToTime !== null) {
       videoRef.current.currentTime = seekToTime;
-      if (vocalsAudioRef.current) vocalsAudioRef.current.currentTime = seekToTime;
-      if (backgroundAudioRef.current) backgroundAudioRef.current.currentTime = seekToTime;
+      AudioPlaybackManager.getInstance().seek(seekToTime);
       setCurrentTime(seekToTime); // Sync UI immediately
       setSeekToTime(null);
     }
@@ -138,25 +166,27 @@ export const VideoPlayer: React.FC = () => {
     const playerService = PlayerCommandService.getInstance();
     playerService.attachPlayer({
       video: videoRef.current,
-      vocalsAudio: vocalsAudioRef.current,
-      backgroundAudio: backgroundAudioRef.current,
       wrapper: playerWrapperRef.current,
     });
 
     return () => {
       playerService.detachPlayer();
+      AudioPlaybackManager.getInstance().unbind();
     };
   }, [videoUrl]);
 
   const handleTimeUpdate = () => {
     if (videoRef.current && isPlaying) {
-      setCurrentTime(videoRef.current.currentTime);
+      const cur = videoRef.current.currentTime;
+      setCurrentTime(cur);
+      AudioPlaybackManager.getInstance().syncTime(cur);
     }
   };
 
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
       setDuration(videoRef.current.duration);
+      videoRef.current.playbackRate = playbackRate;
     }
   };
 
@@ -174,8 +204,6 @@ export const VideoPlayer: React.FC = () => {
               onEnded={() => setIsPlaying(false)}
               onClick={() => setIsPlaying(!isPlaying)}
             />
-            <audio ref={vocalsAudioRef} src={vocalsUrl || undefined} preload="auto" />
-            <audio ref={backgroundAudioRef} src={backgroundUrl || undefined} preload="auto" />
             
             {hoverText && (
               <DictionaryTooltip

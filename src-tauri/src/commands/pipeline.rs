@@ -82,7 +82,7 @@ pub fn trigger_pipeline(
         if tasks.contains(&TaskType::Preprocess) {
             proj.extracted_audio_path = None;
         }
-        if tasks.contains(&TaskType::Mss) {
+        if tasks.contains(&TaskType::Mss) || args.mss_engine == "off" {
             proj.vocals_audio_path = None;
             proj.background_audio_path = None;
         }
@@ -111,6 +111,7 @@ pub fn trigger_pipeline(
         proj.use_batch = args.use_batch;
         proj.batch_size = args.batch_size;
         proj.enable_furigana = args.enable_furigana;
+        proj.sync_active_stems();
     }
     
     let _ = app.emit("app-state-changed", Value::Null);

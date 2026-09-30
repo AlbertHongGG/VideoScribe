@@ -104,6 +104,7 @@ export type ProjectState = {
 	batch_size: number,
 	vad_segments: VadSegment[] | null,
 	enable_furigana: boolean,
+	has_active_stems?: boolean,
 };
 
 export type RubySegment = 

@@ -59,24 +59,35 @@ impl PythonWorkerClient {
                 };
                 
                 let mut should_advance_pipeline = false;
+                let mut state_changed = false;
                 
                 if let Some(state) = app.try_state::<crate::infrastructure::state::AppState>() {
                     let dispatcher = Arc::new(TauriEventDispatcher::new(app.clone()));
                     if let Ok(mut proj) = state.project.lock() {
-                        if let Some(ref v) = data.vocals_path {
-                            proj.vocals_audio_path = Some(v.clone());
+                        if let Some(ref path) = data.extracted_audio_path {
+                            proj.extracted_audio_path = Some(path.clone());
+                            state_changed = true;
                         }
-                        if let Some(ref inst) = data.instrumental_path {
-                            proj.background_audio_path = Some(inst.clone());
-                        }
-                        
+
                         if let Some(tt) = task_type.clone() {
-                            if tt == TaskType::Preprocess {
-                                if let Some(ref path) = data.vocals_path {
-                                    proj.extracted_audio_path = Some(path.clone());
+                            if tt == TaskType::Mss {
+                                if let Some(ref v) = data.vocals_path {
+                                    proj.vocals_audio_path = Some(v.clone());
+                                    state_changed = true;
+                                }
+                                if let Some(ref inst) = data.instrumental_path {
+                                    proj.background_audio_path = Some(inst.clone());
+                                    state_changed = true;
                                 }
                             }
                         }
+                        if state_changed {
+                            proj.sync_active_stems();
+                        }
+                    }
+
+                    if state_changed {
+                        let _ = app.emit("app-state-changed", Value::Null);
                     }
                     
                     if let Some(tt) = task_type {

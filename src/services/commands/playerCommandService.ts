@@ -1,9 +1,8 @@
 import { useVideoStore } from "../../store/videoStore";
+import { AudioPlaybackManager } from "../audio";
 
 export interface AttachedPlayerElements {
   video: HTMLVideoElement | null;
-  vocalsAudio?: HTMLAudioElement | null;
-  backgroundAudio?: HTMLAudioElement | null;
   wrapper?: HTMLElement | null;
 }
 
@@ -15,8 +14,6 @@ export class PlayerCommandService {
   private static instance: PlayerCommandService | null = null;
 
   private videoElement: HTMLVideoElement | null = null;
-  private vocalsAudioElement: HTMLAudioElement | null = null;
-  private backgroundAudioElement: HTMLAudioElement | null = null;
   private wrapperElement: HTMLElement | null = null;
 
   private scrubTargetTime: number | null = null;
@@ -37,8 +34,6 @@ export class PlayerCommandService {
    */
   attachPlayer(elements: AttachedPlayerElements): void {
     this.videoElement = elements.video;
-    this.vocalsAudioElement = elements.vocalsAudio ?? null;
-    this.backgroundAudioElement = elements.backgroundAudio ?? null;
     this.wrapperElement = elements.wrapper ?? null;
   }
 
@@ -48,8 +43,6 @@ export class PlayerCommandService {
   detachPlayer(): void {
     this.stopFrameScrub();
     this.videoElement = null;
-    this.vocalsAudioElement = null;
-    this.backgroundAudioElement = null;
     this.wrapperElement = null;
   }
 
@@ -73,8 +66,7 @@ export class PlayerCommandService {
 
     if (this.videoElement) {
       this.videoElement.currentTime = targetTime;
-      if (this.vocalsAudioElement) this.vocalsAudioElement.currentTime = targetTime;
-      if (this.backgroundAudioElement) this.backgroundAudioElement.currentTime = targetTime;
+      AudioPlaybackManager.getInstance().seek(targetTime);
       state.setCurrentTime(targetTime);
     } else {
       state.setSeekToTime(targetTime);
@@ -162,8 +154,7 @@ export class PlayerCommandService {
         if (this.videoElement && this.scrubTargetTime !== null) {
           const target = this.scrubTargetTime;
           this.videoElement.currentTime = target;
-          if (this.vocalsAudioElement) this.vocalsAudioElement.currentTime = target;
-          if (this.backgroundAudioElement) this.backgroundAudioElement.currentTime = target;
+          AudioPlaybackManager.getInstance().seek(target);
 
           const now = performance.now();
           if (now - this.lastSyncTime > 100) {

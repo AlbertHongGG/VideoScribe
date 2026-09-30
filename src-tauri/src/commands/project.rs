@@ -17,7 +17,7 @@ pub fn get_app_state(state: State<'_, AppState>) -> Result<ProjectState, String>
 #[specta::specta]
 pub fn set_video_path(app: tauri::AppHandle, state: State<'_, AppState>, path: String) -> Result<(), String> {
     let mut project = state.project.lock().map_err(|e| e.to_string())?;
-    project.video_path = Some(path);
+    project.reset_for_new_media(path);
     
     use tauri::Emitter;
     let _ = app.emit("app-state-changed", Value::Null);
@@ -32,8 +32,8 @@ pub fn export_mss_stems(state: State<'_, AppState>, export_path: String) -> Resu
     let vocals_path = project.vocals_audio_path.clone();
     let background_path = project.background_audio_path.clone();
     
-    if vocals_path.is_none() && background_path.is_none() {
-        return Err("No stems available to export.".to_string());
+    if !project.has_active_stems() {
+        return Err("No active stems available to export.".to_string());
     }
 
     let file = File::create(&export_path).map_err(|e| e.to_string())?;
@@ -116,6 +116,8 @@ pub fn import_mss_stems(app: tauri::AppHandle, state: State<'_, AppState>, impor
 
     project.vocals_audio_path = new_vocals;
     project.background_audio_path = new_background;
+    project.mss_engine = Some("imported".to_string());
+    project.sync_active_stems();
 
     use tauri::Emitter;
     let _ = app.emit("app-state-changed", Value::Null);
