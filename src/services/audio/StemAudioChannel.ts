@@ -161,11 +161,14 @@ export class StemAudioChannel implements IAudioChannel {
     this.ensureAudioGraphInitialized();
 
     const targetTime = this.videoElement ? this.videoElement.currentTime : 0;
+    const isHostPlaying = Boolean(this.videoElement && !this.videoElement.paused);
+    let sourcesChanged = false;
 
     if (this.vocalsAudio) {
       const vocalsUrl = this.vocalsPath ? convertFileSrc(this.vocalsPath) : '';
       if (this.vocalsAudio.src !== vocalsUrl) {
         this.vocalsAudio.src = vocalsUrl;
+        sourcesChanged = true;
         if (vocalsUrl) {
           this.vocalsAudio.load();
           if (targetTime > 0) {
@@ -183,6 +186,7 @@ export class StemAudioChannel implements IAudioChannel {
       const bgUrl = this.backgroundPath ? convertFileSrc(this.backgroundPath) : '';
       if (this.backgroundAudio.src !== bgUrl) {
         this.backgroundAudio.src = bgUrl;
+        sourcesChanged = true;
         if (bgUrl) {
           this.backgroundAudio.load();
           if (targetTime > 0) {
@@ -194,6 +198,12 @@ export class StemAudioChannel implements IAudioChannel {
         }
       }
       this.backgroundAudio.playbackRate = this.playbackRate;
+    }
+
+    // Seamless hot-reload: If the host video is actively playing when sources are updated,
+    // seamlessly resume playback so the audio stems don't get stuck in paused state.
+    if (sourcesChanged && isHostPlaying && this.isActive) {
+      this.play().catch(console.error);
     }
   }
 
@@ -278,7 +288,8 @@ export class StemAudioChannel implements IAudioChannel {
   public setMasterVolume(volume: number): void {
     this.masterVolume = volume;
     if (this.masterBusGainNode && this.audioContext) {
-      this.masterBusGainNode.gain.setValueAtTime(AudioMath.linearGain(volume), this.audioContext.currentTime);
+      const targetGain = AudioMath.linearGain(volume);
+      this.masterBusGainNode.gain.setTargetAtTime(targetGain, this.audioContext.currentTime, 0.015);
     }
   }
 
@@ -289,10 +300,12 @@ export class StemAudioChannel implements IAudioChannel {
     if (this.audioContext) {
       const now = this.audioContext.currentTime;
       if (this.vocalGainNode) {
-        this.vocalGainNode.gain.setValueAtTime(AudioMath.perceptualStemGain(vocalVolume), now);
+        const targetVocalGain = AudioMath.perceptualStemGain(vocalVolume);
+        this.vocalGainNode.gain.setTargetAtTime(targetVocalGain, now, 0.015);
       }
       if (this.bgGainNode) {
-        this.bgGainNode.gain.setValueAtTime(AudioMath.perceptualStemGain(backgroundVolume), now);
+        const targetBgGain = AudioMath.perceptualStemGain(backgroundVolume);
+        this.bgGainNode.gain.setTargetAtTime(targetBgGain, now, 0.015);
       }
     }
   }

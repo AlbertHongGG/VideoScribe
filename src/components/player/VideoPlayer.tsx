@@ -190,6 +190,27 @@ export const VideoPlayer: React.FC = () => {
     }
   };
 
+  const handleWaiting = () => {
+    // When video pauses/stalls due to network/disk buffering, pause audio to prevent drift
+    if (hasActiveStems) {
+      AudioPlaybackManager.getInstance().pause();
+    }
+  };
+
+  const handlePlaying = () => {
+    // When video resumes playing after buffering, ensure audio channel resumes
+    if (isPlaying) {
+      AudioPlaybackManager.getInstance().play().catch(console.error);
+    }
+  };
+
+  const handleSeeked = () => {
+    // Lock stem positions immediately upon video seek completion
+    if (videoRef.current) {
+      AudioPlaybackManager.getInstance().seek(videoRef.current.currentTime);
+    }
+  };
+
   return (
     <div ref={playerWrapperRef} className={isFullscreen ? "fixed inset-0 z-[9999] bg-[#0a0a0a] flex flex-col overflow-hidden" : "w-full h-full flex flex-col bg-[#0a0a0a] overflow-hidden"}>
       {videoUrl ? (
@@ -201,6 +222,9 @@ export const VideoPlayer: React.FC = () => {
               className="w-full h-full object-contain"
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
+              onWaiting={handleWaiting}
+              onPlaying={handlePlaying}
+              onSeeked={handleSeeked}
               onEnded={() => setIsPlaying(false)}
               onClick={() => setIsPlaying(!isPlaying)}
             />

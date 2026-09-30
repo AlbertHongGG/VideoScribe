@@ -324,6 +324,121 @@ impl ProjectState {
         }
         Err("No input audio or video track available for music source separation.".to_string())
     }
+
+    /// Checks if a file path belongs to a recognized video container.
+    pub fn is_video_container(path: &str) -> bool {
+        let ext = std::path::Path::new(path)
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        SUPPORTED_VIDEO_CONTAINERS.contains(&ext.as_str())
+    }
+
+    /// Determines the authoritative sequence of tasks composing a pipeline execution.
+    pub fn determine_pipeline_tasks(&self, config: &PipelineConfig) -> Vec<TaskType> {
+        let mut tasks = Vec::new();
+
+        if Self::is_video_container(&config.video_path) {
+            tasks.push(TaskType::Preprocess);
+        }
+
+        if config.mss_engine != "off" {
+            tasks.push(TaskType::Mss);
+        }
+
+        if config.vad_engine != "off" {
+            tasks.push(TaskType::Vad);
+        }
+
+        tasks.push(TaskType::Stt);
+
+        if config.enable_proofread {
+            tasks.push(TaskType::Proofread);
+        }
+
+        if config.fa_engine != "off" {
+            tasks.push(TaskType::ForcedAlignment);
+        }
+
+        if config.enable_segmentation {
+            tasks.push(TaskType::Segmentation);
+        }
+
+        if config.enable_ruby_annotation {
+            tasks.push(TaskType::RubyAnnotation);
+        }
+
+        if config.enable_translation {
+            tasks.push(TaskType::Translation);
+        }
+
+        tasks
+    }
+
+    /// Invalidate stale task outputs in the project blackboard before executing scheduled tasks.
+    pub fn invalidate_task_caches(&mut self, tasks: &[TaskType], mss_off: bool) {
+        if tasks.contains(&TaskType::Preprocess) {
+            self.extracted_audio_path = None;
+        }
+        if tasks.contains(&TaskType::Mss) || mss_off {
+            self.vocals_audio_path = None;
+            self.background_audio_path = None;
+        }
+        if tasks.contains(&TaskType::Vad) {
+            self.vad_segments = None;
+        }
+        if tasks.contains(&TaskType::Stt) {
+            self.results.clear();
+        }
+        self.sync_active_stems();
+    }
+
+    /// Persists pipeline execution arguments into the authoritative project domain state.
+    pub fn apply_pipeline_args(&mut self, args: &PipelineConfig, workspace_dir: String) {
+        self.workspace_dir = Some(workspace_dir);
+        self.target_language = args.target_language.clone();
+        self.source_language = Some(args.language.clone());
+        self.video_path = Some(args.video_path.clone());
+        self.stt_engine = Some(args.stt_engine.clone());
+        self.stt_model_size = Some(args.model_size.clone());
+        self.vad_engine = Some(args.vad_engine.clone());
+        self.mss_engine = Some(args.mss_engine.clone());
+        self.mss_model = Some(args.mss_model.clone());
+        self.fa_engine = Some(args.fa_engine.clone());
+        self.fa_model = Some(args.fa_model.clone());
+        self.use_batch = args.use_batch;
+        self.batch_size = args.batch_size;
+        self.enable_furigana = args.enable_furigana;
+        self.sync_active_stems();
+    }
+}
+
+/// Comprehensive list of standard video container extensions requiring preprocessing / audio extraction.
+pub const SUPPORTED_VIDEO_CONTAINERS: &[&str] = &[
+    "mp4", "mov", "mkv", "avi", "webm", "flv", "m4v", "wmv", "ts"
+];
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct PipelineConfig {
+    pub video_path: String,
+    pub stt_engine: String,
+    pub model_size: String,
+    pub language: String,
+    pub vad_engine: String,
+    pub mss_engine: String,
+    pub mss_model: String,
+    pub fa_engine: String,
+    pub fa_model: String,
+    pub use_batch: bool,
+    pub batch_size: i32,
+    pub enable_proofread: bool,
+    pub enable_segmentation: bool,
+    pub enable_translation: bool,
+    pub target_language: String,
+    pub enable_ruby_annotation: bool,
+    pub enable_furigana: bool,
 }
 
 #[cfg(test)]
@@ -433,6 +548,80 @@ mod tests {
         proj.reset_for_new_media("/path/to/video2.mp4".to_string());
         assert_eq!(proj.video_path.as_deref(), Some("/path/to/video2.mp4"));
         assert!(proj.workspace_dir.is_none());
+        assert!(proj.extracted_audio_path.is_none());
+        assert!(proj.vocals_audio_path.is_none());
+        assert!(proj.background_audio_path.is_none());
+        assert!(!proj.has_active_stems());
+    }
+
+    #[test]
+    fn test_pipeline_tasks_and_state_lifecycle() {
+        let mut proj = ProjectState::new();
+
+        // 1. Video file with Demucs, VAD, and Translation
+        let config = PipelineConfig {
+            video_path: "/media/movie.mkv".to_string(),
+            stt_engine: "whisper".to_string(),
+            model_size: "medium".to_string(),
+            language: "ja".to_string(),
+            vad_engine: "silero".to_string(),
+            mss_engine: "htdemucs".to_string(),
+            mss_model: "htdemucs_ft".to_string(),
+            fa_engine: "off".to_string(),
+            fa_model: "".to_string(),
+            use_batch: true,
+            batch_size: 4,
+            enable_proofread: false,
+            enable_segmentation: true,
+            enable_translation: true,
+            target_language: "zh-TW".to_string(),
+            enable_ruby_annotation: false,
+            enable_furigana: false,
+        };
+
+        let tasks = proj.determine_pipeline_tasks(&config);
+        assert_eq!(
+            tasks,
+            vec![
+                TaskType::Preprocess,
+                TaskType::Mss,
+                TaskType::Vad,
+                TaskType::Stt,
+                TaskType::Segmentation,
+                TaskType::Translation,
+            ]
+        );
+
+        // 2. Audio file (.wav) should not include Preprocess
+        let mut audio_config = config.clone();
+        audio_config.video_path = "/media/recording.wav".to_string();
+        audio_config.mss_engine = "off".to_string();
+        let audio_tasks = proj.determine_pipeline_tasks(&audio_config);
+        assert_eq!(
+            audio_tasks,
+            vec![
+                TaskType::Vad,
+                TaskType::Stt,
+                TaskType::Segmentation,
+                TaskType::Translation,
+            ]
+        );
+
+        // 3. Apply args to project
+        proj.apply_pipeline_args(&config, "/workspace/test".to_string());
+        assert_eq!(proj.workspace_dir.as_deref(), Some("/workspace/test"));
+        assert_eq!(proj.video_path.as_deref(), Some("/media/movie.mkv"));
+        assert_eq!(proj.stt_engine.as_deref(), Some("whisper"));
+        assert_eq!(proj.target_language, "zh-TW");
+
+        // 4. Invalidation clears scheduled outputs
+        proj.extracted_audio_path = Some("/workspace/test/extracted.wav".to_string());
+        proj.vocals_audio_path = Some("/workspace/test/vocals.wav".to_string());
+        proj.background_audio_path = Some("/workspace/test/bg.wav".to_string());
+        proj.sync_active_stems();
+        assert!(proj.has_active_stems());
+
+        proj.invalidate_task_caches(&tasks, false);
         assert!(proj.extracted_audio_path.is_none());
         assert!(proj.vocals_audio_path.is_none());
         assert!(proj.background_audio_path.is_none());
